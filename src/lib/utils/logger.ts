@@ -1,7 +1,3 @@
-/* eslint-disable no-console -- this module is the single sanctioned place
-   console methods may appear; every other module must import `logger`
-   instead of calling console.* directly. */
-
 /**
  * Thin logging wrapper that no-ops in production so no debug/error output
  * ever leaks into production consoles or logs.

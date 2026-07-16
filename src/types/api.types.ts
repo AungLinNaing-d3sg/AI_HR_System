@@ -11,7 +11,12 @@
 
 import type { UserRole } from './domain.types';
 
-/** Raw user payload as returned by the backend inside Auth responses. */
+/**
+ * Raw user payload assumed for `/Auth/CreateUser` - unverified against the
+ * live backend (creating a throwaway user to inspect the real shape would
+ * pollute real backend data). `Login`/`UpdateProfile` shapes below are
+ * verified against the live backend and are flatter than this.
+ */
 export interface AuthUserDto {
   Id: string;
   Username: string;
@@ -29,11 +34,17 @@ export interface LoginRequest {
   Password: string;
 }
 
+/** Verified against the live backend: flat fields, no nested `User`, plural `Roles`. */
 export interface LoginResponse {
   AccessToken: string;
   RefreshToken: string;
-  ExpiresIn: number;
-  User: AuthUserDto;
+  ExpiresAt: string;
+  UserId: string;
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  Roles: string[];
 }
 
 export interface RefreshTokenRequest {
@@ -43,7 +54,7 @@ export interface RefreshTokenRequest {
 export interface RefreshTokenResponse {
   AccessToken: string;
   RefreshToken: string;
-  ExpiresIn: number;
+  ExpiresAt: string;
 }
 
 export interface LogoutRequest {
@@ -57,7 +68,15 @@ export interface UpdateProfileRequest {
   CountryId?: string | null;
 }
 
-export type UpdateProfileResponse = AuthUserDto;
+/** Verified against the live backend: no role fields, no `EmployeeId`. */
+export interface UpdateProfileResponse {
+  UserId: string;
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  CountryId: string | null;
+}
 
 export interface ChangePasswordRequest {
   CurrentPassword: string;

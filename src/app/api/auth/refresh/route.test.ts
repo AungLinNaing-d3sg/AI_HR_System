@@ -39,7 +39,7 @@ describe('POST /api/auth/refresh', () => {
     authBackend.refreshToken.mockResolvedValue({
       AccessToken: 'new-access-token',
       RefreshToken: 'new-refresh-token',
-      ExpiresIn: 900,
+      ExpiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     });
 
     const response = await POST();

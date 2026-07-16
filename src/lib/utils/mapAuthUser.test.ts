@@ -1,21 +1,19 @@
 import { mapAuthUser } from './mapAuthUser';
-import type { AuthUserDto } from '@/types/api.types';
+import type { MapAuthUserDto } from './mapAuthUser';
 
 describe('mapAuthUser', () => {
-  const dto: AuthUserDto = {
-    Id: 'user-1',
+  const dto: MapAuthUserDto = {
+    UserId: 'user-1',
     Username: 'jdoe',
     Email: 'jdoe@example.com',
     FirstName: 'Jane',
     LastName: 'Doe',
     EmployeeId: 'EMP-001',
     CountryId: 'country-1',
-    RoleId: 'role-1',
-    RoleName: 'ProjectAdmin',
   };
 
-  it('maps the PascalCase DTO to the camelCase domain model', () => {
-    expect(mapAuthUser(dto)).toEqual({
+  it('maps the PascalCase DTO plus the explicit role to the camelCase domain model', () => {
+    expect(mapAuthUser(dto, 'ProjectAdmin')).toEqual({
       id: 'user-1',
       username: 'jdoe',
       email: 'jdoe@example.com',
@@ -28,16 +26,27 @@ describe('mapAuthUser', () => {
   });
 
   it('preserves null optional fields instead of coercing them', () => {
-    const nullableDto: AuthUserDto = { ...dto, EmployeeId: null, CountryId: null };
-    const mapped = mapAuthUser(nullableDto);
+    const nullableDto: MapAuthUserDto = { ...dto, EmployeeId: null, CountryId: null };
+    const mapped = mapAuthUser(nullableDto, 'ProjectAdmin');
     expect(mapped.employeeId).toBeNull();
     expect(mapped.countryId).toBeNull();
   });
 
-  it('never forwards fields outside of the declared domain shape (e.g. RoleId)', () => {
-    const mapped = mapAuthUser(dto) as unknown as Record<string, unknown>;
-    expect(mapped.RoleId).toBeUndefined();
-    expect(mapped.roleId).toBeUndefined();
+  it('defaults employeeId/countryId to null when the backend omits them (e.g. Login/UpdateProfile)', () => {
+    const minimalDto: MapAuthUserDto = {
+      UserId: 'user-1',
+      Username: 'jdoe',
+      Email: 'jdoe@example.com',
+      FirstName: 'Jane',
+      LastName: 'Doe',
+    };
+    const mapped = mapAuthUser(minimalDto, 'User');
+    expect(mapped.employeeId).toBeNull();
+    expect(mapped.countryId).toBeNull();
+  });
+
+  it('never forwards fields outside of the declared domain shape', () => {
+    const mapped = mapAuthUser(dto, 'ProjectAdmin') as unknown as Record<string, unknown>;
     expect(Object.keys(mapped).sort()).toEqual(
       ['id', 'username', 'email', 'firstName', 'lastName', 'employeeId', 'countryId', 'role'].sort()
     );

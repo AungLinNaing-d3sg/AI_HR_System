@@ -1,7 +1,23 @@
 import 'server-only';
 
-import type { AuthUserDto } from '@/types/api.types';
-import type { AuthenticatedUser } from '@/types/domain.types';
+import type { AuthenticatedUser, UserRole } from '@/types/domain.types';
+
+/**
+ * Fields shared by the backend's Login/UpdateProfile/CreateUser user
+ * payloads. None of those endpoints returns a role field consistently (or
+ * at all, for UpdateProfile) - callers pass `role` explicitly, sourced from
+ * the access token's JWT claim via `extractRole(decodeAccessToken(...))`,
+ * since that's the one place the role is reliably present.
+ */
+export interface MapAuthUserDto {
+  UserId: string;
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  EmployeeId?: string | null;
+  CountryId?: string | null;
+}
 
 /**
  * Maps the backend's PascalCase Auth user DTO to the app's camelCase domain
@@ -9,15 +25,15 @@ import type { AuthenticatedUser } from '@/types/domain.types';
  * backend response might include - only the fields declared on
  * `AuthenticatedUser` are copied through.
  */
-export function mapAuthUser(dto: AuthUserDto): AuthenticatedUser {
+export function mapAuthUser(dto: MapAuthUserDto, role: UserRole): AuthenticatedUser {
   return {
-    id: dto.Id,
+    id: dto.UserId,
     username: dto.Username,
     email: dto.Email,
     firstName: dto.FirstName,
     lastName: dto.LastName,
-    employeeId: dto.EmployeeId,
-    countryId: dto.CountryId,
-    role: dto.RoleName,
+    employeeId: dto.EmployeeId ?? null,
+    countryId: dto.CountryId ?? null,
+    role,
   };
 }

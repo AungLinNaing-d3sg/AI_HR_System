@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import * as authBackend from '@/lib/api/authBackend.api';
 import { setAuthCookies } from '@/lib/utils/authCookies';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
+import { decodeAccessToken, extractRole, secondsUntilExpiry } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapAuthUser } from '@/lib/utils/mapAuthUser';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
@@ -38,9 +39,20 @@ export async function POST(request: Request): Promise<NextResponse> {
       Password: parsed.data.password,
     });
 
-    const user = mapAuthUser(result.User);
+    const claims = decodeAccessToken(result.AccessToken);
+    const role = extractRole(claims) ?? 'User';
+    const user = mapAuthUser(
+      {
+        UserId: result.UserId,
+        Username: result.Username,
+        Email: result.Email,
+        FirstName: result.FirstName,
+        LastName: result.LastName,
+      },
+      role
+    );
     const response = NextResponse.json<AuthResponsePayload>({ user }, { status: 200 });
-    setAuthCookies(response, result.AccessToken, result.RefreshToken, result.ExpiresIn);
+    setAuthCookies(response, result.AccessToken, result.RefreshToken, secondsUntilExpiry(claims));
     return response;
   } catch (error) {
     logger.error('Login failed', error);

@@ -4,6 +4,7 @@ import * as authBackend from '@/lib/api/authBackend.api';
 import { REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { clearAuthCookies, setAuthCookies } from '@/lib/utils/authCookies';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
+import { decodeAccessToken, secondsUntilExpiry } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 
 /**
@@ -26,7 +27,7 @@ export async function POST(): Promise<NextResponse> {
   try {
     const result = await authBackend.refreshToken({ RefreshToken: refreshTokenValue });
     const response = NextResponse.json({ success: true }, { status: 200 });
-    setAuthCookies(response, result.AccessToken, result.RefreshToken, result.ExpiresIn);
+    setAuthCookies(response, result.AccessToken, result.RefreshToken, secondsUntilExpiry(decodeAccessToken(result.AccessToken)));
     return response;
   } catch (error) {
     logger.warn('Session refresh failed', error);

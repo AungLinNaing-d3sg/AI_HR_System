@@ -35,4 +35,32 @@ describe('backendClient', () => {
     const { backendClient } = await import('./backendClient');
     expect(backendClient.defaults.httpsAgent).toBeDefined();
   });
+
+  it('unwraps the {StatusCode, IsSuccess, Message, Data} envelope on a successful response', async () => {
+    const { backendClient } = await import('./backendClient');
+    backendClient.defaults.adapter = async (config) => ({
+      data: { StatusCode: 200, IsSuccess: true, Message: 'Success', Data: { Foo: 'bar' } },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    });
+
+    const response = await backendClient.get('/whatever');
+    expect(response.data).toEqual({ Foo: 'bar' });
+  });
+
+  it('leaves non-enveloped responses untouched', async () => {
+    const { backendClient } = await import('./backendClient');
+    backendClient.defaults.adapter = async (config) => ({
+      data: { Foo: 'bar' },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    });
+
+    const response = await backendClient.get('/whatever');
+    expect(response.data).toEqual({ Foo: 'bar' });
+  });
 });

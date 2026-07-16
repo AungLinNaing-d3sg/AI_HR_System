@@ -59,3 +59,15 @@ export function isTokenExpired(claims: DecodedAccessTokenClaims | null): boolean
   if (!claims?.exp) return true;
   return Date.now() >= claims.exp * 1000;
 }
+
+/**
+ * Seconds remaining until the token's own `exp` claim, for use as the auth
+ * cookie's max-age. This is the token's cryptographically authoritative
+ * expiry - safer to rely on than a separate `ExpiresAt` field the backend
+ * response body may report, since that field isn't guaranteed to agree with
+ * the JWT it accompanies.
+ */
+export function secondsUntilExpiry(claims: DecodedAccessTokenClaims | null): number | undefined {
+  if (!claims?.exp) return undefined;
+  return Math.max(0, claims.exp - Math.floor(Date.now() / 1000));
+}

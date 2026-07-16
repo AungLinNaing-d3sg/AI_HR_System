@@ -17,6 +17,11 @@ function jsonRequest(body: unknown): Request {
   });
 }
 
+function makeAccessToken(payload: Record<string, unknown>): string {
+  const base64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  return `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url(payload)}.sig`;
+}
+
 describe('POST /api/auth/login', () => {
   beforeEach(() => {
     authBackend.login.mockReset();
@@ -29,21 +34,20 @@ describe('POST /api/auth/login', () => {
   });
 
   it('sets httpOnly cookies and returns only the mapped user on success', async () => {
+    const accessToken = makeAccessToken({
+      role: 'User',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
     authBackend.login.mockResolvedValue({
-      AccessToken: 'access-token',
+      AccessToken: accessToken,
       RefreshToken: 'refresh-token',
-      ExpiresIn: 900,
-      User: {
-        Id: 'user-1',
-        Username: 'jdoe',
-        Email: 'jdoe@example.com',
-        FirstName: 'Jane',
-        LastName: 'Doe',
-        EmployeeId: null,
-        CountryId: null,
-        RoleId: 'role-1',
-        RoleName: 'User',
-      },
+      ExpiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      UserId: 'user-1',
+      Username: 'jdoe',
+      Email: 'jdoe@example.com',
+      FirstName: 'Jane',
+      LastName: 'Doe',
+      Roles: ['User'],
     });
 
     const response = await POST(jsonRequest({ usernameOrEmail: 'jdoe', password: 'Password@123' }));
@@ -63,7 +67,7 @@ describe('POST /api/auth/login', () => {
     expect(body.user.accessToken).toBeUndefined();
 
     const setCookie = response.headers.getSetCookie().join(';');
-    expect(setCookie).toContain('access-token');
+    expect(setCookie).toContain(accessToken);
     expect(setCookie).toContain('HttpOnly');
   });
 

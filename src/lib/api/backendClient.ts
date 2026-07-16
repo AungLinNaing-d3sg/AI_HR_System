@@ -33,3 +33,17 @@ export const backendClient = axios.create({
   },
   httpsAgent: allowInsecureTls ? new https.Agent({ rejectUnauthorized: false }) : undefined,
 });
+
+/**
+ * The backend wraps every response in a `{StatusCode, IsSuccess, Message,
+ * Data}` envelope. Unwrapping it here means every `*Backend.api.ts` function
+ * can keep returning `response.data` and get the real payload directly,
+ * instead of every call site having to know about the envelope.
+ */
+backendClient.interceptors.response.use((response) => {
+  const body = response.data;
+  if (body && typeof body === 'object' && 'IsSuccess' in body && 'Data' in body) {
+    response.data = body.Data;
+  }
+  return response;
+});

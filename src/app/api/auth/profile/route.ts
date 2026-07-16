@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import * as authBackend from '@/lib/api/authBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
-import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapAuthUser } from '@/lib/utils/mapAuthUser';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
@@ -20,8 +20,9 @@ import type { AuthResponsePayload } from '@/types/api.types';
 export async function PUT(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+  const claims = accessToken ? decodeAccessToken(accessToken) : null;
 
-  if (!accessToken || isTokenExpired(decodeAccessToken(accessToken))) {
+  if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
 
@@ -51,7 +52,23 @@ export async function PUT(request: Request): Promise<NextResponse> {
       accessToken
     );
 
-    return NextResponse.json<AuthResponsePayload>({ user: mapAuthUser(dto) }, { status: 200 });
+    const role = extractRole(claims) ?? 'User';
+    return NextResponse.json<AuthResponsePayload>(
+      {
+        user: mapAuthUser(
+          {
+            UserId: dto.UserId,
+            Username: dto.Username,
+            Email: dto.Email,
+            FirstName: dto.FirstName,
+            LastName: dto.LastName,
+            CountryId: dto.CountryId,
+          },
+          role
+        ),
+      },
+      { status: 200 }
+    );
   } catch (error) {
     logger.error('Update profile failed', error);
     const details = getBackendErrorDetails(error, 'Could not update your profile.');

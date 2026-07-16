@@ -63,7 +63,23 @@ export async function POST(request: Request): Promise<NextResponse> {
       accessToken
     );
 
-    return NextResponse.json<AuthResponsePayload>({ user: mapAuthUser(dto) }, { status: 201 });
+    return NextResponse.json<AuthResponsePayload>(
+      {
+        user: mapAuthUser(
+          {
+            UserId: dto.Id,
+            Username: dto.Username,
+            Email: dto.Email,
+            FirstName: dto.FirstName,
+            LastName: dto.LastName,
+            EmployeeId: dto.EmployeeId,
+            CountryId: dto.CountryId,
+          },
+          dto.RoleName
+        ),
+      },
+      { status: 201 }
+    );
   } catch (error) {
     logger.error('Create user failed', error);
     const details = getBackendErrorDetails(error, 'Could not create the user.');

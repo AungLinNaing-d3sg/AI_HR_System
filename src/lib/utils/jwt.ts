@@ -26,6 +26,15 @@ const ROLE_CLAIM_KEYS = [
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role',
 ];
 
+/** Common claim keys .NET/JWT providers use for the "subject"/user-id claim. */
+const USER_ID_CLAIM_KEYS = [
+  'sub',
+  'nameid',
+  'userId',
+  'UserId',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier',
+];
+
 export interface DecodedAccessTokenClaims {
   sub?: string;
   exp?: number;
@@ -50,6 +59,22 @@ export function extractRole(claims: DecodedAccessTokenClaims | null): UserRole |
     }
     if (Array.isArray(value) && typeof value[0] === 'string') {
       return value[0] as UserRole;
+    }
+  }
+  return null;
+}
+
+/**
+ * Extracts the current user's id from the access token's "subject" claim, for
+ * Route Handlers that need to scope a backend query to "my" records (e.g.
+ * `GET /api/timesheets/week` filtering entries by `userId`).
+ */
+export function extractUserId(claims: DecodedAccessTokenClaims | null): string | null {
+  if (!claims) return null;
+  for (const key of USER_ID_CLAIM_KEYS) {
+    const value = claims[key];
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
     }
   }
   return null;

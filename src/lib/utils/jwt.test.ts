@@ -5,7 +5,7 @@
  * that the jsdom test environment doesn't provide out of the box. jwt.ts is
  * server-only anyway, so `node` is both correct and sufficient here.
  */
-import { decodeAccessToken, extractRole, isTokenExpired } from './jwt';
+import { decodeAccessToken, extractRole, extractUserId, isTokenExpired } from './jwt';
 
 /**
  * Builds a syntactically-valid (but unsigned/fake-signed) JWT string so
@@ -62,6 +62,27 @@ describe('extractRole', () => {
 
   it('returns null when claims are null', () => {
     expect(extractRole(null)).toBeNull();
+  });
+});
+
+describe('extractUserId', () => {
+  it('reads the standard "sub" claim', () => {
+    expect(extractUserId({ sub: 'user-1' })).toBe('user-1');
+  });
+
+  it('reads the Microsoft claims-schema nameidentifier URI when "sub" is absent', () => {
+    const claims = {
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': 'user-2',
+    };
+    expect(extractUserId(claims)).toBe('user-2');
+  });
+
+  it('returns null when no recognized user-id claim exists', () => {
+    expect(extractUserId({ role: 'User' })).toBeNull();
+  });
+
+  it('returns null when claims are null', () => {
+    expect(extractUserId(null)).toBeNull();
   });
 });
 

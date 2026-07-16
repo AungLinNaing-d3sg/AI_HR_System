@@ -30,6 +30,14 @@ export default async function DashboardPage() {
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/timesheets"
+          className="rounded-lg border border-zinc-200 bg-white p-5 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+        >
+          <p className="text-sm font-semibold text-zinc-900">Timesheets</p>
+          <p className="mt-1 text-sm text-zinc-500">Log your weekly hours per project.</p>
+        </Link>
+
         {role && PROJECT_MANAGEMENT_ROLES.includes(role) && (
           <Link
             href="/projects"

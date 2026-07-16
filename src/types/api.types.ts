@@ -163,3 +163,51 @@ export interface ProjectResponsePayload {
 export interface ProjectListResponsePayload {
   projects: import('./domain.types').Project[];
 }
+
+/**
+ * Raw Timesheet Period/Entry payloads as returned by the backend (see
+ * docs/HR_System_BE.postman_collection.json's `TimesheetPeriod`/
+ * `TimesheetEntry` request/response examples).
+ */
+export interface TimesheetPeriodDto {
+  Id: string;
+  PeriodStart: string;
+  PeriodEnd: string;
+  IsLocked: boolean;
+}
+
+export interface TimesheetEntryDto {
+  Id: string;
+  UserId: string;
+  ProjectId: string;
+  TimesheetPeriodId: string;
+  EntryDate: string;
+  Hours: number;
+  TaskDescription: string | null;
+  IsApproved: boolean;
+}
+
+export interface CreateTimesheetEntryRequest {
+  ProjectId: string;
+  TimesheetPeriodId: string;
+  EntryDate: string;
+  Hours: number;
+  TaskDescription?: string | null;
+}
+
+export interface UpdateTimesheetEntryRequest {
+  Hours: number;
+  TaskDescription?: string | null;
+}
+
+export type TimesheetPeriodListResponse = TimesheetPeriodDto[];
+export type TimesheetEntryListResponse = TimesheetEntryDto[];
+export type TimesheetEntryResponse = TimesheetEntryDto;
+
+/** Shapes returned by this app's own BFF route handlers to the browser. */
+export interface TimesheetEntryResponsePayload {
+  entry: import('./domain.types').TimesheetEntry;
+}
+
+/** Combined read model behind `GET /api/timesheets/week` - see `app/api/timesheets/week/route.ts`. */
+export type TimesheetWeekResponsePayload = import('./domain.types').TimesheetWeek;

@@ -31,3 +31,29 @@ export interface Project {
   maxDailyHours: number | null;
   isActive: boolean;
 }
+
+export interface TimesheetPeriod {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  isLocked: boolean;
+}
+
+export interface TimesheetEntry {
+  id: string;
+  projectId: string;
+  timesheetPeriodId: string;
+  entryDate: string;
+  hours: number;
+  taskDescription: string | null;
+  isApproved: boolean;
+}
+
+/** Combined read model behind the `/timesheets` weekly grid - see `app/api/timesheets/week/route.ts`. */
+export interface TimesheetWeek {
+  weekStart: string;
+  weekEnd: string;
+  period: TimesheetPeriod | null;
+  projects: Project[];
+  entries: TimesheetEntry[];
+}

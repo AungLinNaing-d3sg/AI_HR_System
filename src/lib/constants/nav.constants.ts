@@ -7,8 +7,8 @@ import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
  * (`docs/HR_System_FE_wireframe.pdf`) explicitly calls out "all sidebar
  * links navigate without 404" as a bug it hit and fixed, so this list must
  * stay in lockstep with `src/app/**` rather than mirroring every domain the
- * wireframe's mock prototype showed (Timesheets/Reports/Invoices/etc. are
- * not built yet - see the repo root CLAUDE.md).
+ * wireframe's mock prototype showed (Reports/Invoices/etc. are not built yet
+ * - see the repo root CLAUDE.md).
  */
 export interface NavItem {
   label: string;
@@ -29,7 +29,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   },
   {
     title: 'Workspace',
-    items: [{ label: 'Projects', href: '/projects', roles: PROJECT_MANAGEMENT_ROLES }],
+    items: [
+      { label: 'Timesheets', href: '/timesheets' },
+      { label: 'Projects', href: '/projects', roles: PROJECT_MANAGEMENT_ROLES },
+    ],
   },
   {
     title: 'Administration',

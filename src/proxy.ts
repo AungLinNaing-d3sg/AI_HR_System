@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import * as authBackend from '@/lib/api/authBackend.api';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { clearAuthCookies, setAuthCookies, setRequestAuthCookies } from '@/lib/utils/authCookies';
-import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, extractRole, isTokenExpired, secondsUntilExpiry } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { resolveRouteAccess } from '@/lib/utils/routeAccess';
 
@@ -16,9 +16,9 @@ import { resolveRouteAccess } from '@/lib/utils/routeAccess';
  * same, just renamed.
  *
  * This intentionally only guards the routes this feature owns
- * (`/profile`, `/admin/users/create`, `/projects`) rather than acting as a
- * blanket catch-all, so unrelated existing routes (e.g. `/`) are left
- * untouched.
+ * (`/dashboard`, `/profile`, `/admin/users/create`, `/projects`) rather than
+ * acting as a blanket catch-all, so unrelated existing routes (e.g.
+ * `/login`, `/forbidden`) are left untouched.
  */
 function buildLoginRedirect(request: NextRequest): NextResponse {
   const loginUrl = new URL('/login', request.url);
@@ -82,7 +82,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
     setRequestAuthCookies(request, refreshed.AccessToken, refreshed.RefreshToken);
     const response = NextResponse.next({ request });
-    setAuthCookies(response, refreshed.AccessToken, refreshed.RefreshToken, refreshed.ExpiresIn);
+    setAuthCookies(response, refreshed.AccessToken, refreshed.RefreshToken, secondsUntilExpiry(refreshedClaims));
     return response;
   } catch (error) {
     logger.warn('Silent token refresh failed in proxy', error);
@@ -92,6 +92,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
+    '/dashboard',
+    '/dashboard/:path*',
     '/profile',
     '/profile/:path*',
     '/admin/users/create',

@@ -43,7 +43,7 @@ describe('LoginForm', () => {
     expect(authApi.login).not.toHaveBeenCalled();
   });
 
-  it('submits valid credentials and redirects to /profile by default', async () => {
+  it('submits valid credentials and redirects to /dashboard by default', async () => {
     authApi.login.mockResolvedValue({ id: 'user-1', role: 'User' });
     const user = userEvent.setup();
     renderLoginForm();
@@ -58,7 +58,7 @@ describe('LoginForm', () => {
         password: 'Password@123',
       })
     );
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/profile'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard'));
   });
 
   it('honors a same-origin ?redirect= target', async () => {
@@ -74,7 +74,7 @@ describe('LoginForm', () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/admin/users/create'));
   });
 
-  it('ignores an off-site ?redirect= value and falls back to /profile', async () => {
+  it('ignores an off-site ?redirect= value and falls back to /dashboard', async () => {
     authApi.login.mockResolvedValue({ id: 'user-1', role: 'User' });
     mockSearchParamsGet.mockReturnValue('https://evil.example.com');
     const user = userEvent.setup();
@@ -84,7 +84,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText(/password/i), 'Password@123');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/profile'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard'));
   });
 
   it('shows a server-side error message when login fails', async () => {

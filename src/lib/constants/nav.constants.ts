@@ -1,0 +1,52 @@
+import type { UserRole } from '@/types/domain.types';
+import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
+
+/**
+ * Sidebar navigation model. Deliberately only lists routes that actually
+ * exist in the app router today - the wireframe
+ * (`docs/HR_System_FE_wireframe.pdf`) explicitly calls out "all sidebar
+ * links navigate without 404" as a bug it hit and fixed, so this list must
+ * stay in lockstep with `src/app/**` rather than mirroring every domain the
+ * wireframe's mock prototype showed (Timesheets/Reports/Invoices/etc. are
+ * not built yet - see the repo root CLAUDE.md).
+ */
+export interface NavItem {
+  label: string;
+  href: string;
+  /** Omit to show to every authenticated role. */
+  roles?: readonly UserRole[];
+}
+
+export interface NavSection {
+  /** Omit for a section rendered without a group heading (e.g. Dashboard). */
+  title?: string;
+  items: readonly NavItem[];
+}
+
+export const NAV_SECTIONS: readonly NavSection[] = [
+  {
+    items: [{ label: 'Dashboard', href: '/dashboard' }],
+  },
+  {
+    title: 'Workspace',
+    items: [{ label: 'Projects', href: '/projects', roles: PROJECT_MANAGEMENT_ROLES }],
+  },
+  {
+    title: 'Administration',
+    items: [{ label: 'Create User', href: '/admin/users/create', roles: ['SystemAdmin'] }],
+  },
+];
+
+function isVisible(item: NavItem, role: UserRole | null): boolean {
+  if (!item.roles) return true;
+  if (!role) return false;
+  return item.roles.includes(role);
+}
+
+/** Filters `NAV_SECTIONS` down to the items the given role may see, dropping any section left empty. */
+export function getVisibleNavSections(role: UserRole | null): NavSection[] {
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => isVisible(item, role)),
+  })).filter((section) => section.items.length > 0);
+}

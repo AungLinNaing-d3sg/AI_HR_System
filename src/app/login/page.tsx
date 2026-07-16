@@ -14,7 +14,7 @@ export default async function LoginPage() {
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 
   if (accessToken && !isTokenExpired(decodeAccessToken(accessToken))) {
-    redirect('/profile');
+    redirect('/dashboard');
   }
 
   return (

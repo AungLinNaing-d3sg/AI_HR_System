@@ -14,7 +14,7 @@ import { loginSchema, type LoginFormValues } from '@/lib/validators/auth.validat
 /** A relative, same-origin path only - never redirects off-site with a raw query value. */
 function sanitizeRedirectTarget(rawValue: string | null): string {
   if (!rawValue || !rawValue.startsWith('/') || rawValue.startsWith('//')) {
-    return '/profile';
+    return '/dashboard';
   }
   return rawValue;
 }

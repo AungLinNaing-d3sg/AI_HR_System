@@ -30,9 +30,9 @@ export default async function CreateUserPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-10">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-semibold text-zinc-900">Create user</h1>
       <CreateUserForm />
-    </main>
+    </div>
   );
 }

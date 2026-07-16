@@ -12,8 +12,8 @@ export default function ForbiddenPage() {
         You don&apos;t have permission to view this page. If you believe this is a mistake, contact
         your System Admin.
       </p>
-      <Link href="/profile" className="font-medium text-zinc-900 underline underline-offset-4">
-        Back to your profile
+      <Link href="/dashboard" className="font-medium text-zinc-900 underline underline-offset-4">
+        Back to your dashboard
       </Link>
     </main>
   );

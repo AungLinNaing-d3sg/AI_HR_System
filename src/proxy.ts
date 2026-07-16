@@ -16,8 +16,9 @@ import { resolveRouteAccess } from '@/lib/utils/routeAccess';
  * same, just renamed.
  *
  * This intentionally only guards the routes this feature owns
- * (`/profile`, `/admin/users/create`) rather than acting as a blanket
- * catch-all, so unrelated existing routes (e.g. `/`) are left untouched.
+ * (`/profile`, `/admin/users/create`, `/projects`) rather than acting as a
+ * blanket catch-all, so unrelated existing routes (e.g. `/`) are left
+ * untouched.
  */
 function buildLoginRedirect(request: NextRequest): NextResponse {
   const loginUrl = new URL('/login', request.url);
@@ -90,5 +91,12 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  matcher: ['/profile', '/profile/:path*', '/admin/users/create', '/admin/users/create/:path*'],
+  matcher: [
+    '/profile',
+    '/profile/:path*',
+    '/admin/users/create',
+    '/admin/users/create/:path*',
+    '/projects',
+    '/projects/:path*',
+  ],
 };

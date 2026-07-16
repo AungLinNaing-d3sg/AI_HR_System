@@ -18,3 +18,16 @@ export interface AuthenticatedUser {
   countryId: string | null;
   role: UserRole;
 }
+
+export interface Project {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  clientName: string | null;
+  clientEmail: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  maxDailyHours: number | null;
+  isActive: boolean;
+}

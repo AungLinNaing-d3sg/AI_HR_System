@@ -63,6 +63,31 @@ describe('proxy', () => {
     expect(response.headers.get('location')).toContain('/forbidden');
   });
 
+  it('redirects to /forbidden when a plain User hits /projects', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'User', exp: futureExp });
+    const request = new NextRequest('https://example.com/projects', {
+      headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
+    });
+
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/forbidden');
+  });
+
+  it('allows a ProjectAdmin to reach /projects', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'ProjectAdmin', exp: futureExp });
+    const request = new NextRequest('https://example.com/projects', {
+      headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
+    });
+
+    const response = await proxy(request);
+
+    expect(response.status).toBe(200);
+  });
+
   it('silently refreshes an expired access token and allows the request through', async () => {
     const pastExp = Math.floor(Date.now() / 1000) - 60;
     const expiredToken = makeToken({ role: 'User', exp: pastExp });

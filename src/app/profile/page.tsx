@@ -28,6 +28,14 @@ export default function ProfilePage() {
         </p>
       )}
 
+      {(role === 'SystemAdmin' || role === 'ProjectAdmin') && (
+        <p className="text-sm">
+          <Link href="/projects" className="font-medium text-zinc-900 underline underline-offset-4">
+            Manage projects
+          </Link>
+        </p>
+      )}
+
       {!hasHydrated && (
         <p aria-live="polite" className="text-sm text-zinc-500">
           Loading your profile…

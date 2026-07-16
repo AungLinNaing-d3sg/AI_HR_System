@@ -89,3 +89,58 @@ export interface ApiErrorResponse {
 export interface AuthResponsePayload {
   user: import('./domain.types').AuthenticatedUser;
 }
+
+/**
+ * Raw project payload as returned by the backend
+ * (`docs/HR_System_BE.postman_collection.json` does not include a response
+ * body example for any `/Project/*` endpoint, so this shape is inferred from
+ * the `CreateProject`/`UpdateProject` request bodies plus the same
+ * PascalCase/nullable-optional-field conventions used by `AuthUserDto`).
+ */
+export interface ProjectDto {
+  Id: string;
+  Code: string;
+  Name: string;
+  Description: string | null;
+  ClientName: string | null;
+  ClientEmail: string | null;
+  StartDate: string | null;
+  EndDate: string | null;
+  MaxDailyHours: number | null;
+  IsActive: boolean;
+}
+
+export interface CreateProjectRequest {
+  Code: string;
+  Name: string;
+  Description?: string | null;
+  ClientName?: string | null;
+  ClientEmail?: string | null;
+  StartDate?: string | null;
+  EndDate?: string | null;
+  MaxDailyHours?: number | null;
+}
+
+export interface UpdateProjectRequest {
+  Code: string;
+  Name: string;
+  Description?: string | null;
+  ClientName?: string | null;
+  ClientEmail?: string | null;
+  StartDate?: string | null;
+  EndDate?: string | null;
+  MaxDailyHours?: number | null;
+  IsActive?: boolean;
+}
+
+export type ProjectListResponse = ProjectDto[];
+export type ProjectResponse = ProjectDto;
+
+/** Shapes returned by this app's own BFF route handlers to the browser. */
+export interface ProjectResponsePayload {
+  project: import('./domain.types').Project;
+}
+
+export interface ProjectListResponsePayload {
+  projects: import('./domain.types').Project[];
+}

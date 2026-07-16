@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { NextResponse } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import {
   ACCESS_TOKEN_COOKIE,
   DEFAULT_ACCESS_TOKEN_MAX_AGE_SECONDS,
@@ -46,6 +46,28 @@ export function setAuthCookies(
     path: '/',
     maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
   });
+}
+
+/**
+ * Updates the *incoming request's* cookie jar with a freshly-refreshed
+ * token pair, in addition to `setAuthCookies` writing them onto the
+ * outgoing response.
+ *
+ * This matters for `proxy.ts`'s silent-refresh path specifically: when a
+ * request continues past Proxy via `NextResponse.next({ request })`, any
+ * Server Component/Route Handler further down the request pipeline reads
+ * cookies off that forwarded `request`, not off the eventual response (the
+ * browser hasn't stored the new `Set-Cookie` yet). Without this, a page
+ * rendered immediately after a silent refresh would still see the old,
+ * expired access token.
+ */
+export function setRequestAuthCookies(
+  request: NextRequest,
+  accessToken: string,
+  refreshToken: string
+): void {
+  request.cookies.set(ACCESS_TOKEN_COOKIE, accessToken);
+  request.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken);
 }
 
 export function clearAuthCookies(response: NextResponse): void {

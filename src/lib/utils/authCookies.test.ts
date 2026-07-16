@@ -7,8 +7,8 @@
  * like this one are server-only anyway, so the `node` environment is the
  * correct (and simplest) choice here.
  */
-import { NextResponse } from 'next/server';
-import { clearAuthCookies, setAuthCookies } from './authCookies';
+import { NextRequest, NextResponse } from 'next/server';
+import { clearAuthCookies, setAuthCookies, setRequestAuthCookies } from './authCookies';
 import {
   ACCESS_TOKEN_COOKIE,
   DEFAULT_ACCESS_TOKEN_MAX_AGE_SECONDS,
@@ -63,6 +63,21 @@ describe('setAuthCookies', () => {
     const serialized = Array.isArray(setCookieHeader) ? setCookieHeader.join(';') : setCookieHeader;
 
     expect(serialized).toContain(`Max-Age=${DEFAULT_ACCESS_TOKEN_MAX_AGE_SECONDS}`);
+  });
+});
+
+describe('setRequestAuthCookies', () => {
+  it('overwrites the access/refresh cookies on the incoming request', () => {
+    const request = new NextRequest('https://example.com/profile', {
+      headers: {
+        cookie: `${ACCESS_TOKEN_COOKIE}=old-access; ${REFRESH_TOKEN_COOKIE}=old-refresh`,
+      },
+    });
+
+    setRequestAuthCookies(request, 'new-access', 'new-refresh');
+
+    expect(request.cookies.get(ACCESS_TOKEN_COOKIE)?.value).toBe('new-access');
+    expect(request.cookies.get(REFRESH_TOKEN_COOKIE)?.value).toBe('new-refresh');
   });
 });
 

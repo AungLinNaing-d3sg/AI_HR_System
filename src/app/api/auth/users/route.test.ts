@@ -1,6 +1,7 @@
 /**
  * @jest-environment node
  */
+import { AxiosError } from 'axios';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 
 const mockCookieStore = {
@@ -38,7 +39,7 @@ const validPayload = {
   password: 'Password@123',
   firstName: 'Jane',
   lastName: 'Doe',
-  roleId: 'role-1',
+  roleId: '11111111-1111-1111-1111-111111111101',
 };
 
 describe('POST /api/auth/users', () => {
@@ -73,24 +74,23 @@ describe('POST /api/auth/users', () => {
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
     authBackend.createUser.mockResolvedValue({
-      Id: 'user-2',
+      UserId: 'user-2',
       Username: 'jdoe',
       Email: 'jdoe@example.com',
       FirstName: 'Jane',
       LastName: 'Doe',
       EmployeeId: null,
-      CountryId: null,
-      RoleId: 'role-1',
-      RoleName: 'User',
     });
 
     const response = await POST(jsonRequest(validPayload));
     const body = await response.json();
 
     expect(response.status).toBe(201);
+    expect(body.user.id).toBe('user-2');
     expect(body.user.username).toBe('jdoe');
+    expect(body.user).not.toHaveProperty('role');
     expect(authBackend.createUser).toHaveBeenCalledWith(
-      expect.objectContaining({ Username: 'jdoe', RoleId: 'role-1' }),
+      expect.objectContaining({ Username: 'jdoe', RoleId: '11111111-1111-1111-1111-111111111101' }),
       token
     );
   });
@@ -105,5 +105,72 @@ describe('POST /api/auth/users', () => {
     const response = await POST(jsonRequest({ ...validPayload, roleId: '' }));
     expect(response.status).toBe(400);
     expect(authBackend.createUser).not.toHaveBeenCalled();
+  });
+
+  it('surfaces the backend’s real validation message instead of crashing when the backend rejects a duplicate username (IsSuccess: false)', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    // Mirrors what backendClient's response interceptor throws when the backend
+    // responds 200 with {IsSuccess: false} - see lib/api/backendClient.ts.
+    authBackend.createUser.mockRejectedValue(
+      new AxiosError(
+        'Username is already taken.',
+        AxiosError.ERR_BAD_RESPONSE,
+        undefined,
+        undefined,
+        {
+          status: 400,
+          statusText: 'Bad Request',
+          headers: {},
+          config: {} as never,
+          data: { StatusCode: 400, IsSuccess: false, Message: 'Username is already taken.', Data: null },
+        }
+      )
+    );
+
+    const response = await POST(jsonRequest(validPayload));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.message).toBe('Username is already taken.');
+  });
+
+  it('surfaces ASP.NET Core\'s raw model-binding error instead of a generic message (e.g. a GUID field the backend rejects for a reason our own validation didn\'t catch)', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    // A malformed GUID never reaches the app's own {IsSuccess,...} envelope -
+    // it fails JSON model binding first and comes back as ASP.NET's default
+    // ProblemDetails shape instead (lowercase `errors`, no `Message`/`Data`).
+    authBackend.createUser.mockRejectedValue(
+      new AxiosError('Request failed with status code 400', AxiosError.ERR_BAD_REQUEST, undefined, undefined, {
+        status: 400,
+        statusText: 'Bad Request',
+        headers: {},
+        config: {} as never,
+        data: {
+          title: 'One or more validation errors occurred.',
+          status: 400,
+          errors: {
+            RoleId: [
+              'The JSON value could not be converted to System.Guid. Path: $.RoleId | LineNumber: 0 | BytePositionInLine: 171.',
+            ],
+          },
+        },
+      })
+    );
+
+    const response = await POST(jsonRequest(validPayload));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.message).toBe(
+      'The JSON value could not be converted to System.Guid. Path: $.RoleId | LineNumber: 0 | BytePositionInLine: 171.'
+    );
   });
 });

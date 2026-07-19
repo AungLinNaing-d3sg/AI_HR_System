@@ -3,11 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-
-function getInitials(firstName: string, lastName: string): string {
-  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.trim();
-  return initials ? initials.toUpperCase() : '?';
-}
+import { getInitials } from '@/lib/utils/getInitials';
+import { formatRole } from '@/lib/utils/formatRole';
 
 export function UserMenu() {
   const { user, logout, isLoggingOut } = useAuth();
@@ -50,7 +47,7 @@ export function UserMenu() {
             <p className="truncate text-sm font-medium text-zinc-900">
               {user.firstName} {user.lastName}
             </p>
-            <p className="text-xs text-zinc-500">{user.role}</p>
+            <p className="text-xs text-zinc-500">{formatRole(user.role)}</p>
           </div>
           <Link
             href="/profile"

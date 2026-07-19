@@ -60,11 +60,12 @@ describe('timesheets.api (client)', () => {
     expect(result).toEqual(entry);
   });
 
-  it('updateTimesheetEntry puts to /timesheets/entries/:id and returns the updated entry', async () => {
-    axiosInstance.put.mockResolvedValue({ data: { entry } });
+  it('updateTimesheetEntry puts to /timesheets/entries/:id and returns the echoed id/hours/taskDescription', async () => {
+    const echoed = { id: 'entry-1', hours: 6, taskDescription: 'Frontend component development' };
+    axiosInstance.put.mockResolvedValue({ data: { entry: echoed } });
     const values = { hours: 6, taskDescription: 'Frontend component development' };
     const result = await timesheetsApi.updateTimesheetEntry('entry-1', values);
     expect(axiosInstance.put).toHaveBeenCalledWith('/timesheets/entries/entry-1', values);
-    expect(result).toEqual(entry);
+    expect(result).toEqual(echoed);
   });
 });

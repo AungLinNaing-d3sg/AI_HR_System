@@ -9,26 +9,6 @@
  * before handing data to components/hooks.
  */
 
-import type { UserRole } from './domain.types';
-
-/**
- * Raw user payload assumed for `/Auth/CreateUser` - unverified against the
- * live backend (creating a throwaway user to inspect the real shape would
- * pollute real backend data). `Login`/`UpdateProfile` shapes below are
- * verified against the live backend and are flatter than this.
- */
-export interface AuthUserDto {
-  Id: string;
-  Username: string;
-  Email: string;
-  FirstName: string;
-  LastName: string;
-  EmployeeId: string | null;
-  CountryId: string | null;
-  RoleId: string;
-  RoleName: UserRole;
-}
-
 export interface LoginRequest {
   UsernameOrEmail: string;
   Password: string;
@@ -95,7 +75,23 @@ export interface CreateUserRequest {
   RoleId: string;
 }
 
-export type CreateUserResponse = AuthUserDto;
+/**
+ * Raw response `Data` for `/Auth/CreateUser`, verified against the
+ * documented example response in
+ * docs/HR_System_BE.postman_collection.json: flat fields, no `Id` (it's
+ * `UserId`), and no `RoleId`/`RoleName`/`CountryId` despite those being
+ * present on the request body.
+ */
+export interface CreateUserResponseDto {
+  UserId: string;
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  EmployeeId: string | null;
+}
+
+export type CreateUserResponse = CreateUserResponseDto;
 
 /** Shape of error bodies returned by the backend (best-effort, defensive). */
 export interface ApiErrorResponse {
@@ -107,6 +103,11 @@ export interface ApiErrorResponse {
 /** Shape returned by this app's own BFF route handlers to the browser. */
 export interface AuthResponsePayload {
   user: import('./domain.types').AuthenticatedUser;
+}
+
+/** Shape returned by `POST /api/auth/users` to the browser - see `CreatedUser`. */
+export interface CreateUserResponsePayload {
+  user: import('./domain.types').CreatedUser;
 }
 
 /**
@@ -165,6 +166,80 @@ export interface ProjectListResponsePayload {
 }
 
 /**
+ * Raw payload for `GET /Project/GetProjectAssignments/{projectId}`, verified
+ * against the documented example response.
+ */
+export interface ProjectAssignmentDto {
+  Id: string;
+  UserId: string;
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  ResourceRoleTypeId: string;
+  RoleName: string;
+  AssignedAt: string;
+  IsActive: boolean;
+}
+
+export type ProjectAssignmentListResponse = ProjectAssignmentDto[];
+
+/** Mirrors the backend's `AssignResource` request DTO. */
+export interface AssignResourceRequest {
+  UserId: string;
+  ResourceRoleTypeId: string;
+}
+
+/**
+ * Raw response `Data` for `POST /Project/AssignResource/{projectId}`,
+ * verified against the documented example response.
+ */
+export interface AssignResourceResponseDto {
+  Id: string;
+  ProjectId: string;
+  UserId: string;
+  ResourceRoleTypeId: string;
+  AssignedAt: string;
+}
+
+/**
+ * `DELETE /Project/RemoveResource/{projectId}/{assignmentId}` returns
+ * `Data: null` on success, verified against the documented example response
+ * (same pattern as `UpdateTimesheetEntryResponse`).
+ */
+export type RemoveResourceResponse = null;
+
+/** Shapes returned by this app's own BFF route handlers to the browser. */
+export interface ProjectAssignmentListResponsePayload {
+  assignments: import('./domain.types').ProjectAssignment[];
+}
+
+export interface UnassignedUsersResponsePayload {
+  users: import('./domain.types').UnassignedUser[];
+}
+
+/**
+ * Raw payload for `GET /ResourceRoleType/GetAllResourceRoleTypes`, verified
+ * against the documented example response - paginated, unlike the other
+ * reference-data list endpoints this app calls.
+ */
+export interface ResourceRoleTypeDto {
+  Id: string;
+  Name: string;
+  Description: string | null;
+}
+
+export interface ResourceRoleTypeListResponse {
+  Items: ResourceRoleTypeDto[];
+  TotalCount: number;
+  Page: number;
+  PageSize: number;
+}
+
+export interface ResourceRoleTypeListResponsePayload {
+  roleTypes: import('./domain.types').ResourceRoleType[];
+}
+
+/**
  * Raw Timesheet Period/Entry payloads as returned by the backend (see
  * docs/HR_System_BE.postman_collection.json's `TimesheetPeriod`/
  * `TimesheetEntry` request/response examples).
@@ -179,12 +254,31 @@ export interface TimesheetPeriodDto {
 export interface TimesheetEntryDto {
   Id: string;
   UserId: string;
+  /** Only present on `GetAllTimesheetEntries`/`GetTimesheetEntryById` - absent on `CreateTimesheetEntry`'s response. */
+  UserFirstName?: string;
+  UserLastName?: string;
   ProjectId: string;
+  ProjectCode?: string;
+  ProjectName?: string;
   TimesheetPeriodId: string;
   EntryDate: string;
   Hours: number;
   TaskDescription: string | null;
   IsApproved: boolean;
+  ApprovedAt?: string | null;
+  ApprovedBy?: string | null;
+}
+
+/**
+ * Raw response `Data` for `PUT /TimesheetEntry/ApproveTimesheetEntry/{id}`,
+ * verified against the documented example response - a partial confirmation
+ * only (`Id`/`IsApproved`/`ApprovedAt`/`ApprovedBy`), not the full entry.
+ */
+export interface ApproveTimesheetEntryResponseDto {
+  Id: string;
+  IsApproved: boolean;
+  ApprovedAt: string;
+  ApprovedBy: string;
 }
 
 export interface CreateTimesheetEntryRequest {
@@ -204,10 +298,44 @@ export type TimesheetPeriodListResponse = TimesheetPeriodDto[];
 export type TimesheetEntryListResponse = TimesheetEntryDto[];
 export type TimesheetEntryResponse = TimesheetEntryDto;
 
+/**
+ * Raw response `Data` for `PUT /TimesheetEntry/UpdateTimesheetEntry/{id}`,
+ * verified against the documented example response: `null` on success, no
+ * entry fields at all (unlike `CreateTimesheetEntry`, which returns the full
+ * created entry).
+ */
+export type UpdateTimesheetEntryResponse = null;
+
 /** Shapes returned by this app's own BFF route handlers to the browser. */
 export interface TimesheetEntryResponsePayload {
   entry: import('./domain.types').TimesheetEntry;
 }
 
+/**
+ * Shape returned by `PUT /api/timesheets/entries/:id` - deliberately lighter
+ * than `TimesheetEntryResponsePayload` since `UpdateTimesheetEntryResponse`
+ * carries no entry fields to report back; only what the caller already sent
+ * is echoed.
+ */
+export interface TimesheetEntryUpdateResponsePayload {
+  entry: {
+    id: string;
+    hours: number;
+    taskDescription: string | null;
+  };
+}
+
 /** Combined read model behind `GET /api/timesheets/week` - see `app/api/timesheets/week/route.ts`. */
 export type TimesheetWeekResponsePayload = import('./domain.types').TimesheetWeek;
+
+/** Shape returned by `GET /api/timesheets/history` - see `app/api/timesheets/history/route.ts`. */
+export interface TimesheetHistoryResponsePayload {
+  entries: import('./domain.types').TimesheetHistoryEntry[];
+}
+
+/** Shape returned by `PUT /api/timesheets/entries/:id/approve`. */
+export interface ApproveTimesheetEntryResponsePayload {
+  id: string;
+  isApproved: boolean;
+  approvedAt: string;
+}

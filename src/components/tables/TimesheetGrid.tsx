@@ -6,6 +6,7 @@ import { TimesheetGridRow } from '@/components/tables/TimesheetGridRow';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { useTimesheetGrid } from '@/hooks/useTimesheetGrid';
+import { WEEKLY_HOURS_TARGET } from '@/lib/constants/timesheet.constants';
 import { cn } from '@/lib/utils/cn';
 import { formatDayHeader, formatWeekRangeLabel } from '@/lib/utils/week';
 
@@ -43,6 +44,7 @@ export function TimesheetGrid() {
   } = useTimesheetGrid();
 
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
+  const weekTotal = dailyTotals.reduce((sum, total) => sum + total, 0);
 
   function toggleExpanded(projectId: string) {
     setExpandedProjectIds((previous) => {
@@ -78,25 +80,49 @@ export function TimesheetGrid() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 bg-white px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={goToPreviousWeek}
-            aria-label="Go to the previous week"
-          >
-            <ChevronLeft size={16} aria-hidden="true" />
-          </Button>
-          <span className="min-w-40 text-center text-sm font-medium text-zinc-900">
-            {formatWeekRangeLabel(weekStart)}
-          </span>
-          <Button type="button" variant="outline" size="sm" onClick={goToNextWeek} aria-label="Go to the next week">
-            <ChevronRight size={16} aria-hidden="true" />
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={goToCurrentWeek}>
-            This week
-          </Button>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-8 p-0"
+              onClick={goToPreviousWeek}
+              aria-label="Go to the previous week"
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+            </Button>
+            <span className="min-w-40 text-center text-sm font-medium text-zinc-900">
+              {formatWeekRangeLabel(weekStart)}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-8 p-0"
+              onClick={goToNextWeek}
+              aria-label="Go to the next week"
+            >
+              <ChevronRight size={16} aria-hidden="true" />
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={goToCurrentWeek}>
+              This week
+            </Button>
+          </div>
+
+          {rows.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <span className="whitespace-nowrap">
+                Week {weekTotal}h/{WEEKLY_HOURS_TARGET}h used
+              </span>
+              <span className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-200">
+                <span
+                  className="block h-full rounded-full bg-brand"
+                  style={{ width: `${Math.min(100, (weekTotal / WEEKLY_HOURS_TARGET) * 100)}%` }}
+                />
+              </span>
+            </div>
+          )}
         </div>
 
         <Button
@@ -184,7 +210,7 @@ export function TimesheetGrid() {
                     </td>
                   );
                 })}
-                <td className="px-4 py-3 text-right">{dailyTotals.reduce((sum, total) => sum + total, 0)}h</td>
+                <td className="px-4 py-3 text-right">{weekTotal}h</td>
               </tr>
             </tfoot>
           </table>

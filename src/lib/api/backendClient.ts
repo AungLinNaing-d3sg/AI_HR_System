@@ -1,6 +1,6 @@
 import 'server-only';
 
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import https from 'node:https';
 
 /**
@@ -36,14 +36,44 @@ export const backendClient = axios.create({
 
 /**
  * The backend wraps every response in a `{StatusCode, IsSuccess, Message,
- * Data}` envelope. Unwrapping it here means every `*Backend.api.ts` function
- * can keep returning `response.data` and get the real payload directly,
- * instead of every call site having to know about the envelope.
+ * Data}` envelope, and reports business-rule failures (wrong current
+ * password, duplicate username, etc.) as an HTTP 200 with `IsSuccess: false`
+ * rather than a 4xx status - the real intended status travels in the
+ * envelope's own `StatusCode` field instead. Axios only rejects on non-2xx
+ * responses, so without this check an `IsSuccess: false` response would
+ * resolve exactly like a real success (this was the root cause of Change
+ * Password reporting success on a wrong current password, and Create User
+ * crashing on a null `Data` instead of surfacing the backend's validation
+ * message). Throwing an `AxiosError` here for `IsSuccess: false` lets every
+ * `*Backend.api.ts` caller and `getBackendErrorDetails` handle it exactly
+ * like any other backend error, uniformly across every endpoint.
+ *
+ * For a true success, unwrapping the envelope here means every
+ * `*Backend.api.ts` function can keep returning `response.data` and get the
+ * real payload directly, instead of every call site having to know about
+ * the envelope.
  */
 backendClient.interceptors.response.use((response) => {
-  const body = response.data;
-  if (body && typeof body === 'object' && 'IsSuccess' in body && 'Data' in body) {
-    response.data = body.Data;
+  const body: unknown = response.data;
+  if (body && typeof body === 'object' && 'IsSuccess' in body) {
+    const envelope = body as { IsSuccess: boolean; Message?: string; StatusCode?: number; Data?: unknown };
+
+    if (envelope.IsSuccess === false) {
+      const status = typeof envelope.StatusCode === 'number' && envelope.StatusCode !== 200
+        ? envelope.StatusCode
+        : 400;
+      throw new AxiosError(
+        envelope.Message || 'The request could not be completed.',
+        AxiosError.ERR_BAD_RESPONSE,
+        response.config,
+        response.request,
+        { ...response, status, data: body }
+      );
+    }
+
+    if ('Data' in envelope) {
+      response.data = envelope.Data;
+    }
   }
   return response;
 });

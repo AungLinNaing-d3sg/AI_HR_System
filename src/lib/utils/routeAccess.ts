@@ -1,5 +1,4 @@
 import { SYSTEM_ADMIN_ONLY_ROUTES } from '@/lib/constants/auth.constants';
-import { PROJECT_MANAGEMENT_ROLES, PROJECT_MANAGEMENT_ROUTES } from '@/lib/constants/project.constants';
 import type { UserRole } from '@/types/domain.types';
 
 export type RouteAccessDecision =
@@ -17,12 +16,6 @@ export interface RouteAccessInput {
 
 function requiresSystemAdmin(pathname: string): boolean {
   return SYSTEM_ADMIN_ONLY_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-}
-
-function requiresProjectManagementRole(pathname: string): boolean {
-  return PROJECT_MANAGEMENT_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 }
@@ -50,13 +43,6 @@ export function resolveRouteAccess(input: RouteAccessInput): RouteAccessDecision
   }
 
   if (requiresSystemAdmin(input.pathname) && input.role !== 'SystemAdmin') {
-    return { type: 'redirect', destination: 'forbidden' };
-  }
-
-  if (
-    requiresProjectManagementRole(input.pathname) &&
-    (!input.role || !PROJECT_MANAGEMENT_ROLES.includes(input.role))
-  ) {
     return { type: 'redirect', destination: 'forbidden' };
   }
 

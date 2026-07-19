@@ -72,13 +72,14 @@ describe('GET /api/projects/:id', () => {
     expect(response.status).toBe(401);
   });
 
-  it('returns 403 for a plain User', async () => {
+  it('allows a plain User to view the project (Projects is open to every authenticated role)', async () => {
     const token = tokenFor('User');
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
+    projectsBackend.getProject.mockResolvedValue(dto);
     const response = await GET(jsonRequest('GET'), makeParams('project-1'));
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
   });
 
   it('returns the mapped project for an authorized caller', async () => {
@@ -123,14 +124,15 @@ describe('PUT /api/projects/:id', () => {
     expect(projectsBackend.updateProject).not.toHaveBeenCalled();
   });
 
-  it('returns 403 when the caller is not a SystemAdmin/ProjectAdmin', async () => {
+  it('allows a Guest to update the project (Projects is open to every authenticated role)', async () => {
     const token = tokenFor('Guest');
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
+    projectsBackend.updateProject.mockResolvedValue(dto);
     const response = await PUT(jsonRequest('PUT', validPayload), makeParams('project-1'));
-    expect(response.status).toBe(403);
-    expect(projectsBackend.updateProject).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(projectsBackend.updateProject).toHaveBeenCalled();
   });
 
   it('returns 400 when the payload fails validation', async () => {
@@ -190,14 +192,15 @@ describe('DELETE /api/projects/:id', () => {
     expect(projectsBackend.deleteProject).not.toHaveBeenCalled();
   });
 
-  it('returns 403 when the caller is not a SystemAdmin/ProjectAdmin', async () => {
+  it('allows a plain User to delete the project (Projects is open to every authenticated role)', async () => {
     const token = tokenFor('User');
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
+    projectsBackend.deleteProject.mockResolvedValue(undefined);
     const response = await DELETE(jsonRequest('DELETE'), makeParams('project-1'));
-    expect(response.status).toBe(403);
-    expect(projectsBackend.deleteProject).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(projectsBackend.deleteProject).toHaveBeenCalled();
   });
 
   it('deletes the project when the caller is authorized', async () => {

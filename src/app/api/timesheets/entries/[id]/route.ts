@@ -5,10 +5,9 @@ import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
-import { mapTimesheetEntry } from '@/lib/utils/mapTimesheet';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { updateTimesheetEntrySchema } from '@/lib/validators/timesheet.validators';
-import type { TimesheetEntryResponsePayload } from '@/types/api.types';
+import type { TimesheetEntryUpdateResponsePayload } from '@/types/api.types';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -48,13 +47,16 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
   }
 
   try {
-    const dto = await timesheetsBackend.updateTimesheetEntry(
-      id,
-      { Hours: parsed.data.hours, TaskDescription: parsed.data.taskDescription || null },
-      accessToken
-    );
+    const taskDescription = parsed.data.taskDescription || null;
+    await timesheetsBackend.updateTimesheetEntry(id, { Hours: parsed.data.hours, TaskDescription: taskDescription }, accessToken);
 
-    return NextResponse.json<TimesheetEntryResponsePayload>({ entry: mapTimesheetEntry(dto) }, { status: 200 });
+    // `UpdateTimesheetEntry` returns no entry fields on success (see
+    // `UpdateTimesheetEntryResponse` in api.types.ts), so the response here
+    // echoes back what the caller already sent rather than a backend value.
+    return NextResponse.json<TimesheetEntryUpdateResponsePayload>(
+      { entry: { id, hours: parsed.data.hours, taskDescription } },
+      { status: 200 }
+    );
   } catch (error) {
     logger.error('Update timesheet entry failed', error);
     const details = getBackendErrorDetails(error, 'Could not update this timesheet entry.');

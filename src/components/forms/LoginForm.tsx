@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { Lock, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -48,32 +49,46 @@ export function LoginForm() {
 
       <div>
         <Label htmlFor="usernameOrEmail">Username or email</Label>
-        <Input
-          id="usernameOrEmail"
-          type="text"
-          autoComplete="username"
-          hasError={Boolean(errors.usernameOrEmail)}
-          aria-describedby={errors.usernameOrEmail ? 'usernameOrEmail-error' : undefined}
-          {...register('usernameOrEmail')}
-        />
+        <div className="relative">
+          <User
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden="true"
+          />
+          <Input
+            id="usernameOrEmail"
+            type="text"
+            autoComplete="username"
+            className="pl-9"
+            hasError={Boolean(errors.usernameOrEmail)}
+            aria-describedby={errors.usernameOrEmail ? 'usernameOrEmail-error' : undefined}
+            {...register('usernameOrEmail')}
+          />
+        </div>
         <FieldError id="usernameOrEmail-error" message={errors.usernameOrEmail?.message} />
       </div>
 
       <div>
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          hasError={Boolean(errors.password)}
-          aria-describedby={errors.password ? 'password-error' : undefined}
-          {...register('password')}
-        />
+        <div className="relative">
+          <Lock
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden="true"
+          />
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            className="pl-9"
+            hasError={Boolean(errors.password)}
+            aria-describedby={errors.password ? 'password-error' : undefined}
+            {...register('password')}
+          />
+        </div>
         <FieldError id="password-error" message={errors.password?.message} />
       </div>
 
       <Button type="submit" className="w-full" isLoading={isLoggingIn}>
-        {isLoggingIn ? 'Signing in…' : 'Sign in'}
+        {isLoggingIn ? 'Signing in…' : 'Sign In'}
       </Button>
     </form>
   );

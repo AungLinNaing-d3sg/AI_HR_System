@@ -63,4 +63,53 @@ describe('backendClient', () => {
     const response = await backendClient.get('/whatever');
     expect(response.data).toEqual({ Foo: 'bar' });
   });
+
+  it('throws when the envelope reports IsSuccess: false on an HTTP 200 (e.g. a wrong current password)', async () => {
+    const { backendClient } = await import('./backendClient');
+    backendClient.defaults.adapter = async (config) => ({
+      data: { StatusCode: 400, IsSuccess: false, Message: 'Current password is incorrect.', Data: null },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    });
+
+    await expect(backendClient.get('/whatever')).rejects.toMatchObject({
+      message: 'Current password is incorrect.',
+      response: {
+        status: 400,
+        data: { Message: 'Current password is incorrect.' },
+      },
+    });
+  });
+
+  it('defaults to a 400 status when IsSuccess is false but StatusCode is missing or still 200', async () => {
+    const { backendClient } = await import('./backendClient');
+    backendClient.defaults.adapter = async (config) => ({
+      data: { StatusCode: 200, IsSuccess: false, Message: 'Username is already taken.', Data: null },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    });
+
+    await expect(backendClient.get('/whatever')).rejects.toMatchObject({
+      response: { status: 400 },
+    });
+  });
+
+  it('falls back to a generic message when IsSuccess is false with no Message', async () => {
+    const { backendClient } = await import('./backendClient');
+    backendClient.defaults.adapter = async (config) => ({
+      data: { StatusCode: 400, IsSuccess: false, Data: null },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    });
+
+    await expect(backendClient.get('/whatever')).rejects.toMatchObject({
+      message: 'The request could not be completed.',
+    });
+  });
 });

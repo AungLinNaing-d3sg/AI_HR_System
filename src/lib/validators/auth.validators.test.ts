@@ -113,7 +113,7 @@ describe('createUserSchema', () => {
     password: 'Password@123',
     firstName: 'Jane',
     lastName: 'Doe',
-    roleId: 'role-1',
+    roleId: '11111111-1111-1111-1111-111111111101',
   };
 
   it('accepts a minimal valid payload', () => {
@@ -132,8 +132,23 @@ describe('createUserSchema', () => {
     expect(createUserSchema.safeParse({ ...valid, roleId: '' }).success).toBe(false);
   });
 
+  it('rejects a roleId that is not a valid GUID (the backend deserializes it as System.Guid and crashes on anything else)', () => {
+    const result = createUserSchema.safeParse({ ...valid, roleId: 'role-1' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a countryId that is not a valid GUID', () => {
+    const result = createUserSchema.safeParse({ ...valid, countryId: 'not-a-guid' });
+    expect(result.success).toBe(false);
+  });
+
   it('accepts empty-string optional fields for employeeId/countryId', () => {
     const result = createUserSchema.safeParse({ ...valid, employeeId: '', countryId: '' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a valid GUID countryId', () => {
+    const result = createUserSchema.safeParse({ ...valid, countryId: '22222222-2222-2222-2222-222222222201' });
     expect(result.success).toBe(true);
   });
 });

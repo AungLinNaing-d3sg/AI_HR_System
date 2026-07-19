@@ -1,5 +1,5 @@
+import { ClipboardList, Clock, FolderKanban, LayoutGrid, UserPlus, type LucideIcon } from 'lucide-react';
 import type { UserRole } from '@/types/domain.types';
-import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 
 /**
  * Sidebar navigation model. Deliberately only lists routes that actually
@@ -8,11 +8,13 @@ import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
  * links navigate without 404" as a bug it hit and fixed, so this list must
  * stay in lockstep with `src/app/**` rather than mirroring every domain the
  * wireframe's mock prototype showed (Reports/Invoices/etc. are not built yet
- * - see the repo root CLAUDE.md).
+ * - see the repo root CLAUDE.md). Section title/order and per-item icons
+ * otherwise follow the wireframe's sidebar exactly.
  */
 export interface NavItem {
   label: string;
   href: string;
+  icon: LucideIcon;
   /** Omit to show to every authenticated role. */
   roles?: readonly UserRole[];
 }
@@ -25,18 +27,19 @@ export interface NavSection {
 
 export const NAV_SECTIONS: readonly NavSection[] = [
   {
-    items: [{ label: 'Dashboard', href: '/dashboard' }],
+    items: [{ label: 'Dashboard', href: '/dashboard', icon: LayoutGrid }],
   },
   {
-    title: 'Workspace',
+    title: 'Timesheet',
     items: [
-      { label: 'Timesheets', href: '/timesheets' },
-      { label: 'Projects', href: '/projects', roles: PROJECT_MANAGEMENT_ROLES },
+      { label: 'Projects', href: '/projects', icon: FolderKanban },
+      { label: 'My Timesheets', href: '/timesheets', icon: Clock },
+      { label: 'Timesheet History', href: '/timesheets/history', icon: ClipboardList },
     ],
   },
   {
     title: 'Administration',
-    items: [{ label: 'Create User', href: '/admin/users/create', roles: ['SystemAdmin'] }],
+    items: [{ label: 'Create User', href: '/admin/users/create', icon: UserPlus, roles: ['SystemAdmin'] }],
   },
 ];
 

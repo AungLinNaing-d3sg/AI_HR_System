@@ -21,3 +21,6 @@ export const TASK_DESCRIPTION_MAX_LENGTH = 500;
  * hard validation error.
  */
 export const DAILY_HOURS_WARNING_THRESHOLD = 8;
+
+/** Standard full-time week, used only for the grid's "Week Xh/40h used" progress indicator. */
+export const WEEKLY_HOURS_TARGET = 40;

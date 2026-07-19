@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { NotificationsMenu } from '@/components/layout/NotificationsMenu';
 import { UserMenu } from '@/components/layout/UserMenu';
 
 interface HeaderProps {
@@ -26,7 +27,10 @@ export function Header({ onMenuClick }: HeaderProps) {
         <Breadcrumbs pathname={pathname} />
       </div>
 
-      <UserMenu />
+      <div className="flex items-center gap-2">
+        <NotificationsMenu />
+        <UserMenu />
+      </div>
     </header>
   );
 }

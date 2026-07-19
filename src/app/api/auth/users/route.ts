@@ -5,10 +5,9 @@ import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
-import { mapAuthUser } from '@/lib/utils/mapAuthUser';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createUserSchema } from '@/lib/validators/auth.validators';
-import type { AuthResponsePayload } from '@/types/api.types';
+import type { CreateUserResponsePayload } from '@/types/api.types';
 
 /**
  * POST /api/auth/users
@@ -63,20 +62,16 @@ export async function POST(request: Request): Promise<NextResponse> {
       accessToken
     );
 
-    return NextResponse.json<AuthResponsePayload>(
+    return NextResponse.json<CreateUserResponsePayload>(
       {
-        user: mapAuthUser(
-          {
-            UserId: dto.Id,
-            Username: dto.Username,
-            Email: dto.Email,
-            FirstName: dto.FirstName,
-            LastName: dto.LastName,
-            EmployeeId: dto.EmployeeId,
-            CountryId: dto.CountryId,
-          },
-          dto.RoleName
-        ),
+        user: {
+          id: dto.UserId,
+          username: dto.Username,
+          email: dto.Email,
+          firstName: dto.FirstName,
+          lastName: dto.LastName,
+          employeeId: dto.EmployeeId,
+        },
       },
       { status: 201 }
     );

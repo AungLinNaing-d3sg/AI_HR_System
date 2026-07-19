@@ -1,6 +1,6 @@
 import { axiosInstance } from '@/lib/api/axios';
-import type { AuthResponsePayload } from '@/types/api.types';
-import type { AuthenticatedUser } from '@/types/domain.types';
+import type { AuthResponsePayload, CreateUserResponsePayload } from '@/types/api.types';
+import type { AuthenticatedUser, CreatedUser } from '@/types/domain.types';
 import type {
   ChangePasswordFormValues,
   CreateUserFormValues,
@@ -34,7 +34,7 @@ export async function changePassword(values: ChangePasswordFormValues): Promise<
   await axiosInstance.put('/auth/change-password', values);
 }
 
-export async function createUser(values: CreateUserFormValues): Promise<AuthenticatedUser> {
-  const { data } = await axiosInstance.post<AuthResponsePayload>('/auth/users', values);
+export async function createUser(values: CreateUserFormValues): Promise<CreatedUser> {
+  const { data } = await axiosInstance.post<CreateUserResponsePayload>('/auth/users', values);
   return data.user;
 }

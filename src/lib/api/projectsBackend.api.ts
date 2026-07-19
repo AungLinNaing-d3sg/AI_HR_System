@@ -2,7 +2,10 @@ import 'server-only';
 
 import { backendClient } from '@/lib/api/backendClient';
 import type {
+  AssignResourceRequest,
+  AssignResourceResponseDto,
   CreateProjectRequest,
+  ProjectAssignmentListResponse,
   ProjectListResponse,
   ProjectResponse,
   UpdateProjectRequest,
@@ -57,4 +60,35 @@ export async function updateProject(
 
 export async function deleteProject(id: string, accessToken: string): Promise<void> {
   await backendClient.delete(`/Project/DeleteProject/${id}`, { headers: authHeader(accessToken) });
+}
+
+export async function getProjectAssignments(
+  projectId: string,
+  accessToken: string
+): Promise<ProjectAssignmentListResponse> {
+  const response = await backendClient.get<ProjectAssignmentListResponse>(
+    `/Project/GetProjectAssignments/${projectId}`,
+    { headers: authHeader(accessToken) }
+  );
+  return response.data;
+}
+
+export async function assignResource(
+  projectId: string,
+  payload: AssignResourceRequest,
+  accessToken: string
+): Promise<AssignResourceResponseDto> {
+  const response = await backendClient.post<AssignResourceResponseDto>(
+    `/Project/AssignResource/${projectId}`,
+    payload,
+    { headers: authHeader(accessToken) }
+  );
+  return response.data;
+}
+
+/** `RemoveResource` returns `Data: null` on success - see `RemoveResourceResponse` in api.types.ts. */
+export async function removeResource(projectId: string, assignmentId: string, accessToken: string): Promise<void> {
+  await backendClient.delete(`/Project/RemoveResource/${projectId}/${assignmentId}`, {
+    headers: authHeader(accessToken),
+  });
 }

@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useUpdateTimesheetEntry } from './useUpdateTimesheetEntry';
-import type { TimesheetEntry } from '@/types/domain.types';
 
 jest.mock('../lib/api/timesheets.api', () => ({
   updateTimesheetEntry: jest.fn(),
@@ -10,15 +9,9 @@ jest.mock('../lib/api/timesheets.api', () => ({
 
 const timesheetsApi = jest.requireMock('../lib/api/timesheets.api') as { updateTimesheetEntry: jest.Mock };
 
-const updatedEntry: TimesheetEntry = {
-  id: 'entry-1',
-  projectId: 'project-1',
-  timesheetPeriodId: 'period-1',
-  entryDate: '2025-02-24',
-  hours: 4,
-  taskDescription: 'Updated notes',
-  isApproved: false,
-};
+// The real backend returns no entry fields on a successful update (see
+// UpdateTimesheetEntryResponse in api.types.ts) - only what was submitted is echoed back.
+const updatedEntry = { id: 'entry-1', hours: 4, taskDescription: 'Updated notes' };
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -34,7 +27,7 @@ describe('useUpdateTimesheetEntry', () => {
     timesheetsApi.updateTimesheetEntry.mockResolvedValue(updatedEntry);
     const { result } = renderHook(() => useUpdateTimesheetEntry(), { wrapper });
 
-    let updated: TimesheetEntry | undefined;
+    let updated: { id: string; hours: number; taskDescription: string | null } | undefined;
     await act(async () => {
       updated = await result.current.updateEntry({
         id: 'entry-1',

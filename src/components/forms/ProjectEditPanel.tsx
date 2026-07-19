@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useProject } from '@/hooks/useProject';
 import { useDeleteProject } from '@/hooks/useDeleteProject';
 import { Alert } from '@/components/ui/Alert';
-import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ProjectForm } from '@/components/forms/ProjectForm';
 
@@ -43,16 +42,26 @@ export function ProjectEditPanel({ id }: { id: string }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <span className="inline-flex rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-xs text-zinc-700">
+        {project.code}
+      </span>
+
       {deleteError && <Alert variant="error">{deleteError}</Alert>}
 
-      <ProjectForm mode="edit" project={project} />
-
-      <div className="border-t border-zinc-200 pt-4">
-        <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmingDelete(true)}>
-          Delete project
-        </Button>
-      </div>
+      <ProjectForm
+        mode="edit"
+        project={project}
+        footerLeft={
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            className="text-sm font-medium text-red-600 hover:underline"
+          >
+            Delete project
+          </button>
+        }
+      />
 
       <ConfirmDialog
         open={confirmingDelete}

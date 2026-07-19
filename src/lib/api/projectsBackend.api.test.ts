@@ -65,4 +65,29 @@ describe('projectsBackend.api (server)', () => {
       headers: { Authorization: 'Bearer access-token' },
     });
   });
+
+  it('getProjectAssignments gets /Project/GetProjectAssignments/:id with a Bearer header', async () => {
+    backendClient.get.mockResolvedValue({ data: [] });
+    await projectsBackend.getProjectAssignments('project-1', 'access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Project/GetProjectAssignments/project-1', {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+  });
+
+  it('assignResource posts to /Project/AssignResource/:id with a Bearer header', async () => {
+    backendClient.post.mockResolvedValue({ data: { Id: 'assignment-1' } });
+    const payload = { UserId: 'user-1', ResourceRoleTypeId: 'role-1' };
+    await projectsBackend.assignResource('project-1', payload, 'access-token');
+    expect(backendClient.post).toHaveBeenCalledWith('/Project/AssignResource/project-1', payload, {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+  });
+
+  it('removeResource deletes /Project/RemoveResource/:projectId/:assignmentId with a Bearer header', async () => {
+    backendClient.delete.mockResolvedValue({ data: null });
+    await projectsBackend.removeResource('project-1', 'assignment-1', 'access-token');
+    expect(backendClient.delete).toHaveBeenCalledWith('/Project/RemoveResource/project-1/assignment-1', {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+  });
 });

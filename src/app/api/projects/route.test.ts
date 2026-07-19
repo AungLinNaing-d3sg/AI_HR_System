@@ -69,15 +69,16 @@ describe('GET /api/projects', () => {
     expect(projectsBackend.getProjectList).not.toHaveBeenCalled();
   });
 
-  it('returns 403 for a plain User', async () => {
+  it('allows a plain User to view the project list (Projects is open to every authenticated role)', async () => {
     const token = tokenFor('User');
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
+    projectsBackend.getProjectList.mockResolvedValue([dto]);
 
     const response = await GET();
-    expect(response.status).toBe(403);
-    expect(projectsBackend.getProjectList).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(projectsBackend.getProjectList).toHaveBeenCalled();
   });
 
   it('returns the mapped project list for a SystemAdmin', async () => {
@@ -132,15 +133,16 @@ describe('POST /api/projects', () => {
     expect(projectsBackend.createProject).not.toHaveBeenCalled();
   });
 
-  it('returns 403 when the caller is not a SystemAdmin/ProjectAdmin', async () => {
+  it('allows a Guest to create a project (Projects is open to every authenticated role)', async () => {
     const token = tokenFor('Guest');
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
+    projectsBackend.createProject.mockResolvedValue(dto);
 
     const response = await POST(jsonRequest(validPayload));
-    expect(response.status).toBe(403);
-    expect(projectsBackend.createProject).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(projectsBackend.createProject).toHaveBeenCalled();
   });
 
   it('returns 400 when the payload fails validation', async () => {

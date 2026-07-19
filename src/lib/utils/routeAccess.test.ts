@@ -109,7 +109,7 @@ describe('resolveRouteAccess', () => {
     ).toEqual({ type: 'allow' });
   });
 
-  it('redirects to forbidden when a plain User hits /projects', () => {
+  it('allows a plain User on /projects (Projects is open to every authenticated role)', () => {
     expect(
       resolveRouteAccess({
         pathname: '/projects',
@@ -118,10 +118,10 @@ describe('resolveRouteAccess', () => {
         hasRefreshToken: true,
         role: 'User',
       })
-    ).toEqual({ type: 'redirect', destination: 'forbidden' });
+    ).toEqual({ type: 'allow' });
   });
 
-  it('redirects to forbidden when a Guest hits a nested /projects/:id path', () => {
+  it('allows a Guest on a nested /projects/:id path', () => {
     expect(
       resolveRouteAccess({
         pathname: '/projects/123',
@@ -130,18 +130,6 @@ describe('resolveRouteAccess', () => {
         hasRefreshToken: true,
         role: 'Guest',
       })
-    ).toEqual({ type: 'redirect', destination: 'forbidden' });
-  });
-
-  it('redirects to forbidden when the role could not be determined on /projects', () => {
-    expect(
-      resolveRouteAccess({
-        pathname: '/projects',
-        hasAccessToken: true,
-        isAccessTokenExpired: false,
-        hasRefreshToken: true,
-        role: null,
-      })
-    ).toEqual({ type: 'redirect', destination: 'forbidden' });
+    ).toEqual({ type: 'allow' });
   });
 });

@@ -6,20 +6,16 @@ import type { UserRole } from '@/types/domain.types';
  */
 
 /**
- * Roles allowed to view/create/edit/delete projects. This is a
- * frontend UX-level gate only (per the Technical Requirements' RBAC
- * section, "frontend role checks are UX-only"): the
- * `docs/HR_System_BE.postman_collection.json` `/Project/*` endpoints are
- * tagged only `[Auth]` (no role restriction), so the backend does not
- * itself enforce this restriction today. It is applied here because
- * "Manage Projects" is an administrative feature per the wireframe
- * (`docs/HR_System_FE_wireframe.pdf` shows the Projects nav item to both
- * a `ProjectAdmin` and a `SystemAdmin` demo user).
+ * Roles that can approve other users' timesheet entries and see everyone's
+ * (not just their own) timesheet history. Project view/create/edit/delete/
+ * assign is intentionally *not* gated by this list - the wireframe's own QA
+ * notes (`docs/HR_System_FE_wireframe.pdf`) only call out the
+ * Administration section as hidden for a plain `User`/`AssignedUser` role,
+ * not Projects, and the backend's `/Project/*` endpoints are tagged only
+ * `[Auth]` (no role restriction) anyway. See `TimesheetHistoryTable.tsx` and
+ * `app/api/timesheets/history/route.ts` for where this is actually used.
  */
 export const PROJECT_MANAGEMENT_ROLES: readonly UserRole[] = ['SystemAdmin', 'ProjectAdmin'];
-
-/** Routes gated by `PROJECT_MANAGEMENT_ROLES` in `routeAccess.ts`/`proxy.ts`. */
-export const PROJECT_MANAGEMENT_ROUTES = ['/projects'];
 
 /** Matches the wireframe's "Unique, uppercase letters and hyphens" project code hint. */
 export const PROJECT_CODE_REGEX = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;

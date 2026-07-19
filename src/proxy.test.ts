@@ -63,7 +63,7 @@ describe('proxy', () => {
     expect(response.headers.get('location')).toContain('/forbidden');
   });
 
-  it('redirects to /forbidden when a plain User hits /projects', async () => {
+  it('allows a plain User to reach /projects (Projects is open to every authenticated role)', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const token = makeToken({ role: 'User', exp: futureExp });
     const request = new NextRequest('https://example.com/projects', {
@@ -72,8 +72,7 @@ describe('proxy', () => {
 
     const response = await proxy(request);
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toContain('/forbidden');
+    expect(response.status).toBe(200);
   });
 
   it('allows a ProjectAdmin to reach /projects', async () => {

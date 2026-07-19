@@ -1,4 +1,4 @@
-import { createProjectSchema, updateProjectSchema } from './project.validators';
+import { assignResourceSchema, createProjectSchema, updateProjectSchema } from './project.validators';
 
 const validCreatePayload = {
   code: 'PRJ-001',
@@ -88,5 +88,22 @@ describe('updateProjectSchema', () => {
   it('accepts a valid update payload', () => {
     const result = updateProjectSchema.safeParse({ ...validCreatePayload, isActive: false });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('assignResourceSchema', () => {
+  it('accepts a valid payload', () => {
+    const result = assignResourceSchema.safeParse({ userId: 'user-1', resourceRoleTypeId: 'role-1' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a missing userId', () => {
+    const result = assignResourceSchema.safeParse({ userId: '', resourceRoleTypeId: 'role-1' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a missing resourceRoleTypeId', () => {
+    const result = assignResourceSchema.safeParse({ userId: 'user-1', resourceRoleTypeId: '' });
+    expect(result.success).toBe(false);
   });
 });

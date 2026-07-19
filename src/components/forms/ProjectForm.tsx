@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { cn } from '@/lib/utils/cn';
 import {
   updateProjectSchema,
   type ProjectFormFieldValues,
@@ -23,6 +24,8 @@ export interface ProjectFormProps {
   mode: 'create' | 'edit';
   /** Required when `mode === 'edit'`; supplies the pre-filled values and the id to update. */
   project?: Project;
+  /** Rendered at the start of the footer button row (e.g. edit mode's "Delete project" link). */
+  footerLeft?: React.ReactNode;
 }
 
 function toFormValues(project?: Project): ProjectFormFieldValues {
@@ -47,7 +50,7 @@ function toFormValues(project?: Project): ProjectFormFieldValues {
  * backend (`CreateProject` doesn't accept it - see
  * docs/HR_System_BE.postman_collection.json) and its control isn't shown.
  */
-export function ProjectForm({ mode, project }: ProjectFormProps) {
+export function ProjectForm({ mode, project, footerLeft }: ProjectFormProps) {
   const router = useRouter();
   const isEditMode = mode === 'edit';
 
@@ -101,8 +104,16 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="w-full max-w-2xl space-y-4">
-      {submitError && <Alert variant="error">{submitError}</Alert>}
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="w-full max-w-2xl rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
+    >
+      {submitError && (
+        <div className="mb-4">
+          <Alert variant="error">{submitError}</Alert>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -237,13 +248,21 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={() => router.push('/projects')}>
-          Cancel
-        </Button>
-        <Button type="submit" isLoading={isSubmitting}>
-          {isSubmitting ? 'Saving…' : isEditMode ? 'Save changes' : 'Save Project'}
-        </Button>
+      <div
+        className={cn(
+          'mt-6 flex items-center gap-3 border-t border-zinc-200 pt-4',
+          footerLeft ? 'justify-between' : 'justify-end'
+        )}
+      >
+        {footerLeft}
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="outline" onClick={() => router.push('/projects')}>
+            Cancel
+          </Button>
+          <Button type="submit" isLoading={isSubmitting}>
+            {isSubmitting ? 'Saving…' : isEditMode ? 'Save changes' : 'Save Project'}
+          </Button>
+        </div>
       </div>
     </form>
   );

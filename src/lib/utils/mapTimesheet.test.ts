@@ -1,4 +1,11 @@
-import { mapTimesheetEntry, mapTimesheetEntryList, mapTimesheetPeriod, mapTimesheetPeriodList } from './mapTimesheet';
+import {
+  mapTimesheetEntry,
+  mapTimesheetEntryList,
+  mapTimesheetHistoryEntry,
+  mapTimesheetHistoryEntryList,
+  mapTimesheetPeriod,
+  mapTimesheetPeriodList,
+} from './mapTimesheet';
 import type { TimesheetEntryDto, TimesheetPeriodDto } from '@/types/api.types';
 
 const periodDto: TimesheetPeriodDto = {
@@ -70,5 +77,52 @@ describe('mapTimesheetEntryList', () => {
 
   it('returns an empty array for an empty list', () => {
     expect(mapTimesheetEntryList([])).toEqual([]);
+  });
+});
+
+describe('mapTimesheetHistoryEntry', () => {
+  const historyDto: TimesheetEntryDto = {
+    ...entryDto,
+    UserFirstName: 'Lin Thit',
+    UserLastName: 'Htoo',
+    ProjectCode: 'PRJ-001',
+    ProjectName: 'Project Helix',
+    IsApproved: true,
+    ApprovedAt: '2026-06-22T05:18:00',
+  };
+
+  it('maps the denormalized fields returned by GetAllTimesheetEntries', () => {
+    expect(mapTimesheetHistoryEntry(historyDto)).toEqual({
+      id: 'entry-1',
+      userId: 'user-1',
+      userName: 'Lin Thit Htoo',
+      projectId: 'project-1',
+      projectCode: 'PRJ-001',
+      projectName: 'Project Helix',
+      entryDate: '2025-02-24',
+      hours: 6,
+      taskDescription: 'Frontend component development',
+      isApproved: true,
+      approvedAt: '2026-06-22T05:18:00',
+    });
+  });
+
+  it('falls back to placeholders when the name fields are absent', () => {
+    const result = mapTimesheetHistoryEntry(entryDto);
+    expect(result.userName).toBe('Unknown user');
+    expect(result.projectName).toBe('Unknown project');
+    expect(result.approvedAt).toBeNull();
+  });
+});
+
+describe('mapTimesheetHistoryEntryList', () => {
+  it('maps an array of DTOs', () => {
+    const result = mapTimesheetHistoryEntryList([entryDto, { ...entryDto, Id: 'entry-2' }]);
+    expect(result).toHaveLength(2);
+    expect(result[1].id).toBe('entry-2');
+  });
+
+  it('returns an empty array for an empty list', () => {
+    expect(mapTimesheetHistoryEntryList([])).toEqual([]);
   });
 });

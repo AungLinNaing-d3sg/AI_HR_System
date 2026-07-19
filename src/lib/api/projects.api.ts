@@ -1,7 +1,16 @@
 import { axiosInstance } from '@/lib/api/axios';
-import type { ProjectListResponsePayload, ProjectResponsePayload } from '@/types/api.types';
-import type { Project } from '@/types/domain.types';
-import type { CreateProjectFormValues, UpdateProjectFormValues } from '@/lib/validators/project.validators';
+import type {
+  ProjectAssignmentListResponsePayload,
+  ProjectListResponsePayload,
+  ProjectResponsePayload,
+  UnassignedUsersResponsePayload,
+} from '@/types/api.types';
+import type { ProjectAssignment, UnassignedUser, Project } from '@/types/domain.types';
+import type {
+  AssignResourceFormValues,
+  CreateProjectFormValues,
+  UpdateProjectFormValues,
+} from '@/lib/validators/project.validators';
 
 /**
  * Client-side Project domain module. Hooks (`useProjects`, `useProject`,
@@ -34,4 +43,31 @@ export async function updateProject(id: string, values: UpdateProjectFormValues)
 
 export async function deleteProject(id: string): Promise<void> {
   await axiosInstance.delete(`/projects/${id}`);
+}
+
+export async function getProjectAssignments(projectId: string): Promise<ProjectAssignment[]> {
+  const { data } = await axiosInstance.get<ProjectAssignmentListResponsePayload>(
+    `/projects/${projectId}/assignments`
+  );
+  return data.assignments;
+}
+
+export async function assignResource(
+  projectId: string,
+  values: AssignResourceFormValues
+): Promise<ProjectAssignment[]> {
+  const { data } = await axiosInstance.post<ProjectAssignmentListResponsePayload>(
+    `/projects/${projectId}/assignments`,
+    values
+  );
+  return data.assignments;
+}
+
+export async function removeResource(projectId: string, assignmentId: string): Promise<void> {
+  await axiosInstance.delete(`/projects/${projectId}/assignments/${assignmentId}`);
+}
+
+export async function getUnassignedUsers(projectId: string): Promise<UnassignedUser[]> {
+  const { data } = await axiosInstance.get<UnassignedUsersResponsePayload>(`/projects/${projectId}/unassigned-users`);
+  return data.users;
 }

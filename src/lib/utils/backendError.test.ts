@@ -47,6 +47,32 @@ describe('getBackendErrorDetails', () => {
     expect(getBackendErrorDetails(error, 'fallback message').message).toBe('fallback message');
   });
 
+  it('surfaces ASP.NET Core\'s raw ProblemDetails validation message (e.g. a malformed GUID that fails model binding before the envelope even runs)', () => {
+    const error = makeAxiosError(400, {
+      title: 'One or more validation errors occurred.',
+      status: 400,
+      errors: {
+        RoleId: [
+          'The JSON value could not be converted to System.Guid. Path: $.RoleId | LineNumber: 0 | BytePositionInLine: 171.',
+        ],
+      },
+    });
+    const details = getBackendErrorDetails(error);
+    expect(details.message).toBe(
+      'The JSON value could not be converted to System.Guid. Path: $.RoleId | LineNumber: 0 | BytePositionInLine: 171.'
+    );
+    expect(details.errors).toEqual({
+      RoleId: [
+        'The JSON value could not be converted to System.Guid. Path: $.RoleId | LineNumber: 0 | BytePositionInLine: 171.',
+      ],
+    });
+  });
+
+  it('falls back to the ProblemDetails title when there is no per-field errors message', () => {
+    const error = makeAxiosError(400, { title: 'One or more validation errors occurred.' });
+    expect(getBackendErrorDetails(error).message).toBe('One or more validation errors occurred.');
+  });
+
   it('returns a 502 with a generic message for a network-level failure', () => {
     const error = new AxiosError('Network Error', 'ERR_NETWORK');
     expect(getBackendErrorDetails(error)).toEqual({ status: 502, message: 'Something went wrong. Please try again.' });

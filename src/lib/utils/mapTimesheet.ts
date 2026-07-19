@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { TimesheetEntryDto, TimesheetPeriodDto } from '@/types/api.types';
-import type { TimesheetEntry, TimesheetPeriod } from '@/types/domain.types';
+import type { TimesheetEntry, TimesheetHistoryEntry, TimesheetPeriod } from '@/types/domain.types';
 
 /** Maps the backend's PascalCase Timesheet Period DTO to the app's camelCase domain model. */
 export function mapTimesheetPeriod(dto: TimesheetPeriodDto): TimesheetPeriod {
@@ -32,4 +32,30 @@ export function mapTimesheetEntry(dto: TimesheetEntryDto): TimesheetEntry {
 
 export function mapTimesheetEntryList(dtos: TimesheetEntryDto[]): TimesheetEntry[] {
   return dtos.map(mapTimesheetEntry);
+}
+
+/**
+ * Maps a `GetAllTimesheetEntries` DTO to the denormalized shape the
+ * `/timesheets/history` table renders. Only that endpoint (not
+ * `CreateTimesheetEntry`/`UpdateTimesheetEntry`) returns the
+ * `UserFirstName`/`ProjectName`/etc. fields this depends on.
+ */
+export function mapTimesheetHistoryEntry(dto: TimesheetEntryDto): TimesheetHistoryEntry {
+  return {
+    id: dto.Id,
+    userId: dto.UserId,
+    userName: [dto.UserFirstName, dto.UserLastName].filter(Boolean).join(' ') || 'Unknown user',
+    projectId: dto.ProjectId,
+    projectCode: dto.ProjectCode ?? '',
+    projectName: dto.ProjectName ?? 'Unknown project',
+    entryDate: dto.EntryDate,
+    hours: dto.Hours,
+    taskDescription: dto.TaskDescription,
+    isApproved: dto.IsApproved,
+    approvedAt: dto.ApprovedAt ?? null,
+  };
+}
+
+export function mapTimesheetHistoryEntryList(dtos: TimesheetEntryDto[]): TimesheetHistoryEntry[] {
+  return dtos.map(mapTimesheetHistoryEntry);
 }

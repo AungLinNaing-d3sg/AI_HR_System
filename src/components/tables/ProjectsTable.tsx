@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { useDeleteProject } from '@/hooks/useDeleteProject';
 import { Alert } from '@/components/ui/Alert';
@@ -9,6 +10,9 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { cn } from '@/lib/utils/cn';
 import type { Project } from '@/types/domain.types';
+
+const ACTION_LINK_CLASSNAME =
+  'inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -101,7 +105,11 @@ export function ProjectsTable() {
           <tbody className="divide-y divide-zinc-100">
             {projects.map((project) => (
               <tr key={project.id}>
-                <td className="px-4 py-3 font-mono text-xs text-zinc-700">{project.code}</td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-xs text-zinc-700">
+                    {project.code}
+                  </span>
+                </td>
                 <td className="px-4 py-3 font-medium text-zinc-900">{project.name}</td>
                 <td className="px-4 py-3 text-zinc-600">{project.clientName ?? '—'}</td>
                 <td className="px-4 py-3 text-zinc-600">{formatDate(project.startDate)}</td>
@@ -118,10 +126,12 @@ export function ProjectsTable() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="rounded-md px-2 py-1 text-sm font-medium text-zinc-900 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-                    >
+                    <Link href={`/projects/${project.id}/assignments`} className={ACTION_LINK_CLASSNAME}>
+                      <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                      Assign
+                    </Link>
+                    <Link href={`/projects/${project.id}`} className={ACTION_LINK_CLASSNAME}>
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       Edit
                     </Link>
                     <Button
@@ -133,6 +143,7 @@ export function ProjectsTable() {
                         setPendingDelete(project);
                       }}
                     >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       Delete
                     </Button>
                   </div>

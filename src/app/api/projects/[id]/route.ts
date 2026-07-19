@@ -2,9 +2,8 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as projectsBackend from '@/lib/api/projectsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
-import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
-import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapProject } from '@/lib/utils/mapProject';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
@@ -18,8 +17,7 @@ interface RouteParams {
 /**
  * GET /api/projects/:id
  *
- * Fetches a single project by GUID. `[SystemAdmin]`/`[ProjectAdmin]`-only
- * per this feature's frontend RBAC gate (see `project.constants.ts`).
+ * Fetches a single project by GUID. Open to any authenticated user.
  */
 export async function GET(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   const { id } = await params;
@@ -29,14 +27,6 @@ export async function GET(_request: Request, { params }: RouteParams): Promise<N
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
-  }
-
-  const role = extractRole(claims);
-  if (!role || !PROJECT_MANAGEMENT_ROLES.includes(role)) {
-    return NextResponse.json(
-      { message: 'Only a System Admin or Project Admin can view projects.' },
-      { status: 403 }
-    );
   }
 
   try {
@@ -52,8 +42,7 @@ export async function GET(_request: Request, { params }: RouteParams): Promise<N
 /**
  * PUT /api/projects/:id
  *
- * Updates an existing project. `[SystemAdmin]`/`[ProjectAdmin]`-only per
- * this feature's frontend RBAC gate.
+ * Updates an existing project. Open to any authenticated user.
  */
 export async function PUT(request: Request, { params }: RouteParams): Promise<NextResponse> {
   const { id } = await params;
@@ -63,14 +52,6 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
-  }
-
-  const role = extractRole(claims);
-  if (!role || !PROJECT_MANAGEMENT_ROLES.includes(role)) {
-    return NextResponse.json(
-      { message: 'Only a System Admin or Project Admin can update projects.' },
-      { status: 403 }
-    );
   }
 
   let body: unknown;
@@ -117,8 +98,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
 /**
  * DELETE /api/projects/:id
  *
- * Deletes a project. `[SystemAdmin]`/`[ProjectAdmin]`-only per this
- * feature's frontend RBAC gate.
+ * Deletes a project. Open to any authenticated user.
  */
 export async function DELETE(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   const { id } = await params;
@@ -128,14 +108,6 @@ export async function DELETE(_request: Request, { params }: RouteParams): Promis
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
-  }
-
-  const role = extractRole(claims);
-  if (!role || !PROJECT_MANAGEMENT_ROLES.includes(role)) {
-    return NextResponse.json(
-      { message: 'Only a System Admin or Project Admin can delete projects.' },
-      { status: 403 }
-    );
   }
 
   try {

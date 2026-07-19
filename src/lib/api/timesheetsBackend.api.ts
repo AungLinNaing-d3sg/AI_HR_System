@@ -2,6 +2,7 @@ import 'server-only';
 
 import { backendClient } from '@/lib/api/backendClient';
 import type {
+  ApproveTimesheetEntryResponseDto,
   CreateTimesheetEntryRequest,
   TimesheetEntryListResponse,
   TimesheetEntryResponse,
@@ -68,14 +69,25 @@ export async function createTimesheetEntry(
   return response.data;
 }
 
+/** `UpdateTimesheetEntry` returns `Data: null` on success - see `UpdateTimesheetEntryResponse` in api.types.ts. */
 export async function updateTimesheetEntry(
   id: string,
   payload: UpdateTimesheetEntryRequest,
   accessToken: string
-): Promise<TimesheetEntryResponse> {
-  const response = await backendClient.put<TimesheetEntryResponse>(
-    `/TimesheetEntry/UpdateTimesheetEntry/${id}`,
-    payload,
+): Promise<void> {
+  await backendClient.put(`/TimesheetEntry/UpdateTimesheetEntry/${id}`, payload, {
+    headers: authHeader(accessToken),
+  });
+}
+
+/** `ApproveTimesheetEntry` returns only a partial confirmation - see `ApproveTimesheetEntryResponseDto`. */
+export async function approveTimesheetEntry(
+  id: string,
+  accessToken: string
+): Promise<ApproveTimesheetEntryResponseDto> {
+  const response = await backendClient.put<ApproveTimesheetEntryResponseDto>(
+    `/TimesheetEntry/ApproveTimesheetEntry/${id}`,
+    undefined,
     { headers: authHeader(accessToken) }
   );
   return response.data;

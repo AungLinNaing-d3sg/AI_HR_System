@@ -45,17 +45,6 @@ function paramsFor(id: string) {
 
 const validPayload = { hours: 4, taskDescription: 'Updated notes' };
 
-const dto = {
-  Id: 'entry-1',
-  UserId: 'user-1',
-  ProjectId: 'project-1',
-  TimesheetPeriodId: 'period-1',
-  EntryDate: '2025-02-24',
-  Hours: 4,
-  TaskDescription: 'Updated notes',
-  IsApproved: false,
-};
-
 describe('PUT /api/timesheets/entries/:id', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
@@ -84,13 +73,15 @@ describe('PUT /api/timesheets/entries/:id', () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
-    timesheetsBackend.updateTimesheetEntry.mockResolvedValue(dto);
+    // The real backend returns `Data: null` on success (see UpdateTimesheetEntryResponse
+    // in api.types.ts) - the route must not crash trying to read entry fields off that.
+    timesheetsBackend.updateTimesheetEntry.mockResolvedValue(undefined);
 
     const response = await PUT(jsonRequest(validPayload), paramsFor('entry-1'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.entry.hours).toBe(4);
+    expect(body.entry).toEqual({ id: 'entry-1', hours: 4, taskDescription: 'Updated notes' });
     expect(timesheetsBackend.updateTimesheetEntry).toHaveBeenCalledWith(
       'entry-1',
       { Hours: 4, TaskDescription: 'Updated notes' },

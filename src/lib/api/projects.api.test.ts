@@ -12,7 +12,7 @@ const { axiosInstance } = jest.requireMock('./axios') as {
 };
 
 import * as projectsApi from './projects.api';
-import type { Project } from '@/types/domain.types';
+import type { Project, ProjectAssignment, UnassignedUser } from '@/types/domain.types';
 
 const project: Project = {
   id: 'project-1',
@@ -69,5 +69,46 @@ describe('projects.api (client)', () => {
     axiosInstance.delete.mockResolvedValue({ data: { success: true } });
     await projectsApi.deleteProject('project-1');
     expect(axiosInstance.delete).toHaveBeenCalledWith('/projects/project-1');
+  });
+
+  const assignment: ProjectAssignment = {
+    id: 'assignment-1',
+    userId: 'user-1',
+    firstName: 'Alex',
+    lastName: 'Kumar',
+    email: 'alex.kumar@example.com',
+    resourceRoleTypeId: 'role-1',
+    roleName: 'Senior Developer',
+    assignedAt: '2026-06-18T14:11:57',
+    isActive: true,
+  };
+
+  it('getProjectAssignments gets /projects/:id/assignments and returns the assignment list', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { assignments: [assignment] } });
+    const result = await projectsApi.getProjectAssignments('project-1');
+    expect(axiosInstance.get).toHaveBeenCalledWith('/projects/project-1/assignments');
+    expect(result).toEqual([assignment]);
+  });
+
+  it('assignResource posts to /projects/:id/assignments and returns the updated assignment list', async () => {
+    axiosInstance.post.mockResolvedValue({ data: { assignments: [assignment] } });
+    const values = { userId: 'user-1', resourceRoleTypeId: 'role-1' };
+    const result = await projectsApi.assignResource('project-1', values);
+    expect(axiosInstance.post).toHaveBeenCalledWith('/projects/project-1/assignments', values);
+    expect(result).toEqual([assignment]);
+  });
+
+  it('removeResource deletes /projects/:id/assignments/:assignmentId', async () => {
+    axiosInstance.delete.mockResolvedValue({ data: { success: true } });
+    await projectsApi.removeResource('project-1', 'assignment-1');
+    expect(axiosInstance.delete).toHaveBeenCalledWith('/projects/project-1/assignments/assignment-1');
+  });
+
+  it('getUnassignedUsers gets /projects/:id/unassigned-users and returns the user list', async () => {
+    const user: UnassignedUser = { userId: 'user-2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' };
+    axiosInstance.get.mockResolvedValue({ data: { users: [user] } });
+    const result = await projectsApi.getUnassignedUsers('project-1');
+    expect(axiosInstance.get).toHaveBeenCalledWith('/projects/project-1/unassigned-users');
+    expect(result).toEqual([user]);
   });
 });

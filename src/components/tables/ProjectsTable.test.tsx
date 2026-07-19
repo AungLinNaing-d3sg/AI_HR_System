@@ -98,6 +98,15 @@ describe('ProjectsTable', () => {
     expect(editLinks[0]).toHaveAttribute('href', '/projects/project-1');
   });
 
+  it('links each row Assign action to /projects/:id/assignments', async () => {
+    projectsApi.getProjects.mockResolvedValue(projects);
+    renderWithProviders(<ProjectsTable />);
+
+    await screen.findByText('Project Alpha - Web Platform');
+    const assignLinks = screen.getAllByRole('link', { name: 'Assign' });
+    expect(assignLinks[0]).toHaveAttribute('href', '/projects/project-1/assignments');
+  });
+
   it('opens a confirm dialog before deleting and calls deleteProject on confirm', async () => {
     const user = userEvent.setup();
     projectsApi.getProjects.mockResolvedValue(projects);

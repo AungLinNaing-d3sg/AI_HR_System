@@ -78,3 +78,10 @@ export type UpdateProjectFormValues = z.infer<typeof updateProjectSchema>;
  * callback still receives the validated/transformed `UpdateProjectFormValues`.
  */
 export type ProjectFormFieldValues = z.input<typeof updateProjectSchema>;
+
+/** Mirrors the backend's `AssignResource` request DTO. */
+export const assignResourceSchema = z.object({
+  userId: z.string().trim().min(1, 'Select a user to assign.'),
+  resourceRoleTypeId: z.string().trim().min(1, 'Select a role.'),
+});
+export type AssignResourceFormValues = z.infer<typeof assignResourceSchema>;

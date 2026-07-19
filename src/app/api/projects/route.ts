@@ -2,9 +2,8 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as projectsBackend from '@/lib/api/projectsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
-import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
-import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapProjectList, mapProject } from '@/lib/utils/mapProject';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
@@ -12,19 +11,16 @@ import { createProjectSchema } from '@/lib/validators/project.validators';
 import type { ProjectListResponsePayload, ProjectResponsePayload } from '@/types/api.types';
 
 /**
- * Both handlers below independently re-derive the caller's role from the
- * (unverified) access-token cookie - a defense-in-depth measure, not the
- * real authorization boundary (the backend is - see
- * `lib/constants/project.constants.ts` for why this restriction exists on
- * the frontend even though the backend's `/Project/*` endpoints are only
- * tagged `[Auth]`, not role-restricted).
+ * Both handlers below only check for a valid session - Projects is open to
+ * every authenticated role (see `lib/constants/project.constants.ts`), and
+ * the backend's `/Project/*` endpoints are tagged only `[Auth]` anyway (no
+ * role restriction there either).
  */
 
 /**
  * GET /api/projects
  *
- * Lists all projects. `[SystemAdmin]`/`[ProjectAdmin]`-only per this
- * feature's frontend RBAC gate (see `project.constants.ts`).
+ * Lists all projects, visible to any authenticated user.
  */
 export async function GET(): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -33,14 +29,6 @@ export async function GET(): Promise<NextResponse> {
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
-  }
-
-  const role = extractRole(claims);
-  if (!role || !PROJECT_MANAGEMENT_ROLES.includes(role)) {
-    return NextResponse.json(
-      { message: 'Only a System Admin or Project Admin can view projects.' },
-      { status: 403 }
-    );
   }
 
   try {
@@ -56,8 +44,7 @@ export async function GET(): Promise<NextResponse> {
 /**
  * POST /api/projects
  *
- * Creates a new project. `[SystemAdmin]`/`[ProjectAdmin]`-only per this
- * feature's frontend RBAC gate.
+ * Creates a new project. Open to any authenticated user.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -66,14 +53,6 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
-  }
-
-  const role = extractRole(claims);
-  if (!role || !PROJECT_MANAGEMENT_ROLES.includes(role)) {
-    return NextResponse.json(
-      { message: 'Only a System Admin or Project Admin can create projects.' },
-      { status: 403 }
-    );
   }
 
   let body: unknown;

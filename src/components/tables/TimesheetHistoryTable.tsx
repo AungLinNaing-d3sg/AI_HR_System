@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Clock } from 'lucide-react';
+import type { FormEvent } from 'react';
+import { Clock, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApproveTimesheetEntry } from '@/hooks/useApproveTimesheetEntry';
+import { useDeleteTimesheetEntry } from '@/hooks/useDeleteTimesheetEntry';
 import { useTimesheetHistory } from '@/hooks/useTimesheetHistory';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { cn } from '@/lib/utils/cn';
 import { getMondayOfWeek } from '@/lib/utils/week';
@@ -62,11 +65,15 @@ function matchesFilters(
  * `SystemAdmin`), so this component only adds the User column for the
  * roles that can see everyone's entries.
  *
- * Actions column, per row: "Locked" for an already-approved entry; "Edit"
+ * Actions column, per row: "Locked" for an already-approved entry (an
+ * approved entry can never be deleted either - see
+ * `app/api/timesheets/entries/[id]/route.ts`'s `DELETE` handler); "Edit"
  * (jumps to `/timesheets` pre-navigated to that entry's week, reusing the
- * grid's own create/update flow rather than duplicating it here) for the
- * signed-in user's own pending entry; "Approve" for a pending entry that
- * belongs to someone else, if the caller can approve.
+ * grid's own create/update flow rather than duplicating it here) plus
+ * "Delete" for the signed-in user's own pending entry; "Approve" plus
+ * "Delete" for a pending entry that belongs to someone else, if the caller
+ * can approve/manage timesheets - completing the entry's CRUD lifecycle
+ * (create via the grid, read here, update via Edit, delete here).
  */
 export function TimesheetHistoryTable() {
   const { user, role } = useAuth();
@@ -74,11 +81,14 @@ export function TimesheetHistoryTable() {
 
   const { entries, isLoading, isError, error, refetch } = useTimesheetHistory();
   const { approveEntry, isApproving, error: approveError, reset: resetApproveError } = useApproveTimesheetEntry();
+  const { deleteEntry, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteTimesheetEntry();
 
   const [fromInput, setFromInput] = useState('');
   const [toInput, setToInput] = useState('');
   const [projectInput, setProjectInput] = useState(ALL_PROJECTS);
   const [appliedFilters, setAppliedFilters] = useState({ from: '', to: '', projectId: ALL_PROJECTS });
+  const [filterError, setFilterError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TimesheetHistoryEntry | null>(null);
 
   const projectOptions = useMemo(() => {
     const byId = new Map<string, string>();
@@ -96,6 +106,26 @@ export function TimesheetHistoryTable() {
   const totalHours = filteredEntries.reduce((sum, entry) => sum + entry.hours, 0);
   const approvedHours = filteredEntries.filter((entry) => entry.isApproved).reduce((sum, e) => sum + e.hours, 0);
   const pendingHours = totalHours - approvedHours;
+
+  const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (fromInput && toInput && fromInput > toInput) {
+      setFilterError('"From" date must be on or before the "To" date.');
+      return;
+    }
+    setFilterError(null);
+    setAppliedFilters({ from: fromInput, to: toInput, projectId: projectInput });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    try {
+      await deleteEntry(pendingDelete.id);
+      setPendingDelete(null);
+    } catch {
+      // Surfaced via `deleteError` below; keep the dialog open so the user can retry or cancel.
+    }
+  };
 
   if (isLoading) {
     return (
@@ -132,54 +162,62 @@ export function TimesheetHistoryTable() {
         <HistoryStatCard label="Pending approval" value={`${pendingHours}h`} iconClassName="bg-amber-100 text-amber-700" />
       </div>
 
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          setAppliedFilters({ from: fromInput, to: toInput, projectId: projectInput });
-        }}
-        className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 bg-white p-4"
-      >
-        <label htmlFor="history-from" className="sr-only">
-          From date
-        </label>
-        <input
-          id="history-from"
-          type="date"
-          value={fromInput}
-          onChange={(event) => setFromInput(event.target.value)}
-          className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-        />
-        <span className="text-sm text-zinc-500">to</span>
-        <label htmlFor="history-to" className="sr-only">
-          To date
-        </label>
-        <input
-          id="history-to"
-          type="date"
-          value={toInput}
-          onChange={(event) => setToInput(event.target.value)}
-          className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-        />
-        <label htmlFor="history-project" className="sr-only">
-          Project
-        </label>
-        <Select
-          id="history-project"
-          className="w-auto"
-          value={projectInput}
-          onChange={(event) => setProjectInput(event.target.value)}
+      <div className="space-y-2">
+        <form
+          onSubmit={handleFilterSubmit}
+          className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 bg-white p-4"
         >
-          <option value={ALL_PROJECTS}>All Projects</option>
-          {projectOptions.map((option) => (
-            <option key={option.projectId} value={option.projectId}>
-              {option.projectName}
-            </option>
-          ))}
-        </Select>
-        <Button type="submit">Filter</Button>
-      </form>
+          <label htmlFor="history-from" className="sr-only">
+            From date
+          </label>
+          <input
+            id="history-from"
+            type="date"
+            value={fromInput}
+            onChange={(event) => setFromInput(event.target.value)}
+            aria-invalid={filterError ? true : undefined}
+            aria-describedby={filterError ? 'history-filter-error' : undefined}
+            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+          />
+          <span className="text-sm text-zinc-500">to</span>
+          <label htmlFor="history-to" className="sr-only">
+            To date
+          </label>
+          <input
+            id="history-to"
+            type="date"
+            value={toInput}
+            onChange={(event) => setToInput(event.target.value)}
+            aria-invalid={filterError ? true : undefined}
+            aria-describedby={filterError ? 'history-filter-error' : undefined}
+            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+          />
+          <label htmlFor="history-project" className="sr-only">
+            Project
+          </label>
+          <Select
+            id="history-project"
+            className="w-auto"
+            value={projectInput}
+            onChange={(event) => setProjectInput(event.target.value)}
+          >
+            <option value={ALL_PROJECTS}>All Projects</option>
+            {projectOptions.map((option) => (
+              <option key={option.projectId} value={option.projectId}>
+                {option.projectName}
+              </option>
+            ))}
+          </Select>
+          <Button type="submit">Filter</Button>
+        </form>
+        {filterError && (
+          <p id="history-filter-error" role="alert" className="text-sm text-red-600">
+            {filterError}
+          </p>
+        )}
+      </div>
 
-      {approveError && <Alert variant="error">{approveError}</Alert>}
+      {(approveError || deleteError) && <Alert variant="error">{approveError ?? deleteError}</Alert>}
 
       {filteredEntries.length === 0 ? (
         <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
@@ -247,27 +285,47 @@ export function TimesheetHistoryTable() {
                     <td className="px-4 py-3">
                       {entry.isApproved ? (
                         <span className="text-sm text-zinc-400">Locked</span>
-                      ) : isOwnEntry ? (
-                        <Link
-                          href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
-                          className={OUTLINE_LINK_CLASSNAME}
-                        >
-                          Edit
-                        </Link>
-                      ) : canApprove ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          isLoading={isApproving}
-                          onClick={() => {
-                            resetApproveError();
-                            void approveEntry(entry.id);
-                          }}
-                        >
-                          Approve
-                        </Button>
-                      ) : null}
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {isOwnEntry && (
+                            <Link
+                              href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
+                              className={OUTLINE_LINK_CLASSNAME}
+                            >
+                              Edit
+                            </Link>
+                          )}
+                          {!isOwnEntry && canApprove && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              isLoading={isApproving}
+                              onClick={() => {
+                                resetApproveError();
+                                void approveEntry(entry.id);
+                              }}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                          {(isOwnEntry || canApprove) && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-red-200 text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                resetDeleteError();
+                                setPendingDelete(entry);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -276,6 +334,20 @@ export function TimesheetHistoryTable() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete timesheet entry"
+        description={
+          pendingDelete
+            ? `Are you sure you want to delete the ${pendingDelete.hours}h entry for ${pendingDelete.projectName} on ${formatDate(pendingDelete.entryDate)}? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        isConfirming={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

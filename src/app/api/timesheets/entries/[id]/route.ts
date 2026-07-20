@@ -2,8 +2,9 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as timesheetsBackend from '@/lib/api/timesheetsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
+import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
-import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, extractRole, extractUserId, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { updateTimesheetEntrySchema } from '@/lib/validators/timesheet.validators';
@@ -60,6 +61,59 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
   } catch (error) {
     logger.error('Update timesheet entry failed', error);
     const details = getBackendErrorDetails(error, 'Could not update this timesheet entry.');
+    return NextResponse.json({ message: details.message, errors: details.errors }, { status: details.status });
+  }
+}
+
+/**
+ * DELETE /api/timesheets/entries/:id
+ *
+ * Deletes a timesheet entry, completing the entry's CRUD lifecycle alongside
+ * `POST /api/timesheets/entries` (create), `GET /api/timesheets/history`
+ * (read), and this file's own `PUT` (update). `DeleteTimesheetEntry` is
+ * tagged only `[Auth]` in docs/HR_System_BE.postman_collection.json with no
+ * ownership check documented - to avoid introducing the same unchecked-IDOR
+ * shape already flagged against this route's `PUT` handler, this route
+ * fetches the entry first and enforces the same rule the
+ * `/timesheets/history` UI already surfaces: a plain `User` may only delete
+ * their own entry, `SystemAdmin`/`ProjectAdmin` (`PROJECT_MANAGEMENT_ROLES`)
+ * may delete any entry, and an already-approved entry can never be deleted -
+ * mirroring the backend's existing "no edits to an approved/locked entry"
+ * rule for `UpdateTimesheetEntry`.
+ */
+export async function DELETE(_request: Request, { params }: RouteParams): Promise<NextResponse> {
+  const { id } = await params;
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+  const claims = accessToken ? decodeAccessToken(accessToken) : null;
+
+  if (!accessToken || isTokenExpired(claims)) {
+    return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
+  }
+
+  const role = extractRole(claims);
+  const userId = extractUserId(claims);
+  const canManageAny = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
+
+  try {
+    const entry = await timesheetsBackend.getTimesheetEntryById(id, accessToken);
+
+    if (entry.IsApproved) {
+      return NextResponse.json({ message: 'Approved timesheet entries cannot be deleted.' }, { status: 409 });
+    }
+
+    if (!canManageAny && entry.UserId !== userId) {
+      return NextResponse.json(
+        { message: 'You can only delete your own timesheet entries.' },
+        { status: 403 }
+      );
+    }
+
+    await timesheetsBackend.deleteTimesheetEntry(id, accessToken);
+    return NextResponse.json({ success: true, message: 'Timesheet entry deleted successfully.' }, { status: 200 });
+  } catch (error) {
+    logger.error('Delete timesheet entry failed', error);
+    const details = getBackendErrorDetails(error, 'Could not delete this timesheet entry.');
     return NextResponse.json({ message: details.message, errors: details.errors }, { status: details.status });
   }
 }

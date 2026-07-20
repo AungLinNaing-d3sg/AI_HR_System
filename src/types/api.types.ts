@@ -330,6 +330,13 @@ export type TimesheetEntryResponse = TimesheetEntryDto;
  */
 export type UpdateTimesheetEntryResponse = null;
 
+/**
+ * `DeleteTimesheetEntry` returns `Data: null` on success, verified against
+ * the documented example response (same pattern as
+ * `UpdateTimesheetEntryResponse`/`DeleteTimesheetPeriodResponse`).
+ */
+export type DeleteTimesheetEntryResponse = null;
+
 /** Shapes returned by this app's own BFF route handlers to the browser. */
 export interface TimesheetEntryResponsePayload {
   entry: import('./domain.types').TimesheetEntry;

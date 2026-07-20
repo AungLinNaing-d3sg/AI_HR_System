@@ -130,4 +130,31 @@ describe('timesheetsBackend.api (server)', () => {
     );
     expect(result).toEqual(dto);
   });
+
+  it('getTimesheetEntryById gets /TimesheetEntry/GetTimesheetEntryById/:id with a Bearer header', async () => {
+    const dto = {
+      Id: 'entry-1',
+      UserId: 'user-1',
+      ProjectId: 'project-1',
+      TimesheetPeriodId: 'period-1',
+      EntryDate: '2025-02-24',
+      Hours: 6,
+      TaskDescription: 'Frontend component development',
+      IsApproved: false,
+    };
+    backendClient.get.mockResolvedValue({ data: dto });
+    const result = await timesheetsBackend.getTimesheetEntryById('entry-1', 'access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/TimesheetEntry/GetTimesheetEntryById/entry-1', {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+    expect(result).toEqual(dto);
+  });
+
+  it('deleteTimesheetEntry deletes /TimesheetEntry/DeleteTimesheetEntry/:id with a Bearer header', async () => {
+    backendClient.delete.mockResolvedValue({ data: null });
+    await timesheetsBackend.deleteTimesheetEntry('entry-1', 'access-token');
+    expect(backendClient.delete).toHaveBeenCalledWith('/TimesheetEntry/DeleteTimesheetEntry/entry-1', {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+  });
 });

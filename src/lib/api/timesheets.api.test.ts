@@ -108,4 +108,10 @@ describe('timesheets.api (client)', () => {
     expect(axiosInstance.put).toHaveBeenCalledWith('/timesheets/periods/period-1/unlock');
     expect(result).toEqual(confirmation);
   });
+
+  it('deleteTimesheetEntry deletes /timesheets/entries/:id', async () => {
+    axiosInstance.delete.mockResolvedValue({ data: undefined });
+    await timesheetsApi.deleteTimesheetEntry('entry-1');
+    expect(axiosInstance.delete).toHaveBeenCalledWith('/timesheets/entries/entry-1');
+  });
 });

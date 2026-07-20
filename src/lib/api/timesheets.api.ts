@@ -58,6 +58,10 @@ export async function approveTimesheetEntry(id: string): Promise<ApproveTimeshee
   return data;
 }
 
+export async function deleteTimesheetEntry(id: string): Promise<void> {
+  await axiosInstance.delete(`/timesheets/entries/${id}`);
+}
+
 export async function getTimesheetPeriods(): Promise<TimesheetPeriod[]> {
   const { data } = await axiosInstance.get<TimesheetPeriodListResponsePayload>('/timesheets/periods');
   return data.periods;

@@ -99,6 +99,21 @@ export async function getTimesheetEntries(
   return response.data;
 }
 
+/**
+ * `GetTimesheetEntryById` returns the full raw entry, including `UserId`/
+ * `IsApproved` - used by the `DELETE /api/timesheets/entries/:id` route to
+ * verify ownership/approval status before deleting, since
+ * `DeleteTimesheetEntry` itself is tagged only `[Auth]` with no ownership
+ * check documented.
+ */
+export async function getTimesheetEntryById(id: string, accessToken: string): Promise<TimesheetEntryResponse> {
+  const response = await backendClient.get<TimesheetEntryResponse>(
+    `/TimesheetEntry/GetTimesheetEntryById/${id}`,
+    { headers: authHeader(accessToken) }
+  );
+  return response.data;
+}
+
 export async function createTimesheetEntry(
   payload: CreateTimesheetEntryRequest,
   accessToken: string
@@ -133,4 +148,11 @@ export async function approveTimesheetEntry(
     { headers: authHeader(accessToken) }
   );
   return response.data;
+}
+
+/** `DeleteTimesheetEntry` returns `Data: null` on success - nothing to read off the response. */
+export async function deleteTimesheetEntry(id: string, accessToken: string): Promise<void> {
+  await backendClient.delete(`/TimesheetEntry/DeleteTimesheetEntry/${id}`, {
+    headers: authHeader(accessToken),
+  });
 }

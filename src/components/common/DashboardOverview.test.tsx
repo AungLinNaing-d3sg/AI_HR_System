@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { DashboardOverview } from './DashboardOverview';
 import type { UserRole } from '@/types/domain.types';
 
@@ -19,9 +20,21 @@ const { useTimesheetHistory } = jest.requireMock('../../hooks/useTimesheetHistor
 };
 
 function setupHooks(overrides?: { entries?: Array<Record<string, unknown>> }) {
-  useProjects.mockReturnValue({ projects: [], isLoading: false });
-  useTimesheetWeek.mockReturnValue({ week: { entries: [] }, isLoading: false });
-  useTimesheetHistory.mockReturnValue({ entries: overrides?.entries ?? [], isLoading: false });
+  useProjects.mockReturnValue({ projects: [], isLoading: false, isError: false, error: null, refetch: jest.fn() });
+  useTimesheetWeek.mockReturnValue({
+    week: { entries: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+  });
+  useTimesheetHistory.mockReturnValue({
+    entries: overrides?.entries ?? [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+  });
 }
 
 describe('DashboardOverview', () => {
@@ -33,9 +46,15 @@ describe('DashboardOverview', () => {
   });
 
   it('shows loading placeholders for each stat card while data is loading', () => {
-    useProjects.mockReturnValue({ projects: [], isLoading: true });
-    useTimesheetWeek.mockReturnValue({ week: null, isLoading: true });
-    useTimesheetHistory.mockReturnValue({ entries: [], isLoading: true });
+    useProjects.mockReturnValue({ projects: [], isLoading: true, isError: false, error: null, refetch: jest.fn() });
+    useTimesheetWeek.mockReturnValue({ week: null, isLoading: true, isError: false, error: null, refetch: jest.fn() });
+    useTimesheetHistory.mockReturnValue({
+      entries: [],
+      isLoading: true,
+      isError: false,
+      error: null,
+      refetch: jest.fn(),
+    });
 
     render(<DashboardOverview role="User" />);
 
@@ -48,7 +67,7 @@ describe('DashboardOverview', () => {
     expect(screen.getByText('No timesheet entries yet.')).toBeInTheDocument();
   });
 
-  it('renders recent timesheet entries sorted by most recent date first', () => {
+  it('renders recent timesheet entries sorted by most recent date first, with their task description', () => {
     setupHooks({
       entries: [
         {
@@ -56,6 +75,7 @@ describe('DashboardOverview', () => {
           projectName: 'Project Alpha',
           entryDate: '2026-06-01',
           hours: 4,
+          taskDescription: 'Frontend component development',
           isApproved: true,
         },
         {
@@ -63,6 +83,7 @@ describe('DashboardOverview', () => {
           projectName: 'Project Beta',
           entryDate: '2026-06-10',
           hours: 2,
+          taskDescription: null,
           isApproved: false,
         },
       ],
@@ -72,9 +93,38 @@ describe('DashboardOverview', () => {
 
     const items = screen.getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Project Beta');
+    expect(items[0]).toHaveTextContent('No task description provided.');
     expect(items[1]).toHaveTextContent('Project Alpha');
+    expect(items[1]).toHaveTextContent('Frontend component development');
     expect(screen.getByText('Pending')).toBeInTheDocument();
     expect(screen.getByText('Approved')).toBeInTheDocument();
+  });
+
+  it('shows a dismissible-by-retry error banner when a data source fails, and refetches only the failed ones', async () => {
+    const refetchProjects = jest.fn();
+    const refetchWeek = jest.fn();
+    useProjects.mockReturnValue({
+      projects: [],
+      isLoading: false,
+      isError: true,
+      error: 'Could not load projects.',
+      refetch: refetchProjects,
+    });
+    useTimesheetWeek.mockReturnValue({
+      week: null,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: refetchWeek,
+    });
+
+    render(<DashboardOverview role="User" />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load projects.');
+
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }));
+    expect(refetchProjects).toHaveBeenCalledTimes(1);
+    expect(refetchWeek).not.toHaveBeenCalled();
   });
 
   it('hides the "View Reports" quick action for a plain User', () => {

@@ -15,7 +15,8 @@ export function DashboardGreeting() {
   return (
     <h1 className="text-2xl font-semibold text-zinc-900">
       {greeting}
-      {hasHydrated && user ? `, ${user.firstName}` : ''}
+      {hasHydrated && user ? `, ${user.firstName} ` : ''}
+      {hasHydrated && user && <span aria-hidden="true">👋</span>}
     </h1>
   );
 }

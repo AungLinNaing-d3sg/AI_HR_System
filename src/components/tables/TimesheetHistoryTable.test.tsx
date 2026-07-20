@@ -117,4 +117,34 @@ describe('TimesheetHistoryTable', () => {
     await user.click(approveButtons[0]);
     await waitFor(() => expect(timesheetsApi.approveTimesheetEntry).toHaveBeenCalledWith('entry-1'));
   });
+
+  it('shows "Locked" (no action) for an already-approved entry, regardless of who is viewing', async () => {
+    mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+  });
+
+  it('shows an "Edit" link to the timesheet grid for the signed-in user\'s own pending entry', async () => {
+    mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    const editLink = screen.getByRole('link', { name: 'Edit' });
+    // 2025-03-01 is a Saturday - its Monday is 2025-02-24.
+    expect(editLink).toHaveAttribute('href', '/timesheets?week=2025-02-24');
+  });
+
+  it('shows neither Edit nor Approve for a pending entry that belongs to someone else and the viewer cannot approve', async () => {
+    mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'someone-else' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
+  });
 });

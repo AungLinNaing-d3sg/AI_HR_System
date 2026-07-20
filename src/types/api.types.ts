@@ -294,7 +294,14 @@ export interface UpdateTimesheetEntryRequest {
   TaskDescription?: string | null;
 }
 
+/** Mirrors the backend's `CreateTimesheetPeriod` request DTO. */
+export interface CreateTimesheetPeriodRequest {
+  PeriodStart: string;
+  PeriodEnd: string;
+}
+
 export type TimesheetPeriodListResponse = TimesheetPeriodDto[];
+export type TimesheetPeriodResponse = TimesheetPeriodDto;
 export type TimesheetEntryListResponse = TimesheetEntryDto[];
 export type TimesheetEntryResponse = TimesheetEntryDto;
 
@@ -338,4 +345,14 @@ export interface ApproveTimesheetEntryResponsePayload {
   id: string;
   isApproved: boolean;
   approvedAt: string;
+}
+
+/** Shape returned by `GET /api/timesheets/periods`. */
+export interface TimesheetPeriodListResponsePayload {
+  periods: import('./domain.types').TimesheetPeriod[];
+}
+
+/** Shape returned by `POST /api/timesheets/periods`. */
+export interface TimesheetPeriodResponsePayload {
+  period: import('./domain.types').TimesheetPeriod;
 }

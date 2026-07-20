@@ -1,5 +1,6 @@
 import {
   createTimesheetEntrySchema,
+  createTimesheetPeriodSchema,
   taskDescriptionSchema,
   timesheetCellSchema,
   timesheetHoursSchema,
@@ -86,6 +87,31 @@ describe('updateTimesheetEntrySchema', () => {
 
   it('rejects invalid hours', () => {
     const result = updateTimesheetEntrySchema.safeParse({ hours: '-2', taskDescription: '' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('createTimesheetPeriodSchema', () => {
+  it('accepts a valid period where end is after start', () => {
+    const result = createTimesheetPeriodSchema.safeParse({ periodStart: '2026-03-01', periodEnd: '2026-05-15' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a single-day period where end equals start', () => {
+    const result = createTimesheetPeriodSchema.safeParse({ periodStart: '2026-03-01', periodEnd: '2026-03-01' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an end date before the start date', () => {
+    const result = createTimesheetPeriodSchema.safeParse({ periodStart: '2026-05-15', periodEnd: '2026-03-01' });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toEqual(['periodEnd']);
+    }
+  });
+
+  it('rejects a malformed periodStart', () => {
+    const result = createTimesheetPeriodSchema.safeParse({ periodStart: '03/01/2026', periodEnd: '2026-05-15' });
     expect(result.success).toBe(false);
   });
 });

@@ -3,10 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { TimesheetGrid } from './TimesheetGrid';
 import type { TimesheetGridRowView } from '@/hooks/useTimesheetGrid';
 
+jest.mock('next/navigation', () => ({
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+}));
+
 jest.mock('../../hooks/useTimesheetGrid', () => ({
   useTimesheetGrid: jest.fn(),
 }));
 
+const { useSearchParams } = jest.requireMock('next/navigation') as { useSearchParams: jest.Mock };
 const { useTimesheetGrid } = jest.requireMock('../../hooks/useTimesheetGrid') as {
   useTimesheetGrid: jest.Mock;
 };
@@ -67,6 +72,7 @@ function baseHookValue(overrides: Record<string, unknown> = {}) {
 describe('TimesheetGrid', () => {
   beforeEach(() => {
     useTimesheetGrid.mockReset();
+    useSearchParams.mockReturnValue(new URLSearchParams());
   });
 
   it('shows a loading state', () => {
@@ -176,5 +182,21 @@ describe('TimesheetGrid', () => {
     render(<TimesheetGrid />);
 
     expect(screen.getByLabelText('Daily total exceeds 8 hours')).toBeInTheDocument();
+  });
+
+  it('resolves a ?week= search param (from the History "Edit" link) to that week\'s Monday', () => {
+    useSearchParams.mockReturnValue(new URLSearchParams('week=2025-02-25'));
+    useTimesheetGrid.mockReturnValue(baseHookValue());
+    render(<TimesheetGrid />);
+
+    expect(useTimesheetGrid).toHaveBeenCalledWith('2025-02-24');
+  });
+
+  it('ignores an invalid ?week= value and falls back to the default (current) week', () => {
+    useSearchParams.mockReturnValue(new URLSearchParams('week=not-a-date'));
+    useTimesheetGrid.mockReturnValue(baseHookValue());
+    render(<TimesheetGrid />);
+
+    expect(useTimesheetGrid).toHaveBeenCalledWith(undefined);
   });
 });

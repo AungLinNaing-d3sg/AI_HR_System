@@ -4,11 +4,14 @@ import type {
   TimesheetEntryResponsePayload,
   TimesheetEntryUpdateResponsePayload,
   TimesheetHistoryResponsePayload,
+  TimesheetPeriodListResponsePayload,
+  TimesheetPeriodResponsePayload,
   TimesheetWeekResponsePayload,
 } from '@/types/api.types';
-import type { TimesheetEntry, TimesheetHistoryEntry } from '@/types/domain.types';
+import type { TimesheetEntry, TimesheetHistoryEntry, TimesheetPeriod } from '@/types/domain.types';
 import type {
   CreateTimesheetEntryFormValues,
+  CreateTimesheetPeriodFormValues,
   UpdateTimesheetEntryFormValues,
 } from '@/lib/validators/timesheet.validators';
 
@@ -51,4 +54,14 @@ export async function approveTimesheetEntry(id: string): Promise<ApproveTimeshee
     `/timesheets/entries/${id}/approve`
   );
   return data;
+}
+
+export async function getTimesheetPeriods(): Promise<TimesheetPeriod[]> {
+  const { data } = await axiosInstance.get<TimesheetPeriodListResponsePayload>('/timesheets/periods');
+  return data.periods;
+}
+
+export async function createTimesheetPeriod(values: CreateTimesheetPeriodFormValues): Promise<TimesheetPeriod> {
+  const { data } = await axiosInstance.post<TimesheetPeriodResponsePayload>('/timesheets/periods', values);
+  return data.period;
 }

@@ -68,4 +68,21 @@ describe('timesheets.api (client)', () => {
     expect(axiosInstance.put).toHaveBeenCalledWith('/timesheets/entries/entry-1', values);
     expect(result).toEqual(echoed);
   });
+
+  it('getTimesheetPeriods gets /timesheets/periods and returns the period list', async () => {
+    const periods = [week.period!];
+    axiosInstance.get.mockResolvedValue({ data: { periods } });
+    const result = await timesheetsApi.getTimesheetPeriods();
+    expect(axiosInstance.get).toHaveBeenCalledWith('/timesheets/periods');
+    expect(result).toEqual(periods);
+  });
+
+  it('createTimesheetPeriod posts to /timesheets/periods and returns the created period', async () => {
+    const period = week.period!;
+    axiosInstance.post.mockResolvedValue({ data: { period } });
+    const values = { periodStart: '2025-02-01', periodEnd: '2025-02-28' };
+    const result = await timesheetsApi.createTimesheetPeriod(values);
+    expect(axiosInstance.post).toHaveBeenCalledWith('/timesheets/periods', values);
+    expect(result).toEqual(period);
+  });
 });

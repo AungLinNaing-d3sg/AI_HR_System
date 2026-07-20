@@ -42,6 +42,17 @@ describe('timesheetsBackend.api (server)', () => {
     });
   });
 
+  it('createTimesheetPeriod posts to /TimesheetPeriod/CreateTimesheetPeriod with a Bearer header', async () => {
+    const dto = { Id: 'period-1', PeriodStart: '2026-03-01', PeriodEnd: '2026-05-15', IsLocked: false };
+    backendClient.post.mockResolvedValue({ data: dto });
+    const payload = { PeriodStart: '2026-03-01', PeriodEnd: '2026-05-15' };
+    const result = await timesheetsBackend.createTimesheetPeriod(payload, 'access-token');
+    expect(backendClient.post).toHaveBeenCalledWith('/TimesheetPeriod/CreateTimesheetPeriod', payload, {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+    expect(result).toEqual(dto);
+  });
+
   it('getTimesheetEntries gets /TimesheetEntry/GetAllTimesheetEntries with a Bearer header and query params', async () => {
     backendClient.get.mockResolvedValue({ data: [] });
     await timesheetsBackend.getTimesheetEntries('access-token', { userId: 'user-1' });

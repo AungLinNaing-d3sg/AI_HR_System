@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { cn } from '@/lib/utils/cn';
+import { getMondayOfWeek } from '@/lib/utils/week';
 import type { TimesheetHistoryEntry } from '@/types/domain.types';
 
 function formatDate(value: string): string {
@@ -19,6 +21,9 @@ function formatDate(value: string): string {
 }
 
 const ALL_PROJECTS = 'all';
+
+const OUTLINE_LINK_CLASSNAME =
+  'inline-flex h-8 items-center rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-brand hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
 
 interface HistoryStatCardProps {
   label: string;
@@ -49,16 +54,22 @@ function matchesFilters(
 }
 
 /**
- * The `/timesheets/history` table: every visible entry with an
- * Approved/Pending badge (see `docs/HR_System_FE_wireframe.pdf`'s
- * `/timesheets/history` screen). `useTimesheetHistory` already scopes rows
- * by role server-side (own entries only for a plain `User`, every entry for
- * `ProjectAdmin`/`SystemAdmin`), so this component only adds the
- * User column and the Approve action for the roles that can see everyone's
- * entries.
+ * The `/timesheets/history` table (see `docs/HR_System_FE_wireframe.pdf`'s
+ * `/timesheets/history` screen): stat cards, a date-range + project filter,
+ * and a Date/Project/Hours/Task Description/Status/Actions table.
+ * `useTimesheetHistory` already scopes rows by role server-side (own
+ * entries only for a plain `User`, every entry for `ProjectAdmin`/
+ * `SystemAdmin`), so this component only adds the User column for the
+ * roles that can see everyone's entries.
+ *
+ * Actions column, per row: "Locked" for an already-approved entry; "Edit"
+ * (jumps to `/timesheets` pre-navigated to that entry's week, reusing the
+ * grid's own create/update flow rather than duplicating it here) for the
+ * signed-in user's own pending entry; "Approve" for a pending entry that
+ * belongs to someone else, if the caller can approve.
  */
 export function TimesheetHistoryTable() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const canApprove = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
 
   const { entries, isLoading, isError, error, refetch } = useTimesheetHistory();
@@ -126,49 +137,45 @@ export function TimesheetHistoryTable() {
           event.preventDefault();
           setAppliedFilters({ from: fromInput, to: toInput, projectId: projectInput });
         }}
-        className="flex flex-wrap items-end gap-3 rounded-md border border-zinc-200 bg-white p-4"
+        className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 bg-white p-4"
       >
-        <div>
-          <label htmlFor="history-from" className="mb-1.5 block text-xs font-medium text-zinc-700">
-            From
-          </label>
-          <input
-            id="history-from"
-            type="date"
-            value={fromInput}
-            onChange={(event) => setFromInput(event.target.value)}
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-          />
-        </div>
-        <div>
-          <label htmlFor="history-to" className="mb-1.5 block text-xs font-medium text-zinc-700">
-            To
-          </label>
-          <input
-            id="history-to"
-            type="date"
-            value={toInput}
-            onChange={(event) => setToInput(event.target.value)}
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-          />
-        </div>
-        <div>
-          <label htmlFor="history-project" className="mb-1.5 block text-xs font-medium text-zinc-700">
-            Project
-          </label>
-          <Select
-            id="history-project"
-            value={projectInput}
-            onChange={(event) => setProjectInput(event.target.value)}
-          >
-            <option value={ALL_PROJECTS}>All Projects</option>
-            {projectOptions.map((option) => (
-              <option key={option.projectId} value={option.projectId}>
-                {option.projectName}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <label htmlFor="history-from" className="sr-only">
+          From date
+        </label>
+        <input
+          id="history-from"
+          type="date"
+          value={fromInput}
+          onChange={(event) => setFromInput(event.target.value)}
+          className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+        />
+        <span className="text-sm text-zinc-500">to</span>
+        <label htmlFor="history-to" className="sr-only">
+          To date
+        </label>
+        <input
+          id="history-to"
+          type="date"
+          value={toInput}
+          onChange={(event) => setToInput(event.target.value)}
+          className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+        />
+        <label htmlFor="history-project" className="sr-only">
+          Project
+        </label>
+        <Select
+          id="history-project"
+          className="w-auto"
+          value={projectInput}
+          onChange={(event) => setProjectInput(event.target.value)}
+        >
+          <option value={ALL_PROJECTS}>All Projects</option>
+          {projectOptions.map((option) => (
+            <option key={option.projectId} value={option.projectId}>
+              {option.projectName}
+            </option>
+          ))}
+        </Select>
         <Button type="submit">Filter</Button>
       </form>
 
@@ -179,82 +186,95 @@ export function TimesheetHistoryTable() {
           <p className="text-sm text-zinc-600">No timesheet entries match these filters.</p>
         </div>
       ) : (
-      <div className="overflow-x-auto rounded-md border border-zinc-200">
-        <table className="w-full min-w-max text-left text-sm">
-          <caption className="sr-only">Timesheet entry history with approval status.</caption>
-          <thead className="bg-zinc-50 text-xs uppercase text-zinc-500">
-            <tr>
-              {canApprove && (
-                <th scope="col" className="px-4 py-3 font-medium">
-                  User
-                </th>
-              )}
-              <th scope="col" className="px-4 py-3 font-medium">
-                Project
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Date
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Hours
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Task notes
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Status
-              </th>
-              {canApprove && (
-                <th scope="col" className="px-4 py-3 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {filteredEntries.map((entry) => (
-              <tr key={entry.id}>
-                {canApprove && <td className="px-4 py-3 text-zinc-700">{entry.userName}</td>}
-                <td className="px-4 py-3 text-zinc-700">
-                  <span className="font-medium text-zinc-900">{entry.projectName}</span>
-                  {entry.projectCode && <span className="ml-1 font-mono text-xs text-zinc-500">{entry.projectCode}</span>}
-                </td>
-                <td className="px-4 py-3 text-zinc-600">{formatDate(entry.entryDate)}</td>
-                <td className="px-4 py-3 text-zinc-900">{entry.hours}h</td>
-                <td className="px-4 py-3 max-w-xs truncate text-zinc-600">{entry.taskDescription || '—'}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-                      entry.isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                    )}
-                  >
-                    {entry.isApproved ? 'Approved' : 'Pending'}
-                  </span>
-                </td>
+        <div className="overflow-x-auto rounded-md border border-zinc-200">
+          <table className="w-full min-w-max text-left text-sm">
+            <caption className="sr-only">Timesheet entry history with approval status.</caption>
+            <thead className="bg-zinc-50 text-xs uppercase text-zinc-500">
+              <tr>
                 {canApprove && (
-                  <td className="px-4 py-3 text-right">
-                    {!entry.isApproved && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        isLoading={isApproving}
-                        onClick={() => {
-                          resetApproveError();
-                          void approveEntry(entry.id);
-                        }}
-                      >
-                        Approve
-                      </Button>
-                    )}
-                  </td>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    User
+                  </th>
                 )}
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Date
+                </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Project
+                </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Hours
+                </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Task description
+                </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {filteredEntries.map((entry) => {
+                const isOwnEntry = entry.userId === user?.id;
+                return (
+                  <tr key={entry.id}>
+                    {canApprove && <td className="px-4 py-3 text-zinc-700">{entry.userName}</td>}
+                    <td className="px-4 py-3 text-zinc-600">{formatDate(entry.entryDate)}</td>
+                    <td className="px-4 py-3 text-zinc-700">
+                      <span className="font-medium text-zinc-900">{entry.projectName}</span>
+                      {entry.projectCode && (
+                        <span className="ml-1 font-mono text-xs text-zinc-500">{entry.projectCode}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-zinc-900">{entry.hours}</span>{' '}
+                      <span className="text-zinc-500">hrs</span>
+                    </td>
+                    <td className="px-4 py-3 max-w-xs truncate text-zinc-600">{entry.taskDescription || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                          entry.isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                        )}
+                      >
+                        {entry.isApproved ? 'Approved' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {entry.isApproved ? (
+                        <span className="text-sm text-zinc-400">Locked</span>
+                      ) : isOwnEntry ? (
+                        <Link
+                          href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
+                          className={OUTLINE_LINK_CLASSNAME}
+                        >
+                          Edit
+                        </Link>
+                      ) : canApprove ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          isLoading={isApproving}
+                          onClick={() => {
+                            resetApproveError();
+                            void approveEntry(entry.id);
+                          }}
+                        >
+                          Approve
+                        </Button>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

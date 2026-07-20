@@ -4,9 +4,11 @@ import { backendClient } from '@/lib/api/backendClient';
 import type {
   ApproveTimesheetEntryResponseDto,
   CreateTimesheetEntryRequest,
+  CreateTimesheetPeriodRequest,
   TimesheetEntryListResponse,
   TimesheetEntryResponse,
   TimesheetPeriodListResponse,
+  TimesheetPeriodResponse,
   UpdateTimesheetEntryRequest,
 } from '@/types/api.types';
 
@@ -35,6 +37,18 @@ export async function getTimesheetPeriods(
   const response = await backendClient.get<TimesheetPeriodListResponse>(
     '/TimesheetPeriod/GetAllTimesheetPeriods',
     { headers: authHeader(accessToken), params: query }
+  );
+  return response.data;
+}
+
+export async function createTimesheetPeriod(
+  payload: CreateTimesheetPeriodRequest,
+  accessToken: string
+): Promise<TimesheetPeriodResponse> {
+  const response = await backendClient.post<TimesheetPeriodResponse>(
+    '/TimesheetPeriod/CreateTimesheetPeriod',
+    payload,
+    { headers: authHeader(accessToken) }
   );
   return response.data;
 }

@@ -60,3 +60,15 @@ export const updateTimesheetEntrySchema = z.object({
   taskDescription: taskDescriptionSchema,
 });
 export type UpdateTimesheetEntryFormValues = z.infer<typeof updateTimesheetEntrySchema>;
+
+/** Mirrors the backend's `CreateTimesheetPeriod` request DTO. */
+export const createTimesheetPeriodSchema = z
+  .object({
+    periodStart: isoDateSchema,
+    periodEnd: isoDateSchema,
+  })
+  .refine((data) => data.periodEnd >= data.periodStart, {
+    message: 'End date must be on or after the start date.',
+    path: ['periodEnd'],
+  });
+export type CreateTimesheetPeriodFormValues = z.infer<typeof createTimesheetPeriodSchema>;

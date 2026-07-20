@@ -194,4 +194,13 @@ describe('backend request payloads match the Postman collection exactly (PascalC
     );
     expect(Object.keys(capture.get() as object).sort()).toEqual(['Hours', 'TaskDescription']);
   });
+
+  it('TimesheetPeriod/CreateTimesheetPeriod', async () => {
+    const capture = captureRequestBody();
+    await timesheetsBackend.createTimesheetPeriod(
+      { PeriodStart: '2026-03-01', PeriodEnd: '2026-05-15' },
+      'token'
+    );
+    expect(Object.keys(capture.get() as object).sort()).toEqual(['PeriodEnd', 'PeriodStart']);
+  });
 });

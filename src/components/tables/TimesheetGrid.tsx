@@ -2,13 +2,27 @@
 
 import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { TimesheetGridRow } from '@/components/tables/TimesheetGridRow';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { useTimesheetGrid } from '@/hooks/useTimesheetGrid';
 import { WEEKLY_HOURS_TARGET } from '@/lib/constants/timesheet.constants';
 import { cn } from '@/lib/utils/cn';
-import { formatDayHeader, formatWeekRangeLabel } from '@/lib/utils/week';
+import { formatDayHeader, formatWeekRangeLabel, getMondayOfWeek, isValidDateString } from '@/lib/utils/week';
+
+/**
+ * Resolves the grid's initial week from a `?week=YYYY-MM-DD` search param
+ * (used by the "Edit" link on `/timesheets/history` to jump straight to the
+ * week containing a given entry) - any other/missing/invalid value falls
+ * back to the current week (`useTimesheetGrid`'s own default).
+ */
+function useInitialWeekFromSearchParams(): string | undefined {
+  const searchParams = useSearchParams();
+  const weekParam = searchParams.get('week');
+  if (!weekParam || !isValidDateString(weekParam)) return undefined;
+  return getMondayOfWeek(new Date(`${weekParam}T00:00:00.000Z`));
+}
 
 /**
  * The `/timesheets` weekly grid: Monday-Sunday hour inputs per active
@@ -19,6 +33,7 @@ import { formatDayHeader, formatWeekRangeLabel } from '@/lib/utils/week';
  * empty (no active projects) states.
  */
 export function TimesheetGrid() {
+  const initialWeekStart = useInitialWeekFromSearchParams();
   const {
     weekStart,
     weekDates,
@@ -41,7 +56,7 @@ export function TimesheetGrid() {
     goToNextWeek,
     goToCurrentWeek,
     refetch,
-  } = useTimesheetGrid();
+  } = useTimesheetGrid(initialWeekStart);
 
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
   const weekTotal = dailyTotals.reduce((sum, total) => sum + total, 0);

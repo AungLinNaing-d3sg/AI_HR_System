@@ -23,6 +23,7 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
   if (pathname === '/profile') return [DASHBOARD, { label: 'My Account' }];
   if (pathname === '/timesheets') return [DASHBOARD, { label: 'Timesheets' }];
   if (pathname === '/timesheets/history') return [DASHBOARD, TIMESHEETS, { label: 'History' }];
+  if (pathname === '/timesheets/periods') return [DASHBOARD, TIMESHEETS, { label: 'Periods' }];
   if (pathname === '/projects') return [DASHBOARD, { label: 'Projects' }];
   if (pathname === '/projects/new') return [DASHBOARD, PROJECTS, { label: 'New Project' }];
   if (pathname === '/admin/users/create') return [DASHBOARD, { label: 'Create User' }];

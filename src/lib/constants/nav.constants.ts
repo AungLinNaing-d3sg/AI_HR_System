@@ -1,5 +1,14 @@
-import { ClipboardList, Clock, FolderKanban, LayoutGrid, UserPlus, type LucideIcon } from 'lucide-react';
+import {
+  CalendarRange,
+  ClipboardList,
+  Clock,
+  FolderKanban,
+  LayoutGrid,
+  UserPlus,
+  type LucideIcon,
+} from 'lucide-react';
 import type { UserRole } from '@/types/domain.types';
+import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 
 /**
  * Sidebar navigation model. Deliberately only lists routes that actually
@@ -35,6 +44,12 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { label: 'Projects', href: '/projects', icon: FolderKanban },
       { label: 'My Timesheets', href: '/timesheets', icon: Clock },
       { label: 'Timesheet History', href: '/timesheets/history', icon: ClipboardList },
+      {
+        label: 'Timesheet Periods',
+        href: '/timesheets/periods',
+        icon: CalendarRange,
+        roles: PROJECT_MANAGEMENT_ROLES,
+      },
     ],
   },
   {

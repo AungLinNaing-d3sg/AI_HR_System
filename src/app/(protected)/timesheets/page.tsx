@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { TimesheetGrid } from '@/components/tables/TimesheetGrid';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
@@ -30,7 +31,9 @@ export default async function TimesheetsPage() {
         <p className="text-sm text-zinc-500">Log your daily hours per project.</p>
       </header>
 
-      <TimesheetGrid />
+      <Suspense fallback={null}>
+        <TimesheetGrid />
+      </Suspense>
     </div>
   );
 }

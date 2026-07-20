@@ -37,6 +37,7 @@ describe('timesheets.api (client)', () => {
     axiosInstance.get.mockReset();
     axiosInstance.post.mockReset();
     axiosInstance.put.mockReset();
+    axiosInstance.delete.mockReset();
   });
 
   it('getTimesheetWeek gets /timesheets/week with the weekStart param and returns the combined payload', async () => {
@@ -84,5 +85,27 @@ describe('timesheets.api (client)', () => {
     const result = await timesheetsApi.createTimesheetPeriod(values);
     expect(axiosInstance.post).toHaveBeenCalledWith('/timesheets/periods', values);
     expect(result).toEqual(period);
+  });
+
+  it('deleteTimesheetPeriod deletes /timesheets/periods/:id', async () => {
+    axiosInstance.delete.mockResolvedValue({ data: undefined });
+    await timesheetsApi.deleteTimesheetPeriod('period-1');
+    expect(axiosInstance.delete).toHaveBeenCalledWith('/timesheets/periods/period-1');
+  });
+
+  it('lockTimesheetPeriod puts to /timesheets/periods/:id/lock and returns the confirmation', async () => {
+    const confirmation = { id: 'period-1', isLocked: true as const, lockedAt: '2026-06-22T01:26:23.930Z' };
+    axiosInstance.put.mockResolvedValue({ data: confirmation });
+    const result = await timesheetsApi.lockTimesheetPeriod('period-1');
+    expect(axiosInstance.put).toHaveBeenCalledWith('/timesheets/periods/period-1/lock');
+    expect(result).toEqual(confirmation);
+  });
+
+  it('unlockTimesheetPeriod puts to /timesheets/periods/:id/unlock and returns the confirmation', async () => {
+    const confirmation = { id: 'period-1', isLocked: false as const };
+    axiosInstance.put.mockResolvedValue({ data: confirmation });
+    const result = await timesheetsApi.unlockTimesheetPeriod('period-1');
+    expect(axiosInstance.put).toHaveBeenCalledWith('/timesheets/periods/period-1/unlock');
+    expect(result).toEqual(confirmation);
   });
 });

@@ -5,7 +5,9 @@ import type {
   TimesheetEntryUpdateResponsePayload,
   TimesheetHistoryResponsePayload,
   TimesheetPeriodListResponsePayload,
+  TimesheetPeriodLockResponsePayload,
   TimesheetPeriodResponsePayload,
+  TimesheetPeriodUnlockResponsePayload,
   TimesheetWeekResponsePayload,
 } from '@/types/api.types';
 import type { TimesheetEntry, TimesheetHistoryEntry, TimesheetPeriod } from '@/types/domain.types';
@@ -64,4 +66,20 @@ export async function getTimesheetPeriods(): Promise<TimesheetPeriod[]> {
 export async function createTimesheetPeriod(values: CreateTimesheetPeriodFormValues): Promise<TimesheetPeriod> {
   const { data } = await axiosInstance.post<TimesheetPeriodResponsePayload>('/timesheets/periods', values);
   return data.period;
+}
+
+export async function deleteTimesheetPeriod(id: string): Promise<void> {
+  await axiosInstance.delete(`/timesheets/periods/${id}`);
+}
+
+export async function lockTimesheetPeriod(id: string): Promise<TimesheetPeriodLockResponsePayload> {
+  const { data } = await axiosInstance.put<TimesheetPeriodLockResponsePayload>(`/timesheets/periods/${id}/lock`);
+  return data;
+}
+
+export async function unlockTimesheetPeriod(id: string): Promise<TimesheetPeriodUnlockResponsePayload> {
+  const { data } = await axiosInstance.put<TimesheetPeriodUnlockResponsePayload>(
+    `/timesheets/periods/${id}/unlock`
+  );
+  return data;
 }

@@ -302,6 +302,23 @@ export interface CreateTimesheetPeriodRequest {
 
 export type TimesheetPeriodListResponse = TimesheetPeriodDto[];
 export type TimesheetPeriodResponse = TimesheetPeriodDto;
+
+/**
+ * Raw response `Data` for `PUT /TimesheetPeriod/LockTimesheetPeriod/{id}`,
+ * verified against the documented example response - a partial confirmation
+ * only (`LockedAt`), not the full period.
+ */
+export interface LockTimesheetPeriodResponseDto {
+  LockedAt: string;
+}
+
+/**
+ * `UnlockTimesheetPeriod`/`DeleteTimesheetPeriod` both return `Data: null` on
+ * success, verified against the documented example responses (same pattern
+ * as `UpdateTimesheetEntryResponse`/`RemoveResourceResponse`).
+ */
+export type UnlockTimesheetPeriodResponse = null;
+export type DeleteTimesheetPeriodResponse = null;
 export type TimesheetEntryListResponse = TimesheetEntryDto[];
 export type TimesheetEntryResponse = TimesheetEntryDto;
 
@@ -355,4 +372,23 @@ export interface TimesheetPeriodListResponsePayload {
 /** Shape returned by `POST /api/timesheets/periods`. */
 export interface TimesheetPeriodResponsePayload {
   period: import('./domain.types').TimesheetPeriod;
+}
+
+/**
+ * Shape returned by `PUT /api/timesheets/periods/:id/lock` - deliberately a
+ * partial confirmation (not the full period), since the backend's own
+ * `LockTimesheetPeriod` response is likewise partial (see
+ * `LockTimesheetPeriodResponseDto`). Callers refetch the `['timesheets',
+ * 'periods']` list to see the updated row.
+ */
+export interface TimesheetPeriodLockResponsePayload {
+  id: string;
+  isLocked: true;
+  lockedAt: string;
+}
+
+/** Shape returned by `PUT /api/timesheets/periods/:id/unlock`. */
+export interface TimesheetPeriodUnlockResponsePayload {
+  id: string;
+  isLocked: false;
 }

@@ -33,7 +33,9 @@ export default async function TimesheetPeriodsPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold text-zinc-900">Timesheet Periods</h1>
-        <p className="text-sm text-zinc-500">Create payroll periods so users can log hours against them.</p>
+        <p className="text-sm text-zinc-500">
+          Create, lock/unlock, and delete payroll periods that users log hours against.
+        </p>
       </header>
 
       <TimesheetPeriodForm />

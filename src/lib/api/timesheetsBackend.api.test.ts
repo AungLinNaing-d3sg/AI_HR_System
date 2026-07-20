@@ -53,6 +53,36 @@ describe('timesheetsBackend.api (server)', () => {
     expect(result).toEqual(dto);
   });
 
+  it('deleteTimesheetPeriod deletes /TimesheetPeriod/DeleteTimesheetPeriod/:id with a Bearer header', async () => {
+    backendClient.delete.mockResolvedValue({ data: null });
+    await timesheetsBackend.deleteTimesheetPeriod('period-1', 'access-token');
+    expect(backendClient.delete).toHaveBeenCalledWith('/TimesheetPeriod/DeleteTimesheetPeriod/period-1', {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+  });
+
+  it('lockTimesheetPeriod puts to /TimesheetPeriod/LockTimesheetPeriod/:id and returns the LockedAt confirmation', async () => {
+    const dto = { LockedAt: '2026-06-22T01:26:23.930Z' };
+    backendClient.put.mockResolvedValue({ data: dto });
+    const result = await timesheetsBackend.lockTimesheetPeriod('period-1', 'access-token');
+    expect(backendClient.put).toHaveBeenCalledWith(
+      '/TimesheetPeriod/LockTimesheetPeriod/period-1',
+      undefined,
+      { headers: { Authorization: 'Bearer access-token' } }
+    );
+    expect(result).toEqual(dto);
+  });
+
+  it('unlockTimesheetPeriod puts to /TimesheetPeriod/UnlockTimesheetPeriod/:id with a Bearer header', async () => {
+    backendClient.put.mockResolvedValue({ data: null });
+    await timesheetsBackend.unlockTimesheetPeriod('period-1', 'access-token');
+    expect(backendClient.put).toHaveBeenCalledWith(
+      '/TimesheetPeriod/UnlockTimesheetPeriod/period-1',
+      undefined,
+      { headers: { Authorization: 'Bearer access-token' } }
+    );
+  });
+
   it('getTimesheetEntries gets /TimesheetEntry/GetAllTimesheetEntries with a Bearer header and query params', async () => {
     backendClient.get.mockResolvedValue({ data: [] });
     await timesheetsBackend.getTimesheetEntries('access-token', { userId: 'user-1' });

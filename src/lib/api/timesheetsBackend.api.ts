@@ -5,6 +5,7 @@ import type {
   ApproveTimesheetEntryResponseDto,
   CreateTimesheetEntryRequest,
   CreateTimesheetPeriodRequest,
+  LockTimesheetPeriodResponseDto,
   TimesheetEntryListResponse,
   TimesheetEntryResponse,
   TimesheetPeriodListResponse,
@@ -51,6 +52,33 @@ export async function createTimesheetPeriod(
     { headers: authHeader(accessToken) }
   );
   return response.data;
+}
+
+/** `DeleteTimesheetPeriod` returns `Data: null` on success - nothing to read off the response. */
+export async function deleteTimesheetPeriod(id: string, accessToken: string): Promise<void> {
+  await backendClient.delete(`/TimesheetPeriod/DeleteTimesheetPeriod/${id}`, {
+    headers: authHeader(accessToken),
+  });
+}
+
+/** `LockTimesheetPeriod` returns only a partial confirmation - see `LockTimesheetPeriodResponseDto`. */
+export async function lockTimesheetPeriod(
+  id: string,
+  accessToken: string
+): Promise<LockTimesheetPeriodResponseDto> {
+  const response = await backendClient.put<LockTimesheetPeriodResponseDto>(
+    `/TimesheetPeriod/LockTimesheetPeriod/${id}`,
+    undefined,
+    { headers: authHeader(accessToken) }
+  );
+  return response.data;
+}
+
+/** `UnlockTimesheetPeriod` returns `Data: null` on success - nothing to read off the response. */
+export async function unlockTimesheetPeriod(id: string, accessToken: string): Promise<void> {
+  await backendClient.put(`/TimesheetPeriod/UnlockTimesheetPeriod/${id}`, undefined, {
+    headers: authHeader(accessToken),
+  });
 }
 
 export interface TimesheetEntryQuery {

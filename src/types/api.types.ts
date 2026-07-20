@@ -399,3 +399,108 @@ export interface TimesheetPeriodUnlockResponsePayload {
   id: string;
   isLocked: false;
 }
+
+/**
+ * Raw Report domain payloads as returned by the backend (see the `Report`
+ * folder in docs/HR_System_BE.postman_collection.json's documented example
+ * responses for `GenerateTimesheetReport`/`GenerateUserRolesSummary`/
+ * `GenerateMonthlyCostRevenue`). The `Export*` counterparts return a raw
+ * file (xlsx/csv), not JSON, and so have no DTO here - see
+ * `reportsBackend.api.ts`'s `ExportedReportFile`.
+ */
+export interface ReportUserDto {
+  Id: string;
+  FullName: string;
+  EmployeeId: string | null;
+}
+
+export interface ReportProjectDto {
+  Id: string;
+  Code: string;
+  Name: string;
+}
+
+export interface TimesheetReportItemDto {
+  User: ReportUserDto;
+  Project: ReportProjectDto;
+  EntryDate: string;
+  Hours: number;
+  TaskDescription: string | null;
+  IsApproved: boolean;
+}
+
+export interface TimesheetReportResponseDto {
+  ReportGeneratedAt: string;
+  StartDate: string;
+  EndDate: string;
+  TotalHours: number;
+  TotalCount: number;
+  Page: number;
+  PageSize: number;
+  Items: TimesheetReportItemDto[];
+}
+
+export interface ResourceRoleTypeRefDto {
+  Id: string;
+  Name: string;
+}
+
+export interface UserRolesSummaryRowDto {
+  ResourceRoleType: ResourceRoleTypeRefDto;
+  TotalHours: number;
+  UserCount: number;
+}
+
+export interface UserRolesSummaryResponseDto {
+  StartDate: string;
+  EndDate: string;
+  Summary: UserRolesSummaryRowDto[];
+  GrandTotalHours: number;
+}
+
+export interface ReportCurrencyDto {
+  Id: string;
+  Code: string;
+  Symbol: string;
+}
+
+/** Per-role-type line within a project's `Breakdown` - note there is no per-resource(user) field, only the aggregated role. */
+export interface CostRevenueBreakdownDto {
+  ResourceRoleType: string;
+  Hours: number;
+  CostRate: number;
+  BillingRate: number;
+  Cost: number;
+  Revenue: number;
+}
+
+export interface CostRevenueProjectDto {
+  Project: ReportProjectDto;
+  TotalHours: number;
+  TotalCost: number;
+  TotalRevenue: number;
+  Margin: number;
+  Breakdown: CostRevenueBreakdownDto[];
+}
+
+export interface MonthlyCostRevenueResponseDto {
+  Year: number;
+  Month: number;
+  Currency: ReportCurrencyDto;
+  Projects: CostRevenueProjectDto[];
+}
+
+/** Shape returned by `GET /api/reports/timesheet`. */
+export interface TimesheetReportResponsePayload {
+  report: import('./domain.types').TimesheetReport;
+}
+
+/** Shape returned by `GET /api/reports/roles-summary`. */
+export interface UserRolesSummaryResponsePayload {
+  summary: import('./domain.types').UserRolesSummary;
+}
+
+/** Shape returned by `GET /api/reports/cost-revenue`. */
+export interface MonthlyCostRevenueResponsePayload {
+  report: import('./domain.types').MonthlyCostRevenueReport;
+}

@@ -7,6 +7,7 @@ export interface Crumb {
 const DASHBOARD: Crumb = { label: 'Dashboard', href: '/dashboard' };
 const PROJECTS: Crumb = { label: 'Projects', href: '/projects' };
 const TIMESHEETS: Crumb = { label: 'Timesheets', href: '/timesheets' };
+const REPORTS: Crumb = { label: 'Reports', href: '/reports' };
 
 const EDIT_PROJECT_PATTERN = /^\/projects\/[^/]+$/;
 const PROJECT_ASSIGNMENTS_PATTERN = /^\/projects\/([^/]+)\/assignments$/;
@@ -27,6 +28,10 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
   if (pathname === '/projects') return [DASHBOARD, { label: 'Projects' }];
   if (pathname === '/projects/new') return [DASHBOARD, PROJECTS, { label: 'New Project' }];
   if (pathname === '/admin/users/create') return [DASHBOARD, { label: 'Create User' }];
+  if (pathname === '/reports') return [DASHBOARD, { label: 'Reports' }];
+  if (pathname === '/reports/timesheet') return [DASHBOARD, REPORTS, { label: 'Timesheet Report' }];
+  if (pathname === '/reports/roles-summary') return [DASHBOARD, REPORTS, { label: 'Roles Summary' }];
+  if (pathname === '/reports/cost-revenue') return [DASHBOARD, REPORTS, { label: 'Cost & Revenue' }];
 
   const assignmentsMatch = PROJECT_ASSIGNMENTS_PATTERN.exec(pathname);
   if (assignmentsMatch) {

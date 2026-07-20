@@ -64,3 +64,33 @@ export function getBackendErrorDetails(
   }
   return { status: 500, message: fallback };
 }
+
+/**
+ * Same normalization as `getBackendErrorDetails`, but for requests made with
+ * `responseType: 'arraybuffer'` (see `reportsBackend.api.ts`'s export
+ * functions, used by the Report domain's "export" Route Handlers under
+ * `app/api/reports`). On a real error the backend still replies with its
+ * usual `{StatusCode, IsSuccess, Message, Data}` JSON envelope, but axios
+ * hands it back as raw bytes instead of an already-parsed object (since the
+ * request itself asked for binary), so the envelope's `Message` has to be
+ * decoded off the buffer first before falling back to
+ * `getBackendErrorDetails`'s normal handling.
+ */
+export function getBackendFileErrorDetails(
+  error: unknown,
+  fallback = 'Something went wrong. Please try again.'
+): BackendErrorDetails {
+  if (error instanceof AxiosError && error.response?.data instanceof ArrayBuffer) {
+    try {
+      const decoded = Buffer.from(error.response.data).toString('utf-8');
+      const parsed = JSON.parse(decoded) as ApiErrorResponse;
+      if (parsed.Message) {
+        return { status: error.response.status, message: parsed.Message, errors: parsed.Errors };
+      }
+    } catch {
+      // The response body wasn't JSON (e.g. a genuinely corrupted file) -
+      // fall through to the generic handling below instead of throwing.
+    }
+  }
+  return getBackendErrorDetails(error, fallback);
+}

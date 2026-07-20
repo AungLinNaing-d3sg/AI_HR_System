@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Clock, FolderKanban, UserPlus, User as UserIcon } from 'lucide-react';
+import { BarChart3, Clock, FolderKanban, UserPlus, User as UserIcon } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { useTimesheetWeek } from '@/hooks/useTimesheetWeek';
 import { useTimesheetHistory } from '@/hooks/useTimesheetHistory';
+import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getMondayOfWeek } from '@/lib/utils/week';
 import { cn } from '@/lib/utils/cn';
 import type { UserRole } from '@/types/domain.types';
@@ -41,6 +42,7 @@ function formatEntryDate(value: string): string {
 /** Dashboard's data-driven body: stat cards, recent timesheet entries, and quick actions. Client Component so it can use TanStack Query hooks; only real, already-fetched data is shown (no fabricated Invoices/Active-users cards - those domains have no backend endpoint yet). */
 export function DashboardOverview({ role }: DashboardOverviewProps) {
   const isSystemAdmin = role === 'SystemAdmin';
+  const canViewReports = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
 
   const { projects, isLoading: isLoadingProjects } = useProjects();
   const { week, isLoading: isLoadingWeek } = useTimesheetWeek(getMondayOfWeek());
@@ -129,6 +131,15 @@ export function DashboardOverview({ role }: DashboardOverviewProps) {
               <FolderKanban className="h-5 w-5 text-zinc-600" aria-hidden="true" />
               <span className="text-xs font-medium text-zinc-900">Manage Projects</span>
             </Link>
+            {canViewReports && (
+              <Link
+                href="/reports"
+                className="flex flex-col items-center gap-2 rounded-md border border-zinc-200 p-3 text-center transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+              >
+                <BarChart3 className="h-5 w-5 text-zinc-600" aria-hidden="true" />
+                <span className="text-xs font-medium text-zinc-900">View Reports</span>
+              </Link>
+            )}
             {isSystemAdmin && (
               <Link
                 href="/admin/users/create"

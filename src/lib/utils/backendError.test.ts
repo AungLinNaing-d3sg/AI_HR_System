@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 import { AxiosError, AxiosHeaders } from 'axios';
-import { getBackendErrorDetails } from './backendError';
+import { getBackendErrorDetails, getBackendFileErrorDetails } from './backendError';
 
 function makeAxiosError(status: number, data: unknown): AxiosError {
   return new AxiosError(
@@ -80,6 +80,44 @@ describe('getBackendErrorDetails', () => {
 
   it('returns a 500 for a non-Axios error', () => {
     expect(getBackendErrorDetails(new Error('boom'))).toEqual({
+      status: 500,
+      message: 'Something went wrong. Please try again.',
+    });
+  });
+});
+
+describe('getBackendFileErrorDetails', () => {
+  function makeArrayBufferError(status: number, body: unknown): AxiosError {
+    const data = new TextEncoder().encode(JSON.stringify(body)).buffer as ArrayBuffer;
+    return makeAxiosError(status, data);
+  }
+
+  it('decodes the JSON envelope Message off an ArrayBuffer error body', () => {
+    const error = makeArrayBufferError(400, { Message: 'startDate and endDate are required.' });
+    expect(getBackendFileErrorDetails(error)).toEqual({
+      status: 400,
+      message: 'startDate and endDate are required.',
+      errors: undefined,
+    });
+  });
+
+  it('falls back to the generic handling when the ArrayBuffer body is not valid JSON', () => {
+    const notJson = new TextEncoder().encode('not json').buffer as ArrayBuffer;
+    const error = makeAxiosError(500, notJson);
+    expect(getBackendFileErrorDetails(error, 'fallback message').message).toBe('fallback message');
+  });
+
+  it('delegates to getBackendErrorDetails for a normal (already-parsed) error body', () => {
+    const error = makeAxiosError(401, { Message: 'Invalid credentials.' });
+    expect(getBackendFileErrorDetails(error)).toEqual({
+      status: 401,
+      message: 'Invalid credentials.',
+      errors: undefined,
+    });
+  });
+
+  it('returns a 500 for a non-Axios error', () => {
+    expect(getBackendFileErrorDetails(new Error('boom'))).toEqual({
       status: 500,
       message: 'Something went wrong. Please try again.',
     });

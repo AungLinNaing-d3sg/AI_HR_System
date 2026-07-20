@@ -125,3 +125,84 @@ export interface TimesheetWeek {
   projects: Project[];
   entries: TimesheetEntry[];
 }
+
+/**
+ * Report domain models, behind the `/reports/*` screens
+ * (`docs/HR_System_FE_wireframe.pdf`). All three reports are read/export
+ * only - there is no create/update/delete for a report itself, only for the
+ * timesheet/project/rate-card data they summarize.
+ */
+
+export interface ReportUserRef {
+  id: string;
+  fullName: string;
+  employeeId: string | null;
+}
+
+export interface ReportProjectRef {
+  id: string;
+  code: string;
+  name: string;
+}
+
+/** A single row behind the `/reports/timesheet` filter bar + data table. */
+export interface TimesheetReportItem {
+  user: ReportUserRef;
+  project: ReportProjectRef;
+  entryDate: string;
+  hours: number;
+  taskDescription: string | null;
+  isApproved: boolean;
+}
+
+export interface TimesheetReport {
+  reportGeneratedAt: string;
+  startDate: string;
+  endDate: string;
+  totalHours: number;
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  items: TimesheetReportItem[];
+}
+
+export interface UserRolesSummaryRow {
+  resourceRoleType: { id: string; name: string };
+  totalHours: number;
+  userCount: number;
+}
+
+/** Behind the `/reports/roles-summary` summary table + horizontal bar chart placeholder. */
+export interface UserRolesSummary {
+  startDate: string;
+  endDate: string;
+  summary: UserRolesSummaryRow[];
+  grandTotalHours: number;
+}
+
+/** Per-resource-role-type line within a project's cost/revenue breakdown. */
+export interface CostRevenueBreakdownRow {
+  resourceRoleType: string;
+  hours: number;
+  costRate: number;
+  billingRate: number;
+  cost: number;
+  revenue: number;
+}
+
+export interface CostRevenueProject {
+  project: ReportProjectRef;
+  totalHours: number;
+  totalCost: number;
+  totalRevenue: number;
+  margin: number;
+  breakdown: CostRevenueBreakdownRow[];
+}
+
+/** Behind the `/reports/cost-revenue` KPI cards + cost/revenue table + chart placeholder. */
+export interface MonthlyCostRevenueReport {
+  year: number;
+  month: number;
+  currency: { id: string; code: string; symbol: string };
+  projects: CostRevenueProject[];
+}

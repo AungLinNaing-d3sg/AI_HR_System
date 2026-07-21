@@ -4,17 +4,14 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Eye } from 'lucide-react';
 import { useInvoices } from '@/hooks/useInvoices';
-import { useProjects } from '@/hooks/useProjects';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { InvoiceStatusBadge } from '@/components/common/InvoiceStatusBadge';
 import { INVOICE_STATUS_LABELS } from '@/lib/constants/invoice.constants';
 import { cn } from '@/lib/utils/cn';
 import { INVOICE_STATUSES } from '@/types/domain.types';
 import type { InvoiceStatus } from '@/types/domain.types';
 
-const ALL_PROJECTS = 'all';
 const ALL_STATUSES = 'all';
 
 function formatDate(value: string): string {
@@ -29,23 +26,18 @@ function formatAmount(amount: number): string {
 
 /**
  * The `/invoices` table (see `docs/HR_System_FE_wireframe.pdf`'s `/invoices`
- * screen): a row of status-count chips (doubling as status filter tabs), an
- * optional project filter, and an Invoice #/Project/Client/Billing Period/
- * Amount/Currency/Status/Generated/Actions table with a "View" link per row.
- * The wireframe's mockup has no pagination controls, so - matching the
- * `INVOICE_LIST_PAGE_SIZE` comment in `invoice.constants.ts` - this component
- * requests one large, unfiltered-by-status page from the backend (scoped
- * only by the optional project filter) and derives status counts/filtering
- * client-side instead.
+ * screen): a row of status-count chips (doubling as status filter tabs) and
+ * an Invoice #/Project/Client/Billing Period/Amount/Currency/Status/
+ * Generated/Actions table with a "View" link per row. The wireframe has no
+ * project filter/dropdown on this screen, so this component requests one
+ * unfiltered page of invoices from the backend and derives status counts/
+ * filtering client-side instead - matching the `INVOICE_LIST_PAGE_SIZE`
+ * comment in `invoice.constants.ts`.
  */
 export function InvoicesTable() {
-  const [projectFilter, setProjectFilter] = useState(ALL_PROJECTS);
   const [statusFilter, setStatusFilter] = useState<typeof ALL_STATUSES | InvoiceStatus>(ALL_STATUSES);
 
-  const { projects } = useProjects();
-  const { invoices, isLoading, isError, error, refetch } = useInvoices({
-    projectId: projectFilter === ALL_PROJECTS ? undefined : projectFilter,
-  });
+  const { invoices, isLoading, isError, error, refetch } = useInvoices();
 
   const statusCounts = useMemo(() => {
     const counts: Record<InvoiceStatus, number> = { Draft: 0, Sent: 0, Paid: 0, Void: 0, Cancelled: 0 };
@@ -117,25 +109,6 @@ export function InvoicesTable() {
             </span>
           </button>
         ))}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <label htmlFor="invoice-project-filter" className="text-sm text-zinc-500">
-          Project
-        </label>
-        <Select
-          id="invoice-project-filter"
-          className="w-auto"
-          value={projectFilter}
-          onChange={(event) => setProjectFilter(event.target.value)}
-        >
-          <option value={ALL_PROJECTS}>All Projects</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </Select>
       </div>
 
       {invoices.length === 0 ? (

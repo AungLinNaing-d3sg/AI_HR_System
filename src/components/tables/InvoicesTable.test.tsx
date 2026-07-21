@@ -1,33 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { InvoicesTable } from './InvoicesTable';
-import type { InvoiceSummary, Project } from '@/types/domain.types';
+import type { InvoiceSummary } from '@/types/domain.types';
 
 jest.mock('../../lib/api/invoices.api', () => ({
   getInvoices: jest.fn(),
 }));
 
-jest.mock('../../lib/api/projects.api', () => ({
-  getProjects: jest.fn(),
-}));
-
 const invoicesApi = jest.requireMock('../../lib/api/invoices.api') as { getInvoices: jest.Mock };
-const projectsApi = jest.requireMock('../../lib/api/projects.api') as { getProjects: jest.Mock };
-
-const project: Project = {
-  id: 'project-1',
-  code: 'PRJ-001',
-  name: 'Project Helix',
-  description: null,
-  clientName: 'Acme Corp',
-  clientEmail: null,
-  startDate: null,
-  endDate: null,
-  maxDailyHours: null,
-  isActive: true,
-};
 
 const draftInvoice: InvoiceSummary = {
   id: 'invoice-1',
@@ -58,8 +40,6 @@ function renderWithProviders(ui: ReactNode) {
 describe('InvoicesTable', () => {
   beforeEach(() => {
     invoicesApi.getInvoices.mockReset();
-    projectsApi.getProjects.mockReset();
-    projectsApi.getProjects.mockResolvedValue([project]);
   });
 
   it('shows a loading state initially', () => {
@@ -119,16 +99,13 @@ describe('InvoicesTable', () => {
     expect(screen.queryByText('INV-2025-0002')).not.toBeInTheDocument();
   });
 
-  it('refetches with the selected project filter', async () => {
-    const user = userEvent.setup();
+  it('fetches invoices without a project filter and renders no project filter control', async () => {
     invoicesApi.getInvoices.mockResolvedValue({ invoices: [draftInvoice], totalCount: 1 });
     renderWithProviders(<InvoicesTable />);
 
     await screen.findByText('INV-2025-0001');
-    await user.selectOptions(screen.getByLabelText(/project/i), 'project-1');
 
-    await waitFor(() =>
-      expect(invoicesApi.getInvoices).toHaveBeenLastCalledWith({ projectId: 'project-1' })
-    );
+    expect(invoicesApi.getInvoices).toHaveBeenCalledWith({});
+    expect(screen.queryByLabelText(/project/i)).not.toBeInTheDocument();
   });
 });

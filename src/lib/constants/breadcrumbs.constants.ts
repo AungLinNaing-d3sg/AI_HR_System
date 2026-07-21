@@ -8,9 +8,11 @@ const DASHBOARD: Crumb = { label: 'Dashboard', href: '/dashboard' };
 const PROJECTS: Crumb = { label: 'Projects', href: '/projects' };
 const TIMESHEETS: Crumb = { label: 'Timesheets', href: '/timesheets' };
 const REPORTS: Crumb = { label: 'Reports', href: '/reports' };
+const INVOICES: Crumb = { label: 'Invoices', href: '/invoices' };
 
 const EDIT_PROJECT_PATTERN = /^\/projects\/[^/]+$/;
 const PROJECT_ASSIGNMENTS_PATTERN = /^\/projects\/([^/]+)\/assignments$/;
+const INVOICE_DETAIL_PATTERN = /^\/invoices\/[^/]+$/;
 
 /**
  * Static pathname -> breadcrumb-trail mapping. Kept as an explicit lookup
@@ -32,12 +34,15 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
   if (pathname === '/reports/timesheet') return [DASHBOARD, REPORTS, { label: 'Timesheet Report' }];
   if (pathname === '/reports/roles-summary') return [DASHBOARD, REPORTS, { label: 'Roles Summary' }];
   if (pathname === '/reports/cost-revenue') return [DASHBOARD, REPORTS, { label: 'Cost & Revenue' }];
+  if (pathname === '/invoices') return [DASHBOARD, { label: 'Invoices' }];
+  if (pathname === '/invoices/generate') return [DASHBOARD, INVOICES, { label: 'Generate Invoice' }];
 
   const assignmentsMatch = PROJECT_ASSIGNMENTS_PATTERN.exec(pathname);
   if (assignmentsMatch) {
     return [DASHBOARD, PROJECTS, { label: 'Edit', href: `/projects/${assignmentsMatch[1]}` }, { label: 'Assignments' }];
   }
   if (EDIT_PROJECT_PATTERN.test(pathname)) return [DASHBOARD, PROJECTS, { label: 'Edit' }];
+  if (INVOICE_DETAIL_PATTERN.test(pathname)) return [DASHBOARD, INVOICES, { label: 'Edit' }];
 
   return [DASHBOARD];
 }

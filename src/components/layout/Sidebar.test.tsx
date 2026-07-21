@@ -36,4 +36,15 @@ describe('Sidebar', () => {
     render(<Sidebar />);
     expect(screen.queryByRole('link', { name: 'Create User' })).not.toBeInTheDocument();
   });
+
+  it('shows the Billing/Invoices item to a ProjectAdmin but hides it from a plain User', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });
+    const { rerender } = render(<Sidebar />);
+    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute('href', '/invoices');
+
+    mockUseAuth.mockReturnValue({ role: 'User' });
+    rerender(<Sidebar />);
+    expect(screen.queryByRole('link', { name: 'Invoices' })).not.toBeInTheDocument();
+  });
 });

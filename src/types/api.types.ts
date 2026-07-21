@@ -536,3 +536,229 @@ export interface UserRolesSummaryResponsePayload {
 export interface MonthlyCostRevenueResponsePayload {
   report: import('./domain.types').MonthlyCostRevenueReport;
 }
+
+/**
+ * Raw Invoice domain payloads as returned by the backend (see the `Invoice`
+ * folder in docs/HR_System_BE.postman_collection.json's documented example
+ * responses). `GenerateInvoice`'s response and `GetAllInvoices`'s list items
+ * are both deliberately lighter than `GetInvoiceById`'s full detail (no
+ * `LineItems` array) - modeled here as distinct DTOs rather than one
+ * "everything optional" shape, matching the DTO-per-endpoint convention used
+ * throughout this file (e.g. `ApproveTimesheetEntryResponseDto` vs the full
+ * `TimesheetEntryDto`).
+ */
+export interface InvoiceProjectRefDto {
+  Id: string;
+  Code: string;
+  Name: string;
+}
+
+export interface InvoiceCurrencyRefDto {
+  Code: string;
+  Symbol: string;
+}
+
+export interface InvoiceCurrencyDetailDto extends InvoiceCurrencyRefDto {
+  Id: string;
+}
+
+export interface GenerateInvoiceRequest {
+  ProjectId: string;
+  BillingPeriodStart: string;
+  BillingPeriodEnd: string;
+  CurrencyId: string;
+  ClientName: string;
+  ClientEmail?: string | null;
+  IssuedDate: string;
+  DueDate: string;
+  Notes?: string | null;
+}
+
+/** Raw response `Data` for `POST /Invoice/GenerateInvoice`, verified against the documented example response. */
+export interface GenerateInvoiceResponseDto {
+  Id: string;
+  InvoiceNumber: string;
+  ProjectId: string;
+  ProjectName: string;
+  ClientName: string;
+  BillingPeriodStart: string;
+  BillingPeriodEnd: string;
+  Currency: InvoiceCurrencyRefDto;
+  ExchangeRate: number;
+  SubTotal: number;
+  TaxAmount: number;
+  TotalAmount: number;
+  Status: import('./domain.types').InvoiceStatus;
+  LineItemCount: number;
+}
+
+/** A single row within `GetAllInvoices`'s `Items`, verified against the documented example response. */
+export interface InvoiceListItemDto {
+  Id: string;
+  InvoiceNumber: string;
+  Project: InvoiceProjectRefDto;
+  ClientName: string;
+  BillingPeriodStart: string;
+  BillingPeriodEnd: string;
+  Currency: InvoiceCurrencyRefDto;
+  TotalAmount: number;
+  Status: import('./domain.types').InvoiceStatus;
+  IssuedDate: string;
+  DueDate: string;
+}
+
+export interface InvoiceListResponseDto {
+  Items: InvoiceListItemDto[];
+  TotalCount: number;
+  Page: number;
+  PageSize: number;
+}
+
+export interface InvoiceLineItemUserDto {
+  Id: string;
+  FullName: string;
+  EmployeeId: string | null;
+}
+
+export interface InvoiceLineItemRoleDto {
+  Id: string;
+  Name: string;
+}
+
+export interface InvoiceLineItemDto {
+  Id: string;
+  User: InvoiceLineItemUserDto;
+  ResourceRoleType: InvoiceLineItemRoleDto;
+  TimesheetEntryId: string;
+  Description: string | null;
+  Hours: number;
+  UnitRate: number;
+  Amount: number;
+}
+
+/** Raw response `Data` for `GET /Invoice/GetInvoiceById/{id}`, verified against the documented example response. */
+export interface InvoiceDetailDto {
+  Id: string;
+  InvoiceNumber: string;
+  Project: InvoiceProjectRefDto;
+  ClientName: string;
+  ClientEmail: string | null;
+  BillingPeriodStart: string;
+  BillingPeriodEnd: string;
+  Currency: InvoiceCurrencyDetailDto;
+  ExchangeRate: number;
+  SubTotal: number;
+  TaxAmount: number;
+  TotalAmount: number;
+  Status: import('./domain.types').InvoiceStatus;
+  IssuedDate: string;
+  DueDate: string;
+  Notes: string | null;
+  LineItems: InvoiceLineItemDto[];
+  CreatedAt: string;
+}
+
+/** Mirrors the backend's `UpdateInvoice` request DTO - all fields optional per its documented description. */
+export interface UpdateInvoiceRequest {
+  CurrencyId?: string;
+  ClientName?: string;
+  ClientEmail?: string | null;
+  IssuedDate?: string;
+  DueDate?: string;
+  Notes?: string | null;
+}
+
+/**
+ * Raw response `Data` for `PUT /Invoice/UpdateInvoice/{id}`, verified against
+ * the documented example response - a partial confirmation only (no
+ * `Project`/`Currency`/`LineItems`), not the full invoice.
+ */
+export interface UpdateInvoiceResponseDto {
+  Id: string;
+  InvoiceNumber: string;
+  ClientName: string;
+  ClientEmail: string | null;
+  IssuedDate: string;
+  DueDate: string;
+  Notes: string | null;
+  Status: import('./domain.types').InvoiceStatus;
+}
+
+/**
+ * Raw response `Data` shape shared by `SendInvoice`/`MarkInvoicePaid`/
+ * `VoidInvoice`/`CancelInvoice`, verified against their documented example
+ * responses - each is a partial `{Id, Status}` confirmation only.
+ */
+export interface InvoiceStatusChangeResponseDto {
+  Id: string;
+  Status: import('./domain.types').InvoiceStatus;
+}
+
+/** `DeleteInvoice` returns `Data: null` on success, verified against the documented example response. */
+export type DeleteInvoiceResponse = null;
+
+/** Shape returned by `GET /api/invoices`. */
+export interface InvoiceListResponsePayload {
+  invoices: import('./domain.types').InvoiceSummary[];
+  totalCount: number;
+}
+
+/** Shape returned by `POST /api/invoices` and `GET /api/invoices/:id`. */
+export interface GeneratedInvoiceResponsePayload {
+  invoice: import('./domain.types').GeneratedInvoice;
+}
+
+export interface InvoiceResponsePayload {
+  invoice: import('./domain.types').InvoiceDetail;
+}
+
+/**
+ * Shape returned by `PUT /api/invoices/:id` - deliberately lighter than
+ * `InvoiceResponsePayload`, mirroring `UpdateInvoiceResponseDto`'s own
+ * partial shape (see above). Callers refetch `['invoices', 'detail', id]`
+ * to see the full updated invoice.
+ */
+export interface InvoiceUpdateResponsePayload {
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+    clientName: string;
+    clientEmail: string | null;
+    issuedDate: string;
+    dueDate: string;
+    notes: string | null;
+    status: import('./domain.types').InvoiceStatus;
+  };
+}
+
+/** Shape returned by `PUT /api/invoices/:id/send`, `/mark-paid`, `/void`, and `/cancel`. */
+export interface InvoiceStatusResponsePayload {
+  id: string;
+  status: import('./domain.types').InvoiceStatus;
+}
+
+/**
+ * Raw payload for `GET /Currency/GetAllCurrencies`, verified against the
+ * documented example response - paginated, like `ResourceRoleTypeListResponse`.
+ */
+export interface CurrencyDto {
+  Id: string;
+  Code: string;
+  Name: string;
+  Symbol: string;
+  IsBaseCurrency: boolean;
+  IsActive: boolean;
+  CreatedAt: string;
+}
+
+export interface CurrencyListResponseDto {
+  Items: CurrencyDto[];
+  TotalCount: number;
+  Page: number;
+  PageSize: number;
+}
+
+/** Shape returned by `GET /api/currencies`. */
+export interface CurrencyListResponsePayload {
+  currencies: import('./domain.types').Currency[];
+}

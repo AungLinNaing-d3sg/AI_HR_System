@@ -216,3 +216,113 @@ export interface MonthlyCostRevenueReport {
   currency: { id: string; code: string; symbol: string };
   projects: CostRevenueProject[];
 }
+
+/**
+ * Invoice domain models, behind the `/invoices*` screens
+ * (`docs/HR_System_FE_wireframe.pdf`). Mirrors the backend RBAC-adjacent
+ * lifecycle documented for `/Invoice/*` in
+ * docs/HR_System_BE.postman_collection.json: a `Draft` invoice can be
+ * `Update`d/`Delete`d/`Send`-transitioned to `Sent`; a `Sent` invoice can be
+ * marked `Paid`; `Void`/`Cancel` apply "regardless of current status" per the
+ * documented endpoint descriptions. There is no `Finalized` status in the
+ * real API (unlike the wireframe's hardcoded-JSON prototype, which invented
+ * one) - see `lib/constants/invoice.constants.ts`.
+ */
+export const INVOICE_STATUSES = ['Draft', 'Sent', 'Paid', 'Void', 'Cancelled'] as const;
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+
+export interface InvoiceProjectRef {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface InvoiceCurrencyRef {
+  code: string;
+  symbol: string;
+}
+
+export interface InvoiceCurrencyDetail extends InvoiceCurrencyRef {
+  id: string;
+}
+
+/** A single row on the `/invoices` table - see `GET /Invoice/GetAllInvoices`. */
+export interface InvoiceSummary {
+  id: string;
+  invoiceNumber: string;
+  project: InvoiceProjectRef;
+  clientName: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  currency: InvoiceCurrencyRef;
+  totalAmount: number;
+  status: InvoiceStatus;
+  issuedDate: string;
+  dueDate: string;
+}
+
+/** A single billable line on an invoice - see `GET /Invoice/GetInvoiceById/{id}`'s `LineItems`. */
+export interface InvoiceLineItem {
+  id: string;
+  user: { id: string; fullName: string; employeeId: string | null };
+  resourceRoleType: { id: string; name: string };
+  timesheetEntryId: string;
+  description: string | null;
+  hours: number;
+  unitRate: number;
+  amount: number;
+}
+
+/** Full invoice detail behind `/invoices/[id]` - see `GET /Invoice/GetInvoiceById/{id}`. */
+export interface InvoiceDetail {
+  id: string;
+  invoiceNumber: string;
+  project: InvoiceProjectRef;
+  clientName: string;
+  clientEmail: string | null;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  currency: InvoiceCurrencyDetail;
+  exchangeRate: number;
+  subTotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: InvoiceStatus;
+  issuedDate: string;
+  dueDate: string;
+  notes: string | null;
+  lineItems: InvoiceLineItem[];
+  createdAt: string;
+}
+
+/**
+ * Result of `POST /Invoice/GenerateInvoice` - deliberately lighter than
+ * `InvoiceDetail` (no `LineItems` array, only a `lineItemCount`), matching
+ * what the backend's documented example response actually returns.
+ */
+export interface GeneratedInvoice {
+  id: string;
+  invoiceNumber: string;
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  currency: InvoiceCurrencyRef;
+  exchangeRate: number;
+  subTotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: InvoiceStatus;
+  lineItemCount: number;
+}
+
+/** A supported billing currency - see `GET /Currency/GetAllCurrencies`. Backs the invoice currency dropdown. */
+export interface Currency {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  isBaseCurrency: boolean;
+  isActive: boolean;
+}

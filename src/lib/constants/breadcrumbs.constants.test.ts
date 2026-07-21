@@ -29,6 +29,26 @@ describe('getBreadcrumbs', () => {
     ]);
   });
 
+  it('returns the Invoices list trail', () => {
+    expect(getBreadcrumbs('/invoices')).toEqual([{ label: 'Dashboard', href: '/dashboard' }, { label: 'Invoices' }]);
+  });
+
+  it('returns the Generate Invoice trail, nested under Invoices', () => {
+    expect(getBreadcrumbs('/invoices/generate')).toEqual([
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Invoices', href: '/invoices' },
+      { label: 'Generate Invoice' },
+    ]);
+  });
+
+  it('returns the invoice detail trail, nested under Invoices', () => {
+    expect(getBreadcrumbs('/invoices/abc-123')).toEqual([
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Invoices', href: '/invoices' },
+      { label: 'Edit' },
+    ]);
+  });
+
   it('falls back to just Dashboard for an unknown path', () => {
     expect(getBreadcrumbs('/unknown')).toEqual([{ label: 'Dashboard', href: '/dashboard' }]);
   });

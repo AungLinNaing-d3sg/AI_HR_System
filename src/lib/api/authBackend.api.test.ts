@@ -3,19 +3,21 @@
  */
 jest.mock('./backendClient', () => ({
   backendClient: {
+    get: jest.fn(),
     post: jest.fn(),
     put: jest.fn(),
   },
 }));
 
 const { backendClient } = jest.requireMock('./backendClient') as {
-  backendClient: { post: jest.Mock; put: jest.Mock };
+  backendClient: { get: jest.Mock; post: jest.Mock; put: jest.Mock };
 };
 
 import * as authBackend from './authBackend.api';
 
 describe('authBackend.api (server)', () => {
   beforeEach(() => {
+    backendClient.get.mockReset();
     backendClient.post.mockReset();
     backendClient.put.mockReset();
   });
@@ -75,5 +77,27 @@ describe('authBackend.api (server)', () => {
     expect(backendClient.post).toHaveBeenCalledWith('/Auth/CreateUser', payload, {
       headers: { Authorization: 'Bearer access-token' },
     });
+  });
+
+  it('getRoles gets /Auth/GetRoles with a Bearer header', async () => {
+    backendClient.get.mockResolvedValue({ data: [{ Id: 'role-1', Name: 'SystemAdmin', Description: null }] });
+    const result = await authBackend.getRoles('access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Auth/GetRoles', {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+    expect(result).toEqual([{ Id: 'role-1', Name: 'SystemAdmin', Description: null }]);
+  });
+
+  it('getUnassignedUsers gets /Auth/GetUnassignedUsers with a Bearer header', async () => {
+    backendClient.get.mockResolvedValue({
+      data: [{ UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null }],
+    });
+    const result = await authBackend.getUnassignedUsers('access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Auth/GetUnassignedUsers', {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+    expect(result).toEqual([
+      { UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null },
+    ]);
   });
 });

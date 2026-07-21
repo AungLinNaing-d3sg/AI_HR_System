@@ -110,6 +110,38 @@ export interface CreateUserResponsePayload {
   user: import('./domain.types').CreatedUser;
 }
 
+/** Raw payload for `GET /Auth/GetRoles` - reference data for the Create User role dropdown. */
+export interface RoleDto {
+  Id: string;
+  Name: string;
+  Description: string | null;
+}
+
+export type GetRolesResponse = RoleDto[];
+
+/**
+ * Raw payload for `GET /Auth/GetUnassignedUsers` - every user with no
+ * current project assignment. Global (no `projectId` path param), unlike
+ * the per-project `/Project/GetProjectAssignments/{projectId}` derivation
+ * this app previously combined across every project to fake an
+ * "unassigned users" list (see `app/api/auth/unassigned-users/route.ts`).
+ */
+export interface UnassignedUserDto {
+  UserId: string;
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  EmployeeId: string | null;
+}
+
+export type GetUnassignedUsersResponse = UnassignedUserDto[];
+
+/** Shape returned by `GET /api/auth/roles` to the browser. */
+export interface RoleListResponsePayload {
+  roles: import('./domain.types').Role[];
+}
+
 /**
  * Raw project payload as returned by the backend
  * (`docs/HR_System_BE.postman_collection.json` does not include a response

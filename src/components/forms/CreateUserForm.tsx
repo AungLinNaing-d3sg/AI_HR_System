@@ -3,21 +3,23 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useCreateUser } from '@/hooks/useCreateUser';
+import { useRoles } from '@/hooks/useRoles';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { FieldError } from '@/components/ui/FieldError';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { Select } from '@/components/ui/Select';
 import { createUserSchema, type CreateUserFormValues } from '@/lib/validators/auth.validators';
 
 /**
- * `SystemAdmin`-only account creation form. `RoleId` is entered directly
- * as a GUID because the backend contract in scope for this feature
- * (Auth domain) does not expose a "list roles" endpoint to populate a
- * dropdown from - see the report's "Known limitations" section.
+ * `SystemAdmin`-only account creation form. `RoleId` is selected from a
+ * dropdown populated by `useRoles` (`GET /Auth/GetRoles` via
+ * `app/api/auth/roles/route.ts`), replacing manual GUID entry.
  */
 export function CreateUserForm() {
   const { createUser, isCreating, isSuccess, error, reset: resetMutation } = useCreateUser();
+  const { roles, isLoading: isLoadingRoles, isError: isRolesError, error: rolesError } = useRoles();
 
   const {
     register,
@@ -53,6 +55,7 @@ export function CreateUserForm() {
       <h2 className="text-lg font-semibold text-zinc-900">Create user</h2>
 
       {error && <Alert variant="error">{error}</Alert>}
+      {isRolesError && <Alert variant="error">{rolesError ?? 'Could not load roles.'}</Alert>}
       {isSuccess && <Alert variant="success">User created successfully.</Alert>}
 
       <div>
@@ -124,18 +127,25 @@ export function CreateUserForm() {
       </div>
 
       <div>
-        <Label htmlFor="roleId">Role ID</Label>
-        <Input
+        <Label htmlFor="roleId">Role</Label>
+        <Select
           id="roleId"
-          autoComplete="off"
           hasError={Boolean(errors.roleId)}
-          aria-describedby="roleId-help roleId-error"
+          aria-describedby={errors.roleId ? 'roleId-error' : undefined}
+          disabled={isLoadingRoles}
           {...register('roleId')}
-        />
-        <p id="roleId-help" className="mt-1 text-xs text-zinc-500">
-          The GUID of the role to assign (SystemAdmin, ProjectAdmin, User, or Guest).
-        </p>
+        >
+          <option value="">{isLoadingRoles ? 'Loading roles…' : 'Select a role'}</option>
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
+        </Select>
         <FieldError id="roleId-error" message={errors.roleId?.message} />
+        {roles.length === 0 && !isLoadingRoles && !isRolesError && (
+          <p className="mt-1 text-xs text-zinc-500">No roles available. Contact a system administrator.</p>
+        )}
       </div>
 
       <Button type="submit" isLoading={isCreating}>

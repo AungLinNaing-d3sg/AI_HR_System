@@ -79,7 +79,7 @@ export const createUserSchema = z.object({
   roleId: z
     .string()
     .trim()
-    .min(1, 'Role ID is required.')
-    .regex(GUID_REGEX, 'Enter a valid Role ID (GUID), e.g. 11111111-1111-1111-1111-111111111101.'),
+    .min(1, 'Please select a role.')
+    .regex(GUID_REGEX, 'Select a valid role.'),
 });
 export type CreateUserFormValues = z.infer<typeof createUserSchema>;

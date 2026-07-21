@@ -69,10 +69,20 @@ export interface ResourceRoleType {
 }
 
 /**
+ * An assignable account role (e.g. "SystemAdmin") - see `GET /Auth/GetRoles`.
+ * Populates the `RoleId` dropdown on the Create User form, replacing manual
+ * GUID entry.
+ */
+export interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+/**
  * A candidate user for the `/projects/:id/assignments` "unassigned users"
- * dropdown. There is no backend endpoint that lists every user (see
- * `app/api/projects/[id]/unassigned-users/route.ts`), so this is only ever
- * derived from users who appear in *some* project's assignment list.
+ * dropdown - every user with no current project assignment, per
+ * `GET /Auth/GetUnassignedUsers` (see `app/api/auth/unassigned-users/route.ts`).
  */
 export interface UnassignedUser {
   userId: string;

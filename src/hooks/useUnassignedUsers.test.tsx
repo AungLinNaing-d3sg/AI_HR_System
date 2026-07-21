@@ -4,11 +4,11 @@ import type { ReactNode } from 'react';
 import { useUnassignedUsers } from './useUnassignedUsers';
 import type { UnassignedUser } from '@/types/domain.types';
 
-jest.mock('../lib/api/projects.api', () => ({
+jest.mock('../lib/api/auth.api', () => ({
   getUnassignedUsers: jest.fn(),
 }));
 
-const projectsApi = jest.requireMock('../lib/api/projects.api') as { getUnassignedUsers: jest.Mock };
+const authApi = jest.requireMock('../lib/api/auth.api') as { getUnassignedUsers: jest.Mock };
 
 const users: UnassignedUser[] = [{ userId: 'user-2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' }];
 
@@ -19,25 +19,28 @@ function wrapper({ children }: { children: ReactNode }) {
 
 describe('useUnassignedUsers', () => {
   beforeEach(() => {
-    projectsApi.getUnassignedUsers.mockReset();
+    authApi.getUnassignedUsers.mockReset();
   });
 
   it('returns the candidate user list once loaded', async () => {
-    projectsApi.getUnassignedUsers.mockResolvedValue(users);
-    const { result } = renderHook(() => useUnassignedUsers('project-1'), { wrapper });
+    authApi.getUnassignedUsers.mockResolvedValue(users);
+    const { result } = renderHook(() => useUnassignedUsers(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.users).toEqual(users);
   });
 
   it('defaults to an empty array before data loads', () => {
-    projectsApi.getUnassignedUsers.mockResolvedValue(users);
-    const { result } = renderHook(() => useUnassignedUsers('project-1'), { wrapper });
+    authApi.getUnassignedUsers.mockResolvedValue(users);
+    const { result } = renderHook(() => useUnassignedUsers(), { wrapper });
     expect(result.current.users).toEqual([]);
   });
 
-  it('does not fetch when projectId is empty', () => {
-    renderHook(() => useUnassignedUsers(''), { wrapper });
-    expect(projectsApi.getUnassignedUsers).not.toHaveBeenCalled();
+  it('surfaces an error message on failure', async () => {
+    authApi.getUnassignedUsers.mockRejectedValue(new Error('network down'));
+    const { result } = renderHook(() => useUnassignedUsers(), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeTruthy();
   });
 });

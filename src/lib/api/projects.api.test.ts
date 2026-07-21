@@ -12,7 +12,7 @@ const { axiosInstance } = jest.requireMock('./axios') as {
 };
 
 import * as projectsApi from './projects.api';
-import type { Project, ProjectAssignment, UnassignedUser } from '@/types/domain.types';
+import type { Project, ProjectAssignment } from '@/types/domain.types';
 
 const project: Project = {
   id: 'project-1',
@@ -102,13 +102,5 @@ describe('projects.api (client)', () => {
     axiosInstance.delete.mockResolvedValue({ data: { success: true } });
     await projectsApi.removeResource('project-1', 'assignment-1');
     expect(axiosInstance.delete).toHaveBeenCalledWith('/projects/project-1/assignments/assignment-1');
-  });
-
-  it('getUnassignedUsers gets /projects/:id/unassigned-users and returns the user list', async () => {
-    const user: UnassignedUser = { userId: 'user-2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' };
-    axiosInstance.get.mockResolvedValue({ data: { users: [user] } });
-    const result = await projectsApi.getUnassignedUsers('project-1');
-    expect(axiosInstance.get).toHaveBeenCalledWith('/projects/project-1/unassigned-users');
-    expect(result).toEqual([user]);
   });
 });

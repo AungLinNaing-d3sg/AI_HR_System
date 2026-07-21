@@ -13,7 +13,7 @@ export function useAssignResource(projectId: string) {
     mutationFn: (values: AssignResourceFormValues) => projectsApi.assignResource(projectId, values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'assignments'] });
-      void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'unassigned-users'] });
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'unassigned-users'] });
     },
   });
 

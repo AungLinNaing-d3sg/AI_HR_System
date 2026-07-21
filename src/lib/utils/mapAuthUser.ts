@@ -1,6 +1,7 @@
 import 'server-only';
 
-import type { AuthenticatedUser, UserRole } from '@/types/domain.types';
+import type { RoleDto, UnassignedUserDto } from '@/types/api.types';
+import type { AuthenticatedUser, Role, UnassignedUser, UserRole } from '@/types/domain.types';
 
 /**
  * Fields shared by the backend's Login/UpdateProfile/CreateUser user
@@ -36,4 +37,34 @@ export function mapAuthUser(dto: MapAuthUserDto, role: UserRole): AuthenticatedU
     countryId: dto.CountryId ?? null,
     role,
   };
+}
+
+/** Maps the backend's PascalCase Role DTO (`GET /Auth/GetRoles`) to the app's camelCase domain model. */
+export function mapRole(dto: RoleDto): Role {
+  return {
+    id: dto.Id,
+    name: dto.Name,
+    description: dto.Description,
+  };
+}
+
+export function mapRoleList(dtos: RoleDto[]): Role[] {
+  return dtos.map(mapRole);
+}
+
+/**
+ * Maps the backend's PascalCase Unassigned User DTO (`GET /Auth/GetUnassignedUsers`)
+ * to the app's camelCase domain model.
+ */
+export function mapUnassignedUser(dto: UnassignedUserDto): UnassignedUser {
+  return {
+    userId: dto.UserId,
+    firstName: dto.FirstName,
+    lastName: dto.LastName,
+    email: dto.Email,
+  };
+}
+
+export function mapUnassignedUserList(dtos: UnassignedUserDto[]): UnassignedUser[] {
+  return dtos.map(mapUnassignedUser);
 }

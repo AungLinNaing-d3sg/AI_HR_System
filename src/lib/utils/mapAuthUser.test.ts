@@ -1,5 +1,6 @@
-import { mapAuthUser } from './mapAuthUser';
+import { mapAuthUser, mapRole, mapRoleList, mapUnassignedUser, mapUnassignedUserList } from './mapAuthUser';
 import type { MapAuthUserDto } from './mapAuthUser';
+import type { RoleDto, UnassignedUserDto } from '@/types/api.types';
 
 describe('mapAuthUser', () => {
   const dto: MapAuthUserDto = {
@@ -50,5 +51,72 @@ describe('mapAuthUser', () => {
     expect(Object.keys(mapped).sort()).toEqual(
       ['id', 'username', 'email', 'firstName', 'lastName', 'employeeId', 'countryId', 'role'].sort()
     );
+  });
+});
+
+describe('mapRole', () => {
+  const roleDto: RoleDto = { Id: 'role-1', Name: 'SystemAdmin', Description: 'Full system access' };
+
+  it('maps every PascalCase field to its camelCase domain equivalent', () => {
+    expect(mapRole(roleDto)).toEqual({ id: 'role-1', name: 'SystemAdmin', description: 'Full system access' });
+  });
+
+  it('passes through a null description unchanged', () => {
+    expect(mapRole({ ...roleDto, Description: null }).description).toBeNull();
+  });
+});
+
+describe('mapRoleList', () => {
+  const roleDto: RoleDto = { Id: 'role-1', Name: 'SystemAdmin', Description: null };
+
+  it('maps an array of DTOs', () => {
+    const result = mapRoleList([roleDto, { ...roleDto, Id: 'role-2', Name: 'ProjectAdmin' }]);
+    expect(result).toHaveLength(2);
+    expect(result[1]).toEqual({ id: 'role-2', name: 'ProjectAdmin', description: null });
+  });
+
+  it('returns an empty array for an empty list', () => {
+    expect(mapRoleList([])).toEqual([]);
+  });
+});
+
+describe('mapUnassignedUser', () => {
+  const unassignedUserDto: UnassignedUserDto = {
+    UserId: 'user-2',
+    Username: 'jane.doe',
+    Email: 'jane@example.com',
+    FirstName: 'Jane',
+    LastName: 'Doe',
+    EmployeeId: 'EMP-002',
+  };
+
+  it('maps only the fields the domain model declares', () => {
+    expect(mapUnassignedUser(unassignedUserDto)).toEqual({
+      userId: 'user-2',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+    });
+  });
+});
+
+describe('mapUnassignedUserList', () => {
+  const unassignedUserDto: UnassignedUserDto = {
+    UserId: 'user-2',
+    Username: 'jane.doe',
+    Email: 'jane@example.com',
+    FirstName: 'Jane',
+    LastName: 'Doe',
+    EmployeeId: null,
+  };
+
+  it('maps an array of DTOs', () => {
+    const result = mapUnassignedUserList([unassignedUserDto, { ...unassignedUserDto, UserId: 'user-3' }]);
+    expect(result).toHaveLength(2);
+    expect(result[1].userId).toBe('user-3');
+  });
+
+  it('returns an empty array for an empty list', () => {
+    expect(mapUnassignedUserList([])).toEqual([]);
   });
 });

@@ -5,6 +5,8 @@ import type {
   ChangePasswordRequest,
   CreateUserRequest,
   CreateUserResponse,
+  GetRolesResponse,
+  GetUnassignedUsersResponse,
   LoginRequest,
   LoginResponse,
   LogoutRequest,
@@ -61,6 +63,25 @@ export async function createUser(
   accessToken: string
 ): Promise<CreateUserResponse> {
   const response = await backendClient.post<CreateUserResponse>('/Auth/CreateUser', payload, {
+    headers: authHeader(accessToken),
+  });
+  return response.data;
+}
+
+/** Reference data for the Create User `RoleId` dropdown. */
+export async function getRoles(accessToken: string): Promise<GetRolesResponse> {
+  const response = await backendClient.get<GetRolesResponse>('/Auth/GetRoles', {
+    headers: authHeader(accessToken),
+  });
+  return response.data;
+}
+
+/**
+ * Every user with no current project assignment - candidates for the
+ * "Add User to Project" dropdown on `/projects/:id/assignments`.
+ */
+export async function getUnassignedUsers(accessToken: string): Promise<GetUnassignedUsersResponse> {
+  const response = await backendClient.get<GetUnassignedUsersResponse>('/Auth/GetUnassignedUsers', {
     headers: authHeader(accessToken),
   });
   return response.data;

@@ -12,7 +12,7 @@ export function useRemoveResource(projectId: string) {
     mutationFn: (assignmentId: string) => projectsApi.removeResource(projectId, assignmentId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'assignments'] });
-      void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'unassigned-users'] });
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'unassigned-users'] });
     },
   });
 

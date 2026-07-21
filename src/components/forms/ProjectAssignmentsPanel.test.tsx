@@ -10,6 +10,9 @@ jest.mock('../../lib/api/projects.api', () => ({
   getProjectAssignments: jest.fn(),
   assignResource: jest.fn(),
   removeResource: jest.fn(),
+}));
+
+jest.mock('../../lib/api/auth.api', () => ({
   getUnassignedUsers: jest.fn(),
 }));
 
@@ -22,6 +25,9 @@ const projectsApi = jest.requireMock('../../lib/api/projects.api') as {
   getProjectAssignments: jest.Mock;
   assignResource: jest.Mock;
   removeResource: jest.Mock;
+};
+
+const authApi = jest.requireMock('../../lib/api/auth.api') as {
   getUnassignedUsers: jest.Mock;
 };
 
@@ -73,10 +79,10 @@ describe('ProjectAssignmentsPanel', () => {
     projectsApi.getProjectAssignments.mockReset();
     projectsApi.assignResource.mockReset();
     projectsApi.removeResource.mockReset();
-    projectsApi.getUnassignedUsers.mockReset();
+    authApi.getUnassignedUsers.mockReset();
     resourceRoleTypesApi.getResourceRoleTypes.mockReset();
     projectsApi.getProject.mockResolvedValue(project);
-    projectsApi.getUnassignedUsers.mockResolvedValue(unassignedUsers);
+    authApi.getUnassignedUsers.mockResolvedValue(unassignedUsers);
     resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
   });
 
@@ -91,6 +97,14 @@ describe('ProjectAssignmentsPanel', () => {
     renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it('shows an error alert when candidate users fail to load', async () => {
+    projectsApi.getProjectAssignments.mockResolvedValue([]);
+    authApi.getUnassignedUsers.mockRejectedValue(new Error('network down'));
+    renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
+
+    expect(await screen.findByText(/could not load candidate users/i)).toBeInTheDocument();
   });
 
   it('shows an empty-state row and the unassigned-user dropdown when nobody is assigned yet', async () => {

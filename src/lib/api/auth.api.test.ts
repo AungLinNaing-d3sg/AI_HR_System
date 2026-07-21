@@ -1,16 +1,17 @@
 jest.mock('./axios', () => ({
   axiosInstance: {
+    get: jest.fn(),
     post: jest.fn(),
     put: jest.fn(),
   },
 }));
 
 const { axiosInstance } = jest.requireMock('./axios') as {
-  axiosInstance: { post: jest.Mock; put: jest.Mock };
+  axiosInstance: { get: jest.Mock; post: jest.Mock; put: jest.Mock };
 };
 
 import * as authApi from './auth.api';
-import type { AuthenticatedUser } from '@/types/domain.types';
+import type { AuthenticatedUser, Role, UnassignedUser } from '@/types/domain.types';
 
 const user: AuthenticatedUser = {
   id: 'user-1',
@@ -25,6 +26,7 @@ const user: AuthenticatedUser = {
 
 describe('auth.api (client)', () => {
   beforeEach(() => {
+    axiosInstance.get.mockReset();
     axiosInstance.post.mockReset();
     axiosInstance.put.mockReset();
   });
@@ -79,5 +81,26 @@ describe('auth.api (client)', () => {
     const result = await authApi.createUser(values);
     expect(axiosInstance.post).toHaveBeenCalledWith('/auth/users', values);
     expect(result).toEqual(user);
+  });
+
+  it('getRoles gets /auth/roles and returns the role list', async () => {
+    const role: Role = { id: 'role-1', name: 'SystemAdmin', description: 'Full system access' };
+    axiosInstance.get.mockResolvedValue({ data: { roles: [role] } });
+    const result = await authApi.getRoles();
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/roles');
+    expect(result).toEqual([role]);
+  });
+
+  it('getUnassignedUsers gets /auth/unassigned-users and returns the candidate user list', async () => {
+    const candidate: UnassignedUser = {
+      userId: 'user-2',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+    };
+    axiosInstance.get.mockResolvedValue({ data: { users: [candidate] } });
+    const result = await authApi.getUnassignedUsers();
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/unassigned-users');
+    expect(result).toEqual([candidate]);
   });
 });

@@ -1,6 +1,11 @@
 import { axiosInstance } from '@/lib/api/axios';
-import type { AuthResponsePayload, CreateUserResponsePayload } from '@/types/api.types';
-import type { AuthenticatedUser, CreatedUser } from '@/types/domain.types';
+import type {
+  AuthResponsePayload,
+  CreateUserResponsePayload,
+  RoleListResponsePayload,
+  UnassignedUsersResponsePayload,
+} from '@/types/api.types';
+import type { AuthenticatedUser, CreatedUser, Role, UnassignedUser } from '@/types/domain.types';
 import type {
   ChangePasswordFormValues,
   CreateUserFormValues,
@@ -37,4 +42,16 @@ export async function changePassword(values: ChangePasswordFormValues): Promise<
 export async function createUser(values: CreateUserFormValues): Promise<CreatedUser> {
   const { data } = await axiosInstance.post<CreateUserResponsePayload>('/auth/users', values);
   return data.user;
+}
+
+/** Reference data for the Create User `RoleId` dropdown - `SystemAdmin`-only. */
+export async function getRoles(): Promise<Role[]> {
+  const { data } = await axiosInstance.get<RoleListResponsePayload>('/auth/roles');
+  return data.roles;
+}
+
+/** Candidate users (no current project assignment) for the "Add User to Project" dropdown. */
+export async function getUnassignedUsers(): Promise<UnassignedUser[]> {
+  const { data } = await axiosInstance.get<UnassignedUsersResponsePayload>('/auth/unassigned-users');
+  return data.users;
 }

@@ -3,9 +3,8 @@ import type {
   ProjectAssignmentListResponsePayload,
   ProjectListResponsePayload,
   ProjectResponsePayload,
-  UnassignedUsersResponsePayload,
 } from '@/types/api.types';
-import type { ProjectAssignment, UnassignedUser, Project } from '@/types/domain.types';
+import type { ProjectAssignment, Project } from '@/types/domain.types';
 import type {
   AssignResourceFormValues,
   CreateProjectFormValues,
@@ -65,9 +64,4 @@ export async function assignResource(
 
 export async function removeResource(projectId: string, assignmentId: string): Promise<void> {
   await axiosInstance.delete(`/projects/${projectId}/assignments/${assignmentId}`);
-}
-
-export async function getUnassignedUsers(projectId: string): Promise<UnassignedUser[]> {
-  const { data } = await axiosInstance.get<UnassignedUsersResponsePayload>(`/projects/${projectId}/unassigned-users`);
-  return data.users;
 }

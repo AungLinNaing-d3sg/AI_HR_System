@@ -31,9 +31,9 @@ function formatDate(value: string): string {
  * `/projects/:id/assignments` panel (`docs/HR_System_FE_wireframe.pdf`):
  * lists currently assigned resources with a Remove action per row (confirmed
  * via `ConfirmDialog`), and an "Add User" form whose dropdown is populated
- * from `useUnassignedUsers` - a derived "known users minus this project's
- * assignees" list, since the backend has no endpoint listing every user
- * (see `app/api/projects/[id]/unassigned-users/route.ts`).
+ * from `useUnassignedUsers` - every user with no current project assignment,
+ * per `GET /Auth/GetUnassignedUsers` (see
+ * `app/api/auth/unassigned-users/route.ts`).
  */
 export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
   const { project } = useProject(projectId);
@@ -44,7 +44,12 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
     error: assignmentsError,
     refetch: refetchAssignments,
   } = useProjectAssignments(projectId);
-  const { users: unassignedUsers, isLoading: isLoadingUsers } = useUnassignedUsers(projectId);
+  const {
+    users: unassignedUsers,
+    isLoading: isLoadingUsers,
+    isError: isUnassignedUsersError,
+    error: unassignedUsersError,
+  } = useUnassignedUsers();
   const { roleTypes, isLoading: isLoadingRoleTypes } = useResourceRoleTypes();
   const { assignResource, isAssigning, error: assignError, reset: resetAssignError } = useAssignResource(projectId);
   const { removeResource, isRemoving, error: removeError, reset: resetRemoveError } = useRemoveResource(projectId);
@@ -183,6 +188,12 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
           </div>
         )}
 
+        {isUnassignedUsersError && (
+          <div className="mb-4">
+            <Alert variant="error">{unassignedUsersError ?? 'Could not load candidate users.'}</Alert>
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div>
             <Label htmlFor="userId">User</Label>
@@ -228,10 +239,9 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
           </Button>
         </div>
 
-        {unassignedUsers.length === 0 && !isLoadingUsers && (
+        {unassignedUsers.length === 0 && !isLoadingUsers && !isUnassignedUsersError && (
           <p className="mt-3 text-xs text-zinc-500">
-            No candidate users found. Only users already assigned to at least one other project can be assigned
-            here.
+            No unassigned users are currently available - every user already has a project assignment.
           </p>
         )}
       </form>

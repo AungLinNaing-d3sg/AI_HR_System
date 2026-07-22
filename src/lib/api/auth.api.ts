@@ -4,6 +4,7 @@ import type {
   CreateUserResponsePayload,
   RoleListResponsePayload,
   UserListResponsePayload,
+  UsersListResponsePayload,
 } from '@/types/api.types';
 import type { AuthenticatedUser, CreatedUser, Role, UserListItem } from '@/types/domain.types';
 import type {
@@ -54,4 +55,15 @@ export async function getRoles(): Promise<Role[]> {
 export async function getUserList(): Promise<UserListItem[]> {
   const { data } = await axiosInstance.get<UserListResponsePayload>('/auth/user-list');
   return data.users;
+}
+
+export interface UsersPage {
+  users: UserListItem[];
+  totalCount: number;
+}
+
+/** Every user account, for the `SystemAdmin`-only `/admin/users` management table. */
+export async function getUsers(): Promise<UsersPage> {
+  const { data } = await axiosInstance.get<UsersListResponsePayload>('/auth/users');
+  return { users: data.users, totalCount: data.totalCount };
 }

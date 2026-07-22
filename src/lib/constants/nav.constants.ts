@@ -6,7 +6,7 @@ import {
   FolderKanban,
   LayoutGrid,
   Receipt,
-  UserPlus,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import type { UserRole } from '@/types/domain.types';
@@ -65,7 +65,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   },
   {
     title: 'Administration',
-    items: [{ label: 'Create User', href: '/admin/users/create', icon: UserPlus, roles: ['SystemAdmin'] }],
+    items: [{ label: 'Users', href: '/admin/users', icon: Users, roles: ['SystemAdmin'] }],
   },
 ];
 

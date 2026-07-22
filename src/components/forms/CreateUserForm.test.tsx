@@ -3,7 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { CreateUserForm } from './CreateUserForm';
+import { useKnownUserRolesStore } from '@/stores/knownUserRoles.store';
 import type { AuthenticatedUser, Role } from '@/types/domain.types';
+
+const pushMock = jest.fn();
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
 
 jest.mock('../../lib/api/auth.api', () => ({
   createUser: jest.fn(),
@@ -38,9 +44,12 @@ function renderWithProviders(ui: ReactNode) {
 
 describe('CreateUserForm', () => {
   beforeEach(() => {
+    pushMock.mockReset();
     authApi.createUser.mockReset();
     authApi.getRoles.mockReset();
     authApi.getRoles.mockResolvedValue(roles);
+    useKnownUserRolesStore.setState({ roleNameByUserId: {} });
+    window.sessionStorage.clear();
   });
 
   it('renders the role dropdown populated from useRoles', async () => {
@@ -69,6 +78,7 @@ describe('CreateUserForm', () => {
 
     expect(await screen.findByText('Please select a role.')).toBeInTheDocument();
     expect(authApi.createUser).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('submits the selected role id along with the rest of the form', async () => {
@@ -90,6 +100,69 @@ describe('CreateUserForm', () => {
         expect.objectContaining({ roleId: '11111111-1111-1111-1111-111111111102' })
       )
     );
+  });
+
+  it('redirects to /admin/users after a successful creation', async () => {
+    const user = userEvent.setup();
+    authApi.createUser.mockResolvedValue(createdUser);
+    renderWithProviders(<CreateUserForm />);
+    await screen.findByRole('option', { name: 'SystemAdmin' });
+
+    await user.type(screen.getByLabelText('Username'), 'jdoe');
+    await user.type(screen.getByLabelText('Email'), 'jdoe@example.com');
+    await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
+    await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/admin/users'));
+  });
+
+  it('records the chosen role for the new user so the Users table can show a real badge for it', async () => {
+    const user = userEvent.setup();
+    authApi.createUser.mockResolvedValue(createdUser);
+    renderWithProviders(<CreateUserForm />);
+    await screen.findByRole('option', { name: 'SystemAdmin' });
+
+    await user.type(screen.getByLabelText('Username'), 'jdoe');
+    await user.type(screen.getByLabelText('Email'), 'jdoe@example.com');
+    await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
+    await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    await waitFor(() =>
+      expect(useKnownUserRolesStore.getState().roleNameByUserId[createdUser.id]).toBe('ProjectAdmin')
+    );
+  });
+
+  it('does not navigate away when the backend rejects the submission', async () => {
+    const user = userEvent.setup();
+    authApi.createUser.mockRejectedValue(new Error('Username is already taken.'));
+    renderWithProviders(<CreateUserForm />);
+    await screen.findByRole('option', { name: 'SystemAdmin' });
+
+    await user.type(screen.getByLabelText('Username'), 'jdoe');
+    await user.type(screen.getByLabelText('Email'), 'jdoe@example.com');
+    await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
+    await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('navigates back to /admin/users when Cancel is clicked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CreateUserForm />);
+    await screen.findByRole('option', { name: 'SystemAdmin' });
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(pushMock).toHaveBeenCalledWith('/admin/users');
   });
 
   it('shows an error alert when roles fail to load', async () => {

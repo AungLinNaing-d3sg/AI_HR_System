@@ -34,7 +34,7 @@ describe('Sidebar', () => {
     mockPathname = '/dashboard';
     mockUseAuth.mockReturnValue({ role: 'User' });
     render(<Sidebar />);
-    expect(screen.queryByRole('link', { name: 'Create User' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
   });
 
   it('shows the Billing/Invoices item to a ProjectAdmin but hides it from a plain User', () => {

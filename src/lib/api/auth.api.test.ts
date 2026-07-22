@@ -103,4 +103,17 @@ describe('auth.api (client)', () => {
     expect(axiosInstance.get).toHaveBeenCalledWith('/auth/user-list');
     expect(result).toEqual([candidate]);
   });
+
+  it('getUsers gets /auth/users and returns the full user list with a total count', async () => {
+    const candidate: UserListItem = {
+      userId: 'user-2',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+    };
+    axiosInstance.get.mockResolvedValue({ data: { users: [candidate], totalCount: 1 } });
+    const result = await authApi.getUsers();
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/users');
+    expect(result).toEqual({ users: [candidate], totalCount: 1 });
+  });
 });

@@ -257,6 +257,18 @@ export interface UserListResponsePayload {
 }
 
 /**
+ * Shape returned by `GET /api/auth/users` (the `/admin/users` management
+ * table - distinct from the `/api/auth/user-list` dropdown above: this one
+ * is `SystemAdmin`-only and requests a much larger page, see
+ * `USERS_PAGE_SIZE`). `totalCount` lets the UI note if more accounts exist
+ * than were returned, since no pagination UI is built for this screen.
+ */
+export interface UsersListResponsePayload {
+  users: import('./domain.types').UserListItem[];
+  totalCount: number;
+}
+
+/**
  * Raw payload for `GET /ResourceRoleType/GetAllResourceRoleTypes`, verified
  * against the documented example response - paginated, unlike the other
  * reference-data list endpoints this app calls.

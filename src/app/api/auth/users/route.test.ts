@@ -14,11 +14,15 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../lib/api/authBackend.api', () => ({
   createUser: jest.fn(),
+  getUserList: jest.fn(),
 }));
 
-const authBackend = jest.requireMock('../../../../lib/api/authBackend.api') as { createUser: jest.Mock };
+const authBackend = jest.requireMock('../../../../lib/api/authBackend.api') as {
+  createUser: jest.Mock;
+  getUserList: jest.Mock;
+};
 
-import { POST } from './route';
+import { GET, POST } from './route';
 
 function makeToken(payload: Record<string, unknown>): string {
   const base64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url');
@@ -41,6 +45,85 @@ const validPayload = {
   lastName: 'Doe',
   roleId: '11111111-1111-1111-1111-111111111101',
 };
+
+describe('GET /api/auth/users', () => {
+  beforeEach(() => {
+    mockCookieStore.get.mockReset();
+    authBackend.getUserList.mockReset();
+  });
+
+  it('returns 401 when there is no access token', async () => {
+    mockCookieStore.get.mockReturnValue(undefined);
+    const response = await GET();
+    expect(response.status).toBe(401);
+    expect(authBackend.getUserList).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when the caller is not a SystemAdmin', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'ProjectAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+
+    const response = await GET();
+    expect(response.status).toBe(403);
+    expect(authBackend.getUserList).not.toHaveBeenCalled();
+  });
+
+  it('returns every user, requesting the large management page size', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    authBackend.getUserList.mockResolvedValue({
+      TotalCount: 1,
+      PageNo: 1,
+      PageSize: 100,
+      Items: [
+        { UserId: 'user-1', Username: 'admin', Email: 'admin@hrsystem.com', FirstName: 'System', LastName: 'Admin', EmployeeId: null },
+      ],
+    });
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(authBackend.getUserList).toHaveBeenCalledWith(token, { pageNo: 1, pageSize: 100 });
+    expect(body.totalCount).toBe(1);
+    expect(body.users).toEqual([
+      { userId: 'user-1', firstName: 'System', lastName: 'Admin', email: 'admin@hrsystem.com' },
+    ]);
+  });
+
+  it('returns an empty list when there are no users', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    authBackend.getUserList.mockResolvedValue({ TotalCount: 0, PageNo: 1, PageSize: 100, Items: [] });
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.users).toEqual([]);
+    expect(body.totalCount).toBe(0);
+  });
+
+  it('returns a normalized error when the backend call fails', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    authBackend.getUserList.mockRejectedValue(new Error('network down'));
+
+    const response = await GET();
+    expect(response.status).toBe(500);
+  });
+});
 
 describe('POST /api/auth/users', () => {
   beforeEach(() => {

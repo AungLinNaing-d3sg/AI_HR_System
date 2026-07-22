@@ -2,12 +2,59 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as authBackend from '@/lib/api/authBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
+import { USERS_PAGE_SIZE } from '@/lib/constants/user.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
+import { mapUserListItemList } from '@/lib/utils/mapAuthUser';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createUserSchema } from '@/lib/validators/auth.validators';
-import type { CreateUserResponsePayload } from '@/types/api.types';
+import type { CreateUserResponsePayload, UsersListResponsePayload } from '@/types/api.types';
+
+/**
+ * GET /api/auth/users
+ *
+ * Every user account in the system, for the `/admin/users` management table
+ * (`docs/HR_System_FE_wireframe.pdf`). `[SystemAdmin]`-only, unlike
+ * `/api/auth/user-list` (open to any authenticated role, capped at 10 rows,
+ * for the "Add User to Project" dropdown) - this requests a much larger
+ * page (`USERS_PAGE_SIZE`) since the wireframe's admin table has no
+ * pagination UI.
+ *
+ * `GET /Auth/GetUserList` does not return each account's role, country, or
+ * active/inactive status (see docs/HR_System_BE.postman_collection.json),
+ * so those fields are not part of `UserListItem` - the table renders a
+ * "Role unavailable" state for any user this app can't confirm a role for
+ * (see `UserRoleBadge`) instead of fabricating one.
+ */
+export async function GET(): Promise<NextResponse> {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+  const claims = accessToken ? decodeAccessToken(accessToken) : null;
+
+  if (!accessToken || isTokenExpired(claims)) {
+    return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
+  }
+
+  if (extractRole(claims) !== 'SystemAdmin') {
+    return NextResponse.json({ message: 'Only a System Admin can view the user list.' }, { status: 403 });
+  }
+
+  try {
+    const { Items, TotalCount } = await authBackend.getUserList(accessToken, {
+      pageNo: 1,
+      pageSize: USERS_PAGE_SIZE,
+    });
+    return NextResponse.json<UsersListResponsePayload>(
+      { users: mapUserListItemList(Items), totalCount: TotalCount },
+      { status: 200 }
+    );
+  } catch (error) {
+    logger.error('Get users failed', error);
+    const details = getBackendErrorDetails(error, 'Could not load users.');
+    return NextResponse.json({ message: details.message, errors: details.errors }, { status: details.status });
+  }
+}
 
 /**
  * POST /api/auth/users

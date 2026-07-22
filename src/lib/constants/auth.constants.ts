@@ -13,6 +13,10 @@ export const DEFAULT_ACCESS_TOKEN_MAX_AGE_SECONDS = 15 * 60;
 /** Refresh tokens are long-lived; 7 days is a reasonable, common default. */
 export const REFRESH_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
-export const SYSTEM_ADMIN_ONLY_ROUTES = ['/admin/users/create'];
+/**
+ * `/admin/users` (matches `resolveRouteAccess`'s prefix check, so this also
+ * covers `/admin/users/create` and any future `/admin/users/*` sub-route).
+ */
+export const SYSTEM_ADMIN_ONLY_ROUTES = ['/admin/users'];
 
 export const PUBLIC_ROUTES = ['/login'];

@@ -11,9 +11,16 @@ jest.mock('../../hooks/useTimesheetGrid', () => ({
   useTimesheetGrid: jest.fn(),
 }));
 
+jest.mock('../../hooks/useTimesheetPeriods', () => ({
+  useTimesheetPeriods: jest.fn(),
+}));
+
 const { useSearchParams } = jest.requireMock('next/navigation') as { useSearchParams: jest.Mock };
 const { useTimesheetGrid } = jest.requireMock('../../hooks/useTimesheetGrid') as {
   useTimesheetGrid: jest.Mock;
+};
+const { useTimesheetPeriods } = jest.requireMock('../../hooks/useTimesheetPeriods') as {
+  useTimesheetPeriods: jest.Mock;
 };
 
 const weekDates = ['2025-02-24', '2025-02-25', '2025-02-26', '2025-02-27', '2025-02-28', '2025-03-01', '2025-03-02'];
@@ -64,6 +71,23 @@ function baseHookValue(overrides: Record<string, unknown> = {}) {
     goToPreviousWeek: jest.fn(),
     goToNextWeek: jest.fn(),
     goToCurrentWeek: jest.fn(),
+    goToPeriod: jest.fn(),
+    refetch: jest.fn(),
+    ...overrides,
+  };
+}
+
+const periodsList = [
+  { id: 'period-1', periodStart: '2025-02-01', periodEnd: '2025-02-28', isLocked: false },
+  { id: 'period-2', periodStart: '2025-03-01', periodEnd: '2025-03-31', isLocked: true },
+];
+
+function basePeriodsHookValue(overrides: Record<string, unknown> = {}) {
+  return {
+    periods: periodsList,
+    isLoading: false,
+    isError: false,
+    error: null,
     refetch: jest.fn(),
     ...overrides,
   };
@@ -72,6 +96,8 @@ function baseHookValue(overrides: Record<string, unknown> = {}) {
 describe('TimesheetGrid', () => {
   beforeEach(() => {
     useTimesheetGrid.mockReset();
+    useTimesheetPeriods.mockReset();
+    useTimesheetPeriods.mockReturnValue(basePeriodsHookValue());
     useSearchParams.mockReturnValue(new URLSearchParams());
   });
 
@@ -198,5 +224,60 @@ describe('TimesheetGrid', () => {
     render(<TimesheetGrid />);
 
     expect(useTimesheetGrid).toHaveBeenCalledWith(undefined);
+  });
+
+  it('renders the Timesheet Period dropdown, pre-selected to the week\'s current period', () => {
+    useTimesheetGrid.mockReturnValue(baseHookValue());
+    render(<TimesheetGrid />);
+
+    const select = screen.getByLabelText('Timesheet Period') as HTMLSelectElement;
+    expect(select).toHaveValue('period-1');
+    expect(screen.getByText('Feb 1, 2025 – Feb 28, 2025')).toBeInTheDocument();
+    expect(screen.getByText('Mar 1, 2025 – Mar 31, 2025 (Locked)')).toBeInTheDocument();
+  });
+
+  it('calls goToPeriod with the selected period when the Timesheet Period dropdown changes', async () => {
+    const user = userEvent.setup();
+    const goToPeriod = jest.fn();
+    useTimesheetGrid.mockReturnValue(baseHookValue({ goToPeriod }));
+    render(<TimesheetGrid />);
+
+    await user.selectOptions(screen.getByLabelText('Timesheet Period'), 'period-2');
+
+    expect(goToPeriod).toHaveBeenCalledWith(periodsList[1]);
+  });
+
+  it('shows a loading placeholder and disables the dropdown while periods are loading', () => {
+    useTimesheetGrid.mockReturnValue(baseHookValue());
+    useTimesheetPeriods.mockReturnValue(basePeriodsHookValue({ periods: [], isLoading: true }));
+    render(<TimesheetGrid />);
+
+    expect(screen.getByText('Loading periods…')).toBeInTheDocument();
+    expect(screen.getByLabelText('Timesheet Period')).toBeDisabled();
+  });
+
+  it('shows an error with a retry action when timesheet periods fail to load', async () => {
+    const user = userEvent.setup();
+    const refetch = jest.fn();
+    useTimesheetGrid.mockReturnValue(baseHookValue());
+    useTimesheetPeriods.mockReturnValue(
+      basePeriodsHookValue({ periods: [], isError: true, error: 'periods down', refetch })
+    );
+    render(<TimesheetGrid />);
+
+    expect(screen.getByText('periods down')).toBeInTheDocument();
+    expect(screen.getByLabelText('Timesheet Period')).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: /try again/i }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it('shows an empty-state message and disables the dropdown when no timesheet periods exist', () => {
+    useTimesheetGrid.mockReturnValue(baseHookValue({ period: null, hasPeriod: false, canEdit: false }));
+    useTimesheetPeriods.mockReturnValue(basePeriodsHookValue({ periods: [] }));
+    render(<TimesheetGrid />);
+
+    expect(screen.getByText(/no timesheet periods have been created yet/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Timesheet Period')).toBeDisabled();
   });
 });

@@ -234,4 +234,23 @@ describe('useTimesheetGrid', () => {
     expect(result.current.weekStart).toBe('2025-03-03');
     expect(result.current.isDirty).toBe(false);
   });
+
+  it('jumps to the Monday of the selected period\'s start date and clears pending edits', async () => {
+    timesheetsApi.getTimesheetWeek.mockResolvedValue(weekWith());
+    const { result } = renderHook(() => useTimesheetGrid('2025-02-24'), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.setCell('project-1', '2025-02-25', { hoursInput: '4' });
+    });
+    expect(result.current.isDirty).toBe(true);
+
+    act(() => {
+      // 2025-03-19 is a Wednesday; the containing week's Monday is 2025-03-17.
+      result.current.goToPeriod({ id: 'period-2', periodStart: '2025-03-19', periodEnd: '2025-04-15', isLocked: false });
+    });
+
+    expect(result.current.weekStart).toBe('2025-03-17');
+    expect(result.current.isDirty).toBe(false);
+  });
 });

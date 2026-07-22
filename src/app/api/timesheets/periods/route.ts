@@ -12,13 +12,17 @@ import { createTimesheetPeriodSchema } from '@/lib/validators/timesheet.validato
 import type { TimesheetPeriodListResponsePayload, TimesheetPeriodResponsePayload } from '@/types/api.types';
 
 /**
- * Both handlers require `SystemAdmin`/`ProjectAdmin` - unlike Timesheet
- * Entry (which every role can log against their own timesheet), creating
- * and locking the *periods* themselves is a payroll/admin operation. The
- * backend's `/TimesheetPeriod/*` endpoints carry no distinct role tag in
- * docs/HR_System_BE.postman_collection.json (same as `/Project/*` before
- * it), so this restriction is this app's own choice, not one the backend
- * enforces.
+ * `POST` (create) requires `SystemAdmin`/`ProjectAdmin` - creating and
+ * locking the *periods* themselves is a payroll/admin operation. `GET`
+ * (list), however, is open to any authenticated role: the `/timesheets`
+ * "My Timesheets" page's Timesheet Period dropdown (every role logs their
+ * own hours, see `app/api/timesheets/week/route.ts`) needs to read the full
+ * period list to let a user pick which period to log time against, the same
+ * "no extra RBAC gate beyond authenticated" reasoning that route already
+ * documents. The backend's `/TimesheetPeriod/*` endpoints carry no distinct
+ * role tag in docs/HR_System_BE.postman_collection.json (same as
+ * `/Project/*` before it), so both the restriction on `POST` and its absence
+ * on `GET` are this app's own choice, not something the backend enforces.
  */
 
 /**
@@ -33,14 +37,6 @@ export async function GET(): Promise<NextResponse> {
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
-  }
-
-  const role = extractRole(claims);
-  if (!role || !PROJECT_MANAGEMENT_ROLES.includes(role)) {
-    return NextResponse.json(
-      { message: 'Only a System Admin or Project Admin can view timesheet periods.' },
-      { status: 403 }
-    );
   }
 
   try {

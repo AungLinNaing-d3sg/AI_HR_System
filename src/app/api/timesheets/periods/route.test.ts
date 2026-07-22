@@ -56,13 +56,20 @@ describe('GET /api/timesheets/periods', () => {
     expect(response.status).toBe(401);
   });
 
-  it('returns 403 for a plain User', async () => {
+  it('returns the mapped, newest-first period list for a plain User (open to every authenticated role)', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
     );
+    timesheetsBackend.getTimesheetPeriods.mockResolvedValue([
+      { Id: 'older', PeriodStart: '2026-01-01', PeriodEnd: '2026-01-31', IsLocked: true },
+      dto,
+    ]);
+
     const response = await GET();
-    expect(response.status).toBe(403);
-    expect(timesheetsBackend.getTimesheetPeriods).not.toHaveBeenCalled();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.periods.map((p: { id: string }) => p.id)).toEqual(['period-1', 'older']);
   });
 
   it('returns the mapped, newest-first period list for a SystemAdmin', async () => {

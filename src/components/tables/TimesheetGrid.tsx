@@ -1,15 +1,31 @@
 'use client';
 
-import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TimesheetGridRow } from '@/components/tables/TimesheetGridRow';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { Label } from '@/components/ui/Label';
+import { Select } from '@/components/ui/Select';
 import { useTimesheetGrid } from '@/hooks/useTimesheetGrid';
+import { useTimesheetPeriods } from '@/hooks/useTimesheetPeriods';
 import { WEEKLY_HOURS_TARGET } from '@/lib/constants/timesheet.constants';
 import { cn } from '@/lib/utils/cn';
 import { formatDayHeader, formatWeekRangeLabel, getMondayOfWeek, isValidDateString } from '@/lib/utils/week';
+
+/** "Feb 24 – Mar 2, 2025"-style label for a Timesheet Period option, independent of the grid's Mon-Sun week label. */
+function formatPeriodOptionLabel(periodStart: string, periodEnd: string): string {
+  const format = (value: string) =>
+    new Date(`${value}T00:00:00.000Z`).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+  return `${format(periodStart)} – ${format(periodEnd)}`;
+}
 
 /**
  * Resolves the grid's initial week from a `?week=YYYY-MM-DD` search param
@@ -25,12 +41,19 @@ function useInitialWeekFromSearchParams(): string | undefined {
 }
 
 /**
- * The `/timesheets` weekly grid: Monday-Sunday hour inputs per active
- * project, an auto-calculated daily-total row, and expandable per-project
- * rows to view/edit that day's task notes (see
- * `docs/HR_System_FE_wireframe.pdf`'s `/timesheets` screen). Handles
- * loading, error, "no timesheet period configured", locked-period, and
- * empty (no active projects) states.
+ * The `/timesheets` "My Timesheets" page: a "Create Timesheet" Timesheet
+ * Period dropdown (populated from `useTimesheetPeriods`, i.e.
+ * `GET /api/timesheets/periods`) above a Monday-Sunday weekly grid of hour
+ * inputs per active project, an auto-calculated daily-total row, and
+ * expandable per-project rows to view/edit that day's task notes (see
+ * `docs/HR_System_FE_wireframe.pdf`'s `/timesheets` screen). Selecting a
+ * period jumps the grid to the week containing that period's start date
+ * (`goToPeriod`); the dropdown's own selection then stays in sync with
+ * whichever period the fetched week resolves to, including when navigating
+ * with the Previous/Next/This week controls. Handles loading, error, "no
+ * timesheet period configured", locked-period, and empty (no active
+ * projects) states, plus independent loading/error/empty states for the
+ * period dropdown itself.
  */
 export function TimesheetGrid() {
   const initialWeekStart = useInitialWeekFromSearchParams();
@@ -40,6 +63,7 @@ export function TimesheetGrid() {
     rows,
     dailyTotals,
     dailyHoursWarningThreshold,
+    period,
     isLocked,
     hasPeriod,
     canEdit,
@@ -55,11 +79,27 @@ export function TimesheetGrid() {
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,
+    goToPeriod,
     refetch,
   } = useTimesheetGrid(initialWeekStart);
 
+  const {
+    periods,
+    isLoading: isLoadingPeriods,
+    isError: isPeriodsError,
+    error: periodsError,
+    refetch: refetchPeriods,
+  } = useTimesheetPeriods();
+
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
   const weekTotal = dailyTotals.reduce((sum, total) => sum + total, 0);
+
+  function handlePeriodChange(event: ChangeEvent<HTMLSelectElement>) {
+    const selected = periods.find((candidate) => candidate.id === event.target.value);
+    if (selected) {
+      goToPeriod(selected);
+    }
+  }
 
   function toggleExpanded(projectId: string) {
     setExpandedProjectIds((previous) => {
@@ -94,6 +134,57 @@ export function TimesheetGrid() {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-md border border-zinc-200 bg-white p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <CalendarRange size={18} className="text-zinc-500" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-zinc-900">Create Timesheet</h2>
+        </div>
+        <p className="mb-3 text-sm text-zinc-500">
+          Choose a timesheet period to load its date range and log hours for that period.
+        </p>
+
+        {isPeriodsError && (
+          <div className="mb-3 space-y-2">
+            <Alert variant="error">{periodsError ?? 'Could not load timesheet periods.'}</Alert>
+            <Button type="button" variant="outline" size="sm" onClick={() => refetchPeriods()}>
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {!isPeriodsError && !isLoadingPeriods && periods.length === 0 && (
+          <div className="mb-3">
+            <Alert variant="info">
+              No timesheet periods have been created yet. Contact your administrator to set one up.
+            </Alert>
+          </div>
+        )}
+
+        <div className="max-w-sm">
+          <Label htmlFor="timesheetPeriod">Timesheet Period</Label>
+          <Select
+            id="timesheetPeriod"
+            value={period?.id ?? ''}
+            onChange={handlePeriodChange}
+            disabled={isLoadingPeriods || isPeriodsError || periods.length === 0}
+            aria-describedby="timesheetPeriod-hint"
+          >
+            <option value="">
+              {isLoadingPeriods ? 'Loading periods…' : 'Select a timesheet period…'}
+            </option>
+            {periods.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {formatPeriodOptionLabel(candidate.periodStart, candidate.periodEnd)}
+                {candidate.isLocked ? ' (Locked)' : ''}
+              </option>
+            ))}
+          </Select>
+          <p id="timesheetPeriod-hint" className="mt-1 text-xs text-zinc-500">
+            Selecting a period jumps the grid below to its date range.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 bg-white px-4 py-3">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">

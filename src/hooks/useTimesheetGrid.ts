@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { buildTimesheetGrid, calculateDailyTotals, type TimesheetGridCell } from '@/lib/utils/timesheetGrid';
 import { addDays, getMondayOfWeek, getWeekDates } from '@/lib/utils/week';
 import { timesheetCellSchema } from '@/lib/validators/timesheet.validators';
+import type { TimesheetPeriod } from '@/types/domain.types';
 
 export interface TimesheetGridCellView extends TimesheetGridCell {
   /** Raw, possibly-in-progress input string (kept separate from `hours` so an emptied field doesn't snap back to "0" while typing). */
@@ -160,6 +161,20 @@ export function useTimesheetGrid(initialWeekStart?: string) {
     setWeekStart(getMondayOfWeek());
   }, [resetEdits]);
 
+  /**
+   * Jumps the grid to the week containing `period`'s start date - the
+   * "Timesheet Period" dropdown's selection handler. Entries then load for
+   * whichever week that resolves to, and `hasPeriod`/`canEdit` reflect the
+   * chosen period (or a locked one) as soon as the fetch settles.
+   */
+  const goToPeriod = useCallback(
+    (period: TimesheetPeriod) => {
+      resetEdits();
+      setWeekStart(getMondayOfWeek(new Date(`${period.periodStart}T00:00:00.000Z`)));
+    },
+    [resetEdits]
+  );
+
   const isLocked = Boolean(week?.period?.isLocked);
   const hasPeriod = Boolean(week?.period);
   const canEdit = hasPeriod && !isLocked;
@@ -225,6 +240,7 @@ export function useTimesheetGrid(initialWeekStart?: string) {
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,
+    goToPeriod,
     refetch,
   };
 }

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { CreateUserForm } from './CreateUserForm';
 import { useKnownUserRolesStore } from '@/stores/knownUserRoles.store';
-import type { AuthenticatedUser, Role } from '@/types/domain.types';
+import type { AuthenticatedUser, Country, Role } from '@/types/domain.types';
 
 const pushMock = jest.fn();
 jest.mock('next/navigation', () => ({
@@ -16,14 +16,25 @@ jest.mock('../../lib/api/auth.api', () => ({
   getRoles: jest.fn(),
 }));
 
+jest.mock('../../lib/api/countries.api', () => ({
+  getCountries: jest.fn(),
+}));
+
 const authApi = jest.requireMock('../../lib/api/auth.api') as {
   createUser: jest.Mock;
   getRoles: jest.Mock;
 };
 
+const countriesApi = jest.requireMock('../../lib/api/countries.api') as { getCountries: jest.Mock };
+
 const roles: Role[] = [
   { id: '11111111-1111-1111-1111-111111111101', name: 'SystemAdmin', description: 'Full system access' },
   { id: '11111111-1111-1111-1111-111111111102', name: 'ProjectAdmin', description: null },
+];
+
+const countries: Country[] = [
+  { id: '22222222-2222-2222-2222-222222222201', code: 'SG', name: 'Singapore' },
+  { id: '22222222-2222-2222-2222-222222222202', code: 'US', name: 'United States' },
 ];
 
 const createdUser: AuthenticatedUser = {
@@ -48,6 +59,8 @@ describe('CreateUserForm', () => {
     authApi.createUser.mockReset();
     authApi.getRoles.mockReset();
     authApi.getRoles.mockResolvedValue(roles);
+    countriesApi.getCountries.mockReset();
+    countriesApi.getCountries.mockResolvedValue(countries);
     useKnownUserRolesStore.setState({ roleNameByUserId: {} });
     window.sessionStorage.clear();
   });
@@ -169,5 +182,65 @@ describe('CreateUserForm', () => {
     authApi.getRoles.mockRejectedValue(new Error('network down'));
     renderWithProviders(<CreateUserForm />);
     expect(await screen.findByText(/could not load roles/i)).toBeInTheDocument();
+  });
+
+  it('renders the optional country dropdown populated from useCountries', async () => {
+    renderWithProviders(<CreateUserForm />);
+    expect(await screen.findByRole('option', { name: 'Singapore' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'United States' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Country (optional)')).not.toBeRequired();
+  });
+
+  it('disables the country dropdown while countries are loading', () => {
+    countriesApi.getCountries.mockReturnValue(new Promise(() => {}));
+    renderWithProviders(<CreateUserForm />);
+    expect(screen.getByLabelText('Country (optional)')).toBeDisabled();
+  });
+
+  it('submits successfully without selecting a country (optional field)', async () => {
+    const user = userEvent.setup();
+    authApi.createUser.mockResolvedValue(createdUser);
+    renderWithProviders(<CreateUserForm />);
+    await screen.findByRole('option', { name: 'SystemAdmin' });
+
+    await user.type(screen.getByLabelText('Username'), 'jdoe');
+    await user.type(screen.getByLabelText('Email'), 'jdoe@example.com');
+    await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
+    await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    await waitFor(() => expect(authApi.createUser).toHaveBeenCalledWith(expect.objectContaining({ countryId: '' })));
+    expect(pushMock).toHaveBeenCalledWith('/admin/users');
+  });
+
+  it('submits the selected country id along with the rest of the form', async () => {
+    const user = userEvent.setup();
+    authApi.createUser.mockResolvedValue(createdUser);
+    renderWithProviders(<CreateUserForm />);
+    await screen.findByRole('option', { name: 'SystemAdmin' });
+    await screen.findByRole('option', { name: 'Singapore' });
+
+    await user.type(screen.getByLabelText('Username'), 'jdoe');
+    await user.type(screen.getByLabelText('Email'), 'jdoe@example.com');
+    await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
+    await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.selectOptions(screen.getByLabelText('Country (optional)'), '22222222-2222-2222-2222-222222222201');
+    await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    await waitFor(() =>
+      expect(authApi.createUser).toHaveBeenCalledWith(
+        expect.objectContaining({ countryId: '22222222-2222-2222-2222-222222222201' })
+      )
+    );
+  });
+
+  it('shows an error alert when countries fail to load', async () => {
+    countriesApi.getCountries.mockRejectedValue(new Error('network down'));
+    renderWithProviders(<CreateUserForm />);
+    expect(await screen.findByText(/could not load countries/i)).toBeInTheDocument();
   });
 });

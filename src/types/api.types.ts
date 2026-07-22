@@ -781,3 +781,29 @@ export interface CurrencyListResponseDto {
 export interface CurrencyListResponsePayload {
   currencies: import('./domain.types').Currency[];
 }
+
+/**
+ * Raw payload for `GET /Country/GetAllCountries`, verified against the
+ * documented example response - paginated, like `CurrencyListResponseDto`.
+ * Unlike `CurrencyDto`, the backend does not return a `Symbol`/
+ * `IsBaseCurrency`/`IsActive` for a country - just `Id`/`Code`/`Name`/
+ * `CreatedAt`.
+ */
+export interface CountryDto {
+  Id: string;
+  Code: string;
+  Name: string;
+  CreatedAt: string;
+}
+
+export interface CountryListResponseDto {
+  Items: CountryDto[];
+  TotalCount: number;
+  Page: number;
+  PageSize: number;
+}
+
+/** Shape returned by `GET /api/countries`. */
+export interface CountryListResponsePayload {
+  countries: import('./domain.types').Country[];
+}

@@ -329,3 +329,14 @@ export interface Currency {
   isBaseCurrency: boolean;
   isActive: boolean;
 }
+
+/**
+ * A supported country (e.g. "Singapore") - see `GET /Country/GetAllCountries`.
+ * Backs the optional Country dropdown on the Create User form (`CreateUser`
+ * accepts an optional `CountryId` referencing this entity).
+ */
+export interface Country {
+  id: string;
+  code: string;
+  name: string;
+}

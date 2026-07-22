@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { useCountries } from '@/hooks/useCountries';
 import { useCreateUser } from '@/hooks/useCreateUser';
 import { useRoles } from '@/hooks/useRoles';
 import { useKnownUserRolesStore } from '@/stores/knownUserRoles.store';
@@ -28,11 +29,22 @@ import { createUserSchema, type CreateUserFormValues } from '@/lib/validators/au
  * recorded in `knownUserRoles.store` - the one place that information is
  * available at all - so `UsersTable` can show a real, non-fabricated role
  * badge for it.
+ *
+ * `CountryId` is optional and selected from a dropdown populated by
+ * `useCountries` (`GET /Country/GetAllCountries` via
+ * `app/api/countries/route.ts`), matching the read-only "Country" column
+ * already shown on `/admin/users` (see `docs/HR_System_FE_wireframe.pdf`).
  */
 export function CreateUserForm() {
   const router = useRouter();
   const { createUser, isCreating, error, reset: resetMutation } = useCreateUser();
   const { roles, isLoading: isLoadingRoles, isError: isRolesError, error: rolesError } = useRoles();
+  const {
+    countries,
+    isLoading: isLoadingCountries,
+    isError: isCountriesError,
+    error: countriesError,
+  } = useCountries();
   const recordUserRole = useKnownUserRolesStore((state) => state.recordUserRole);
 
   const {
@@ -81,6 +93,11 @@ export function CreateUserForm() {
       {isRolesError && (
         <div className="mb-4">
           <Alert variant="error">{rolesError ?? 'Could not load roles.'}</Alert>
+        </div>
+      )}
+      {isCountriesError && (
+        <div className="mb-4">
+          <Alert variant="error">{countriesError ?? 'Could not load countries.'}</Alert>
         </div>
       )}
 
@@ -152,7 +169,29 @@ export function CreateUserForm() {
           <Input id="employeeId" autoComplete="off" {...register('employeeId')} />
         </div>
 
-        <div className="sm:col-span-2">
+        <div>
+          <Label htmlFor="countryId">Country (optional)</Label>
+          <Select
+            id="countryId"
+            hasError={Boolean(errors.countryId)}
+            aria-describedby={errors.countryId ? 'countryId-error' : undefined}
+            disabled={isLoadingCountries}
+            {...register('countryId')}
+          >
+            <option value="">{isLoadingCountries ? 'Loading countries…' : 'Select a country'}</option>
+            {countries.map((country) => (
+              <option key={country.id} value={country.id}>
+                {country.name}
+              </option>
+            ))}
+          </Select>
+          <FieldError id="countryId-error" message={errors.countryId?.message} />
+          {countries.length === 0 && !isLoadingCountries && !isCountriesError && (
+            <p className="mt-1 text-xs text-zinc-500">No countries available.</p>
+          )}
+        </div>
+
+        <div>
           <Label htmlFor="roleId">Role</Label>
           <Select
             id="roleId"

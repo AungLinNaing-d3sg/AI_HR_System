@@ -120,13 +120,14 @@ export interface RoleDto {
 export type GetRolesResponse = RoleDto[];
 
 /**
- * Raw payload for `GET /Auth/GetUnassignedUsers` - every user with no
- * current project assignment. Global (no `projectId` path param), unlike
- * the per-project `/Project/GetProjectAssignments/{projectId}` derivation
- * this app previously combined across every project to fake an
- * "unassigned users" list (see `app/api/auth/unassigned-users/route.ts`).
+ * A single row within `GET /Auth/GetUserList`'s paginated `Items` - every
+ * user account in the system (not filtered by project assignment). Backs
+ * the "Add User to Project" dropdown on `/projects/:id/assignments` (see
+ * `app/api/auth/user-list/route.ts`), replacing the now-removed
+ * `/Auth/GetUnassignedUsers` endpoint this app previously called for that
+ * same dropdown.
  */
-export interface UnassignedUserDto {
+export interface UserListItemDto {
   UserId: string;
   Username: string;
   Email: string;
@@ -135,7 +136,13 @@ export interface UnassignedUserDto {
   EmployeeId: string | null;
 }
 
-export type GetUnassignedUsersResponse = UnassignedUserDto[];
+/** Raw paginated payload for `GET /Auth/GetUserList`, verified against the documented example response. */
+export interface GetUserListResponse {
+  TotalCount: number;
+  PageNo: number;
+  PageSize: number;
+  Items: UserListItemDto[];
+}
 
 /** Shape returned by `GET /api/auth/roles` to the browser. */
 export interface RoleListResponsePayload {
@@ -245,8 +252,8 @@ export interface ProjectAssignmentListResponsePayload {
   assignments: import('./domain.types').ProjectAssignment[];
 }
 
-export interface UnassignedUsersResponsePayload {
-  users: import('./domain.types').UnassignedUser[];
+export interface UserListResponsePayload {
+  users: import('./domain.types').UserListItem[];
 }
 
 /**

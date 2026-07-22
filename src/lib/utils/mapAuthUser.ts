@@ -1,7 +1,7 @@
 import 'server-only';
 
-import type { RoleDto, UnassignedUserDto } from '@/types/api.types';
-import type { AuthenticatedUser, Role, UnassignedUser, UserRole } from '@/types/domain.types';
+import type { RoleDto, UserListItemDto } from '@/types/api.types';
+import type { AuthenticatedUser, Role, UserListItem, UserRole } from '@/types/domain.types';
 
 /**
  * Fields shared by the backend's Login/UpdateProfile/CreateUser user
@@ -53,10 +53,11 @@ export function mapRoleList(dtos: RoleDto[]): Role[] {
 }
 
 /**
- * Maps the backend's PascalCase Unassigned User DTO (`GET /Auth/GetUnassignedUsers`)
- * to the app's camelCase domain model.
+ * Maps a single `GET /Auth/GetUserList` item (PascalCase) to the app's
+ * camelCase `UserListItem` domain model used by the "Add User to Project"
+ * dropdown.
  */
-export function mapUnassignedUser(dto: UnassignedUserDto): UnassignedUser {
+export function mapUserListItem(dto: UserListItemDto): UserListItem {
   return {
     userId: dto.UserId,
     firstName: dto.FirstName,
@@ -65,6 +66,6 @@ export function mapUnassignedUser(dto: UnassignedUserDto): UnassignedUser {
   };
 }
 
-export function mapUnassignedUserList(dtos: UnassignedUserDto[]): UnassignedUser[] {
-  return dtos.map(mapUnassignedUser);
+export function mapUserListItemList(dtos: UserListItemDto[]): UserListItem[] {
+  return dtos.map(mapUserListItem);
 }

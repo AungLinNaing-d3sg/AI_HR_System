@@ -88,16 +88,28 @@ describe('authBackend.api (server)', () => {
     expect(result).toEqual([{ Id: 'role-1', Name: 'SystemAdmin', Description: null }]);
   });
 
-  it('getUnassignedUsers gets /Auth/GetUnassignedUsers with a Bearer header', async () => {
-    backendClient.get.mockResolvedValue({
-      data: [{ UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null }],
-    });
-    const result = await authBackend.getUnassignedUsers('access-token');
-    expect(backendClient.get).toHaveBeenCalledWith('/Auth/GetUnassignedUsers', {
+  it('getUserList gets /Auth/GetUserList with a Bearer header and defaults to pageNo=1/pageSize=10', async () => {
+    const page = {
+      TotalCount: 1,
+      PageNo: 1,
+      PageSize: 10,
+      Items: [{ UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null }],
+    };
+    backendClient.get.mockResolvedValue({ data: page });
+    const result = await authBackend.getUserList('access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Auth/GetUserList', {
       headers: { Authorization: 'Bearer access-token' },
+      params: { pageNo: 1, pageSize: 10 },
     });
-    expect(result).toEqual([
-      { UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null },
-    ]);
+    expect(result).toEqual(page);
+  });
+
+  it('getUserList forwards an explicit pageNo/pageSize when provided', async () => {
+    backendClient.get.mockResolvedValue({ data: { TotalCount: 0, PageNo: 2, PageSize: 20, Items: [] } });
+    await authBackend.getUserList('access-token', { pageNo: 2, pageSize: 20 });
+    expect(backendClient.get).toHaveBeenCalledWith('/Auth/GetUserList', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { pageNo: 2, pageSize: 20 },
+    });
   });
 });

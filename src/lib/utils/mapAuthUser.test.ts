@@ -1,6 +1,6 @@
-import { mapAuthUser, mapRole, mapRoleList, mapUnassignedUser, mapUnassignedUserList } from './mapAuthUser';
+import { mapAuthUser, mapRole, mapRoleList, mapUserListItem, mapUserListItemList } from './mapAuthUser';
 import type { MapAuthUserDto } from './mapAuthUser';
-import type { RoleDto, UnassignedUserDto } from '@/types/api.types';
+import type { RoleDto, UserListItemDto } from '@/types/api.types';
 
 describe('mapAuthUser', () => {
   const dto: MapAuthUserDto = {
@@ -80,8 +80,8 @@ describe('mapRoleList', () => {
   });
 });
 
-describe('mapUnassignedUser', () => {
-  const unassignedUserDto: UnassignedUserDto = {
+describe('mapUserListItem', () => {
+  const userListItemDto: UserListItemDto = {
     UserId: 'user-2',
     Username: 'jane.doe',
     Email: 'jane@example.com',
@@ -91,7 +91,7 @@ describe('mapUnassignedUser', () => {
   };
 
   it('maps only the fields the domain model declares', () => {
-    expect(mapUnassignedUser(unassignedUserDto)).toEqual({
+    expect(mapUserListItem(userListItemDto)).toEqual({
       userId: 'user-2',
       firstName: 'Jane',
       lastName: 'Doe',
@@ -100,8 +100,8 @@ describe('mapUnassignedUser', () => {
   });
 });
 
-describe('mapUnassignedUserList', () => {
-  const unassignedUserDto: UnassignedUserDto = {
+describe('mapUserListItemList', () => {
+  const userListItemDto: UserListItemDto = {
     UserId: 'user-2',
     Username: 'jane.doe',
     Email: 'jane@example.com',
@@ -111,12 +111,12 @@ describe('mapUnassignedUserList', () => {
   };
 
   it('maps an array of DTOs', () => {
-    const result = mapUnassignedUserList([unassignedUserDto, { ...unassignedUserDto, UserId: 'user-3' }]);
+    const result = mapUserListItemList([userListItemDto, { ...userListItemDto, UserId: 'user-3' }]);
     expect(result).toHaveLength(2);
     expect(result[1].userId).toBe('user-3');
   });
 
   it('returns an empty array for an empty list', () => {
-    expect(mapUnassignedUserList([])).toEqual([]);
+    expect(mapUserListItemList([])).toEqual([]);
   });
 });

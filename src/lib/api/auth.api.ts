@@ -3,9 +3,9 @@ import type {
   AuthResponsePayload,
   CreateUserResponsePayload,
   RoleListResponsePayload,
-  UnassignedUsersResponsePayload,
+  UserListResponsePayload,
 } from '@/types/api.types';
-import type { AuthenticatedUser, CreatedUser, Role, UnassignedUser } from '@/types/domain.types';
+import type { AuthenticatedUser, CreatedUser, Role, UserListItem } from '@/types/domain.types';
 import type {
   ChangePasswordFormValues,
   CreateUserFormValues,
@@ -50,8 +50,8 @@ export async function getRoles(): Promise<Role[]> {
   return data.roles;
 }
 
-/** Candidate users (no current project assignment) for the "Add User to Project" dropdown. */
-export async function getUnassignedUsers(): Promise<UnassignedUser[]> {
-  const { data } = await axiosInstance.get<UnassignedUsersResponsePayload>('/auth/unassigned-users');
+/** Candidate users (paginated user list, first page) for the "Add User to Project" dropdown. */
+export async function getUserList(): Promise<UserListItem[]> {
+  const { data } = await axiosInstance.get<UserListResponsePayload>('/auth/user-list');
   return data.users;
 }

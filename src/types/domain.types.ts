@@ -80,11 +80,14 @@ export interface Role {
 }
 
 /**
- * A candidate user for the `/projects/:id/assignments` "unassigned users"
- * dropdown - every user with no current project assignment, per
- * `GET /Auth/GetUnassignedUsers` (see `app/api/auth/unassigned-users/route.ts`).
+ * A candidate user for the `/projects/:id/assignments` "Add User to
+ * Project" dropdown, sourced from the paginated `GET /Auth/GetUserList`
+ * (see `app/api/auth/user-list/route.ts`) - every user account in the
+ * system, not filtered by current project assignment (unlike the
+ * now-removed `/Auth/GetUnassignedUsers` endpoint this app previously used
+ * for the same dropdown).
  */
-export interface UnassignedUser {
+export interface UserListItem {
   userId: string;
   firstName: string;
   lastName: string;

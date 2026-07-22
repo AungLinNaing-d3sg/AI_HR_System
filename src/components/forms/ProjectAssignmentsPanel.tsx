@@ -9,7 +9,7 @@ import { useProject } from '@/hooks/useProject';
 import { useProjectAssignments } from '@/hooks/useProjectAssignments';
 import { useRemoveResource } from '@/hooks/useRemoveResource';
 import { useResourceRoleTypes } from '@/hooks/useResourceRoleTypes';
-import { useUnassignedUsers } from '@/hooks/useUnassignedUsers';
+import { useUserList } from '@/hooks/useUserList';
 import { Alert } from '@/components/ui/Alert';
 import { BackLink } from '@/components/common/BackLink';
 import { Button } from '@/components/ui/Button';
@@ -31,9 +31,10 @@ function formatDate(value: string): string {
  * `/projects/:id/assignments` panel (`docs/HR_System_FE_wireframe.pdf`):
  * lists currently assigned resources with a Remove action per row (confirmed
  * via `ConfirmDialog`), and an "Add User" form whose dropdown is populated
- * from `useUnassignedUsers` - every user with no current project assignment,
- * per `GET /Auth/GetUnassignedUsers` (see
- * `app/api/auth/unassigned-users/route.ts`).
+ * from `useUserList` - the first page of the paginated user list, per
+ * `GET /Auth/GetUserList?pageNo=1&pageSize=10` (see
+ * `app/api/auth/user-list/route.ts`), replacing the previously used
+ * `GET /Auth/GetUnassignedUsers`.
  */
 export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
   const { project } = useProject(projectId);
@@ -45,11 +46,11 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
     refetch: refetchAssignments,
   } = useProjectAssignments(projectId);
   const {
-    users: unassignedUsers,
+    users: candidateUsers,
     isLoading: isLoadingUsers,
-    isError: isUnassignedUsersError,
-    error: unassignedUsersError,
-  } = useUnassignedUsers();
+    isError: isCandidateUsersError,
+    error: candidateUsersError,
+  } = useUserList();
   const { roleTypes, isLoading: isLoadingRoleTypes } = useResourceRoleTypes();
   const { assignResource, isAssigning, error: assignError, reset: resetAssignError } = useAssignResource(projectId);
   const { removeResource, isRemoving, error: removeError, reset: resetRemoveError } = useRemoveResource(projectId);
@@ -188,9 +189,9 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
           </div>
         )}
 
-        {isUnassignedUsersError && (
+        {isCandidateUsersError && (
           <div className="mb-4">
-            <Alert variant="error">{unassignedUsersError ?? 'Could not load candidate users.'}</Alert>
+            <Alert variant="error">{candidateUsersError ?? 'Could not load candidate users.'}</Alert>
           </div>
         )}
 
@@ -205,7 +206,7 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
               {...register('userId')}
             >
               <option value="">{isLoadingUsers ? 'Loading users…' : 'Select a user'}</option>
-              {unassignedUsers.map((user) => (
+              {candidateUsers.map((user) => (
                 <option key={user.userId} value={user.userId}>
                   {user.firstName} {user.lastName} ({user.email})
                 </option>
@@ -239,10 +240,8 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
           </Button>
         </div>
 
-        {unassignedUsers.length === 0 && !isLoadingUsers && !isUnassignedUsersError && (
-          <p className="mt-3 text-xs text-zinc-500">
-            No unassigned users are currently available - every user already has a project assignment.
-          </p>
+        {candidateUsers.length === 0 && !isLoadingUsers && !isCandidateUsersError && (
+          <p className="mt-3 text-xs text-zinc-500">No users are currently available to assign.</p>
         )}
       </form>
 

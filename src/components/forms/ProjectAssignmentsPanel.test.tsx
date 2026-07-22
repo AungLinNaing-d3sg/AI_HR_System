@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { ProjectAssignmentsPanel } from './ProjectAssignmentsPanel';
-import type { ProjectAssignment, ResourceRoleType, UnassignedUser } from '@/types/domain.types';
+import type { ProjectAssignment, ResourceRoleType, UserListItem } from '@/types/domain.types';
 
 jest.mock('../../lib/api/projects.api', () => ({
   getProject: jest.fn(),
@@ -13,7 +13,7 @@ jest.mock('../../lib/api/projects.api', () => ({
 }));
 
 jest.mock('../../lib/api/auth.api', () => ({
-  getUnassignedUsers: jest.fn(),
+  getUserList: jest.fn(),
 }));
 
 jest.mock('../../lib/api/resourceRoleTypes.api', () => ({
@@ -28,7 +28,7 @@ const projectsApi = jest.requireMock('../../lib/api/projects.api') as {
 };
 
 const authApi = jest.requireMock('../../lib/api/auth.api') as {
-  getUnassignedUsers: jest.Mock;
+  getUserList: jest.Mock;
 };
 
 const resourceRoleTypesApi = jest.requireMock('../../lib/api/resourceRoleTypes.api') as {
@@ -49,7 +49,7 @@ const assignments: ProjectAssignment[] = [
   },
 ];
 
-const unassignedUsers: UnassignedUser[] = [
+const candidateUsers: UserListItem[] = [
   { userId: 'user-2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' },
 ];
 
@@ -79,10 +79,10 @@ describe('ProjectAssignmentsPanel', () => {
     projectsApi.getProjectAssignments.mockReset();
     projectsApi.assignResource.mockReset();
     projectsApi.removeResource.mockReset();
-    authApi.getUnassignedUsers.mockReset();
+    authApi.getUserList.mockReset();
     resourceRoleTypesApi.getResourceRoleTypes.mockReset();
     projectsApi.getProject.mockResolvedValue(project);
-    authApi.getUnassignedUsers.mockResolvedValue(unassignedUsers);
+    authApi.getUserList.mockResolvedValue(candidateUsers);
     resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
   });
 
@@ -101,13 +101,13 @@ describe('ProjectAssignmentsPanel', () => {
 
   it('shows an error alert when candidate users fail to load', async () => {
     projectsApi.getProjectAssignments.mockResolvedValue([]);
-    authApi.getUnassignedUsers.mockRejectedValue(new Error('network down'));
+    authApi.getUserList.mockRejectedValue(new Error('network down'));
     renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
 
     expect(await screen.findByText(/could not load candidate users/i)).toBeInTheDocument();
   });
 
-  it('shows an empty-state row and the unassigned-user dropdown when nobody is assigned yet', async () => {
+  it('shows an empty-state row and the candidate-user dropdown when nobody is assigned yet', async () => {
     projectsApi.getProjectAssignments.mockResolvedValue([]);
     renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
 

@@ -6,7 +6,7 @@ import type {
   CreateUserRequest,
   CreateUserResponse,
   GetRolesResponse,
-  GetUnassignedUsersResponse,
+  GetUserListResponse,
   LoginRequest,
   LoginResponse,
   LogoutRequest,
@@ -76,13 +76,27 @@ export async function getRoles(accessToken: string): Promise<GetRolesResponse> {
   return response.data;
 }
 
+export interface GetUserListQuery {
+  pageNo?: number;
+  pageSize?: number;
+}
+
 /**
- * Every user with no current project assignment - candidates for the
- * "Add User to Project" dropdown on `/projects/:id/assignments`.
+ * Paginated list of every user account in the system - candidates for the
+ * "Add User to Project" dropdown on `/projects/:id/assignments`. Replaces
+ * the removed `/Auth/GetUnassignedUsers` endpoint this app previously
+ * called for that same dropdown; defaults to the first page of 10 users
+ * (`pageNo=1&pageSize=10`), matching the dropdown's current, non-paginated
+ * UI.
  */
-export async function getUnassignedUsers(accessToken: string): Promise<GetUnassignedUsersResponse> {
-  const response = await backendClient.get<GetUnassignedUsersResponse>('/Auth/GetUnassignedUsers', {
+export async function getUserList(
+  accessToken: string,
+  query: GetUserListQuery = {}
+): Promise<GetUserListResponse> {
+  const { pageNo = 1, pageSize = 10 } = query;
+  const response = await backendClient.get<GetUserListResponse>('/Auth/GetUserList', {
     headers: authHeader(accessToken),
+    params: { pageNo, pageSize },
   });
   return response.data;
 }

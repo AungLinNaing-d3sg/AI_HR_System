@@ -5,7 +5,7 @@ import * as projectsApi from '@/lib/api/projects.api';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import type { AssignResourceFormValues } from '@/lib/validators/project.validators';
 
-/** Assigns a user resource to a project and invalidates its cached assignments/unassigned-users lists. */
+/** Assigns a user resource to a project and invalidates its cached assignments/user-list queries. */
 export function useAssignResource(projectId: string) {
   const queryClient = useQueryClient();
 
@@ -13,7 +13,7 @@ export function useAssignResource(projectId: string) {
     mutationFn: (values: AssignResourceFormValues) => projectsApi.assignResource(projectId, values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'assignments'] });
-      void queryClient.invalidateQueries({ queryKey: ['auth', 'unassigned-users'] });
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'user-list'] });
     },
   });
 

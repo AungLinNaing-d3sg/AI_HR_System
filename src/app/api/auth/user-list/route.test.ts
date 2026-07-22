@@ -12,11 +12,11 @@ jest.mock('next/headers', () => ({
 }));
 
 jest.mock('../../../../lib/api/authBackend.api', () => ({
-  getUnassignedUsers: jest.fn(),
+  getUserList: jest.fn(),
 }));
 
 const authBackend = jest.requireMock('../../../../lib/api/authBackend.api') as {
-  getUnassignedUsers: jest.Mock;
+  getUserList: jest.Mock;
 };
 
 import { GET } from './route';
@@ -31,10 +31,14 @@ function tokenFor(role: string): string {
   return makeToken({ role, exp: futureExp });
 }
 
-describe('GET /api/auth/unassigned-users', () => {
+function pageOf(items: unknown[]) {
+  return { TotalCount: items.length, PageNo: 1, PageSize: 10, Items: items };
+}
+
+describe('GET /api/auth/user-list', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
-    authBackend.getUnassignedUsers.mockReset();
+    authBackend.getUserList.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -47,19 +51,19 @@ describe('GET /api/auth/unassigned-users', () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
     );
-    authBackend.getUnassignedUsers.mockResolvedValue([]);
+    authBackend.getUserList.mockResolvedValue(pageOf([]));
     const response = await GET();
     expect(response.status).toBe(200);
-    expect(authBackend.getUnassignedUsers).toHaveBeenCalled();
+    expect(authBackend.getUserList).toHaveBeenCalledWith(expect.any(String), { pageNo: 1, pageSize: 10 });
   });
 
-  it('returns the mapped unassigned user list', async () => {
+  it('returns the mapped user list from the first page of results', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
-    authBackend.getUnassignedUsers.mockResolvedValue([
-      { UserId: 'user-2', Username: 'jane.doe', Email: 'jane@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null },
-    ]);
+    authBackend.getUserList.mockResolvedValue(
+      pageOf([{ UserId: 'user-2', Username: 'jane.doe', Email: 'jane@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null }])
+    );
 
     const response = await GET();
     const body = await response.json();
@@ -70,11 +74,11 @@ describe('GET /api/auth/unassigned-users', () => {
     ]);
   });
 
-  it('returns an empty list when every user is already assigned to a project', async () => {
+  it('returns an empty list when the user list has no items', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
-    authBackend.getUnassignedUsers.mockResolvedValue([]);
+    authBackend.getUserList.mockResolvedValue(pageOf([]));
 
     const response = await GET();
     const body = await response.json();
@@ -86,7 +90,7 @@ describe('GET /api/auth/unassigned-users', () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
-    authBackend.getUnassignedUsers.mockRejectedValue(new Error('network down'));
+    authBackend.getUserList.mockRejectedValue(new Error('network down'));
 
     const response = await GET();
     expect(response.status).toBe(500);

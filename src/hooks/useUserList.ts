@@ -6,16 +6,17 @@ import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 /**
  * Fetches candidate users for the "Add User to Project" dropdown on
- * `/projects/:id/assignments` - every user with no current project
- * assignment, sourced from `GET /Auth/GetUnassignedUsers` (see
- * `app/api/auth/unassigned-users/route.ts`). Global (not scoped to a single
- * project), so the query key is a flat `['auth', 'unassigned-users']` tuple
- * shared across every project's assignments panel.
+ * `/projects/:id/assignments` - the first page of the paginated user list,
+ * sourced from `GET /Auth/GetUserList?pageNo=1&pageSize=10` (see
+ * `app/api/auth/user-list/route.ts`), replacing the previously used
+ * `GET /Auth/GetUnassignedUsers`. Global (not scoped to a single project),
+ * so the query key is a flat `['auth', 'user-list']` tuple shared across
+ * every project's assignments panel.
  */
-export function useUnassignedUsers() {
+export function useUserList() {
   const query = useQuery({
-    queryKey: ['auth', 'unassigned-users'],
-    queryFn: () => authApi.getUnassignedUsers(),
+    queryKey: ['auth', 'user-list'],
+    queryFn: () => authApi.getUserList(),
   });
 
   return {

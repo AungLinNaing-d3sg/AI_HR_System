@@ -11,7 +11,7 @@ const { axiosInstance } = jest.requireMock('./axios') as {
 };
 
 import * as authApi from './auth.api';
-import type { AuthenticatedUser, Role, UnassignedUser } from '@/types/domain.types';
+import type { AuthenticatedUser, Role, UserListItem } from '@/types/domain.types';
 
 const user: AuthenticatedUser = {
   id: 'user-1',
@@ -91,16 +91,16 @@ describe('auth.api (client)', () => {
     expect(result).toEqual([role]);
   });
 
-  it('getUnassignedUsers gets /auth/unassigned-users and returns the candidate user list', async () => {
-    const candidate: UnassignedUser = {
+  it('getUserList gets /auth/user-list and returns the candidate user list', async () => {
+    const candidate: UserListItem = {
       userId: 'user-2',
       firstName: 'Jane',
       lastName: 'Doe',
       email: 'jane@example.com',
     };
     axiosInstance.get.mockResolvedValue({ data: { users: [candidate] } });
-    const result = await authApi.getUnassignedUsers();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/unassigned-users');
+    const result = await authApi.getUserList();
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/user-list');
     expect(result).toEqual([candidate]);
   });
 });

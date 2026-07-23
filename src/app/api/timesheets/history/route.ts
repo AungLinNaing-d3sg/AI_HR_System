@@ -2,12 +2,11 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as timesheetsBackend from '@/lib/api/timesheetsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
-import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, extractUserId, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapTimesheetHistoryEntryList } from '@/lib/utils/mapTimesheet';
-import type { TimesheetHistoryResponsePayload } from '@/types/api.types';
+import type { TimesheetEntryDto, TimesheetHistoryResponsePayload } from '@/types/api.types';
 
 /**
  * GET /api/timesheets/history
@@ -15,10 +14,16 @@ import type { TimesheetHistoryResponsePayload } from '@/types/api.types';
  * Backs the `/timesheets/history` table (`docs/HR_System_FE_wireframe.pdf`).
  * `GetAllTimesheetEntries` is tagged only `[Auth]` in
  * docs/HR_System_BE.postman_collection.json - the backend itself does not
- * scope results to the caller - so this route applies the same UX-level
- * scoping `PROJECT_MANAGEMENT_ROLES` gets elsewhere: a plain `User` only
- * sees their own entries, while `ProjectAdmin`/`SystemAdmin` (who also get
- * the Approve action) see every entry so they have something to review.
+ * scope results to the caller - so this route applies UX-level scoping by
+ * role:
+ *
+ * - A plain `User` only sees their own entries.
+ * - A `ProjectAdmin` only sees entries for projects they are themselves
+ *   assigned to, via `GetProjectAdminTimesheetSummary` (which the backend
+ *   scopes server-side to the caller's own assignments) rather than the
+ *   unscoped `GetAllTimesheetEntries` - "a Project Admin can only
+ *   view/manage assigned project timesheets".
+ * - A `SystemAdmin` sees every entry system-wide (unrestricted oversight).
  */
 export async function GET(): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -35,10 +40,16 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ message: 'Could not identify the current user.' }, { status: 401 });
   }
 
-  const canViewAll = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
-
   try {
-    const entryDtos = await timesheetsBackend.getTimesheetEntries(accessToken, canViewAll ? {} : { userId });
+    let entryDtos: TimesheetEntryDto[];
+    if (role === 'ProjectAdmin') {
+      const summary = await timesheetsBackend.getProjectAdminTimesheetSummary(accessToken);
+      entryDtos = summary?.Entries ?? [];
+    } else if (role === 'SystemAdmin') {
+      entryDtos = await timesheetsBackend.getTimesheetEntries(accessToken, {});
+    } else {
+      entryDtos = await timesheetsBackend.getTimesheetEntries(accessToken, { userId });
+    }
 
     const payload: TimesheetHistoryResponsePayload = { entries: mapTimesheetHistoryEntryList(entryDtos) };
     return NextResponse.json<TimesheetHistoryResponsePayload>(payload, { status: 200 });

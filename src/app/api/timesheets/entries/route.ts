@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import * as timesheetsBackend from '@/lib/api/timesheetsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
-import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, extractUserId, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapTimesheetEntry } from '@/lib/utils/mapTimesheet';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
@@ -19,6 +19,16 @@ import type { TimesheetEntryResponsePayload } from '@/types/api.types';
  * from the bearer token itself (`CreateTimesheetEntry`'s request body has no
  * `UserId` field - see docs/HR_System_BE.postman_collection.json), so a
  * caller can never create an entry "as" another user.
+ *
+ * "Allow one submission per user's local calendar day": `CreateTimesheetEntry`
+ * has no documented uniqueness constraint of its own, so this route enforces
+ * it here - a user may only have one entry per project per calendar day (the
+ * grid already reads/writes one entry per project/day cell; this guards
+ * against a stale cell falling back to `create` instead of `update`, e.g.
+ * from two open tabs, and creating a duplicate). `entryDate` itself is
+ * whatever calendar day the client resolved as "today" using its own local
+ * timezone (see `lib/utils/week.ts`'s `getLocalDateString`), not the
+ * server's.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -27,6 +37,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
+  }
+
+  const userId = extractUserId(claims);
+  if (!userId) {
+    return NextResponse.json({ message: 'Could not identify the current user.' }, { status: 401 });
   }
 
   let body: unknown;
@@ -45,6 +60,21 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
+    const sameDayEntries = await timesheetsBackend.getTimesheetEntries(accessToken, {
+      userId,
+      projectId: parsed.data.projectId,
+    });
+    const alreadySubmitted = sameDayEntries.some((entry) => entry.EntryDate === parsed.data.entryDate);
+    if (alreadySubmitted) {
+      return NextResponse.json(
+        {
+          message:
+            'You already have a timesheet entry for this project on this day. Edit the existing entry instead of creating a new one.',
+        },
+        { status: 409 }
+      );
+    }
+
     const dto = await timesheetsBackend.createTimesheetEntry(
       {
         ProjectId: parsed.data.projectId,

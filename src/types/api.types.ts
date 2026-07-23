@@ -404,6 +404,13 @@ export interface TimesheetEntryUpdateResponsePayload {
     id: string;
     hours: number;
     taskDescription: string | null;
+    /**
+     * Always `false`: per the latest `UpdateTimesheetEntry` contract (see
+     * docs/HR_System_BE.postman_collection.json), any edit - including one
+     * to a previously-approved entry - resets it to "Pending Approval" on
+     * the backend, requiring a Project Admin to re-approve it.
+     */
+    isApproved: false;
   };
 }
 
@@ -450,6 +457,33 @@ export interface TimesheetPeriodUnlockResponsePayload {
   id: string;
   isLocked: false;
 }
+
+/**
+ * Raw response `Data` for `GET /TimesheetEntry/GetProjectAdminTimesheetSummary`,
+ * verified against the documented example response. The backend scopes this
+ * to the calling `ProjectAdmin`'s own assigned projects (there is no
+ * per-caller "my projects" filter on `GetAllTimesheetEntries` itself), with
+ * an optional `projectId` query param to narrow to a single one of them -
+ * see `TimesheetEntryQuery`/`getProjectAdminTimesheetSummary` below.
+ */
+export interface ProjectAdminProjectSummaryDto {
+  ProjectId: string;
+  ProjectCode: string;
+  ProjectName: string;
+  TotalHours: number;
+  ApprovedHours: number;
+  PendingHours: number;
+}
+
+export interface ProjectAdminTimesheetSummaryDto {
+  TotalHours: number;
+  ApprovedHours: number;
+  PendingHours: number;
+  ProjectSummaries: ProjectAdminProjectSummaryDto[];
+  Entries: TimesheetEntryDto[];
+}
+
+export type ProjectAdminTimesheetSummaryResponse = ProjectAdminTimesheetSummaryDto | null;
 
 /**
  * Raw Report domain payloads as returned by the backend (see the `Report`

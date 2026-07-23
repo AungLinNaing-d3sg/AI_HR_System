@@ -65,15 +65,19 @@ function matchesFilters(
  * `SystemAdmin`), so this component only adds the User column for the
  * roles that can see everyone's entries.
  *
- * Actions column, per row: "Locked" for an already-approved entry (an
- * approved entry can never be deleted either - see
- * `app/api/timesheets/entries/[id]/route.ts`'s `DELETE` handler); "Edit"
- * (jumps to `/timesheets` pre-navigated to that entry's week, reusing the
- * grid's own create/update flow rather than duplicating it here) plus
- * "Delete" for the signed-in user's own pending entry; "Approve" plus
- * "Delete" for a pending entry that belongs to someone else, if the caller
- * can approve/manage timesheets - completing the entry's CRUD lifecycle
- * (create via the grid, read here, update via Edit, delete here).
+ * Actions column, per row: "Edit" (jumps to `/timesheets` pre-navigated to
+ * that entry's week, reusing the grid's own create/update flow rather than
+ * duplicating it here) for the signed-in user's own entry, *including* an
+ * already-approved one - editing it resets it to Pending Approval and
+ * requires the Project Admin to re-approve it, so it is never locked out for
+ * its owner; plus "Delete" for the signed-in user's own *pending* entry (an
+ * approved entry can never be deleted - see
+ * `app/api/timesheets/entries/[id]/route.ts`'s `DELETE` handler). "Approve"
+ * plus "Delete" for a pending entry that belongs to someone else, if the
+ * caller can approve/manage timesheets. "Locked" (no action available) for
+ * an already-approved entry that isn't the viewer's own and needs no further
+ * review. Completes the entry's CRUD lifecycle (create via the grid, read
+ * here, update via Edit, delete here).
  */
 export function TimesheetHistoryTable() {
   const { user, role } = useAuth();
@@ -283,49 +287,60 @@ export function TimesheetHistoryTable() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {entry.isApproved ? (
-                        <span className="text-sm text-zinc-400">Locked</span>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-2">
-                          {isOwnEntry && (
-                            <Link
-                              href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
-                              className={OUTLINE_LINK_CLASSNAME}
-                            >
-                              Edit
-                            </Link>
-                          )}
-                          {!isOwnEntry && canApprove && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              isLoading={isApproving}
-                              onClick={() => {
-                                resetApproveError();
-                                void approveEntry(entry.id);
-                              }}
-                            >
-                              Approve
-                            </Button>
-                          )}
-                          {(isOwnEntry || canApprove) && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="border-red-200 text-red-600 hover:bg-red-50"
-                              onClick={() => {
-                                resetDeleteError();
-                                setPendingDelete(entry);
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                      {(() => {
+                        const canEdit = isOwnEntry;
+                        const canApproveThis = !isOwnEntry && canApprove && !entry.isApproved;
+                        const canDelete = !entry.isApproved && (isOwnEntry || canApprove);
+                        const hasAction = canEdit || canApproveThis || canDelete;
+
+                        return (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {canEdit && (
+                              <Link
+                                href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
+                                className={OUTLINE_LINK_CLASSNAME}
+                                title={
+                                  entry.isApproved
+                                    ? 'Editing this entry resets it to Pending Approval for re-review.'
+                                    : undefined
+                                }
+                              >
+                                Edit
+                              </Link>
+                            )}
+                            {canApproveThis && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                isLoading={isApproving}
+                                onClick={() => {
+                                  resetApproveError();
+                                  void approveEntry(entry.id);
+                                }}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  resetDeleteError();
+                                  setPendingDelete(entry);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                Delete
+                              </Button>
+                            )}
+                            {!hasAction && <span className="text-sm text-zinc-400">Locked</span>}
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 );

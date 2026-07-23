@@ -8,6 +8,7 @@ import { decodeAccessToken, extractUserId, isTokenExpired } from '@/lib/utils/jw
 import { logger } from '@/lib/utils/logger';
 import { mapProjectList } from '@/lib/utils/mapProject';
 import { mapTimesheetEntryList, mapTimesheetPeriodList } from '@/lib/utils/mapTimesheet';
+import { filterProjectsAssignedToUser } from '@/lib/utils/timesheetAccess';
 import { addDays, getMondayOfWeek, isValidDateString } from '@/lib/utils/week';
 import type { TimesheetWeekResponsePayload } from '@/types/api.types';
 
@@ -15,14 +16,18 @@ import type { TimesheetWeekResponsePayload } from '@/types/api.types';
  * GET /api/timesheets/week?weekStart=YYYY-MM-DD
  *
  * Combined read model for the `/timesheets` weekly grid: joins the active
- * Project list with whichever Timesheet Period covers the requested week and
- * that period's entries for the current user, so the client only needs one
- * request per week viewed instead of orchestrating three. No extra RBAC gate
- * beyond "authenticated" is applied here (unlike `/api/projects`) - the
- * underlying `/TimesheetEntry/*` and `/TimesheetPeriod/*` endpoints are
- * tagged only `[Auth]` in docs/HR_System_BE.postman_collection.json, and
- * every role (including a plain `User`) needs to be able to log their own
- * hours.
+ * Project list - narrowed down to only the projects the caller is
+ * themselves actively assigned to (`filterProjectsAssignedToUser`), so the
+ * grid's rows and default total hours reflect the caller's own assignments
+ * rather than every active project system-wide - with whichever Timesheet
+ * Period covers the requested week and that period's entries for the
+ * current user, so the client only needs one request per week viewed
+ * instead of orchestrating three. No extra RBAC gate beyond "authenticated"
+ * is applied here (unlike `/api/projects`) - the underlying
+ * `/TimesheetEntry/*` and `/TimesheetPeriod/*` endpoints are tagged only
+ * `[Auth]` in docs/HR_System_BE.postman_collection.json, and every role
+ * (including a plain `User`) needs to be able to log their own hours
+ * against their own assigned projects.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -46,11 +51,14 @@ export async function GET(request: Request): Promise<NextResponse> {
   const weekEnd = addDays(weekStart, 6);
 
   try {
-    const [projectDtos, periodDtos, entryDtos] = await Promise.all([
+    const [allProjectDtos, periodDtos, entryDtos] = await Promise.all([
       projectsBackend.getProjectList(accessToken),
       timesheetsBackend.getTimesheetPeriods(accessToken),
       timesheetsBackend.getTimesheetEntries(accessToken, { userId }),
     ]);
+
+    const activeProjectDtos = allProjectDtos.filter((project) => project.IsActive);
+    const projectDtos = await filterProjectsAssignedToUser(activeProjectDtos, userId, accessToken);
 
     const periods = mapTimesheetPeriodList(periodDtos);
     // Timesheet Periods are typically monthly and a displayed week can span

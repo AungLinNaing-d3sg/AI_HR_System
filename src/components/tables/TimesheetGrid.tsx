@@ -44,7 +44,10 @@ function useInitialWeekFromSearchParams(): string | undefined {
  * The `/timesheets` "My Timesheets" page: a "Create Timesheet" Timesheet
  * Period dropdown (populated from `useTimesheetPeriods`, i.e.
  * `GET /api/timesheets/periods`) above a Monday-Sunday weekly grid of hour
- * inputs per active project, an auto-calculated daily-total row, and
+ * inputs per active project the signed-in user is themselves assigned to
+ * (see `app/api/timesheets/week/route.ts`), so the default project rows and
+ * total hours reflect the caller's own assignments, an auto-calculated
+ * daily-total row, and
  * expandable per-project rows to view/edit that day's task notes (see
  * `docs/HR_System_FE_wireframe.pdf`'s `/timesheets` screen). Selecting a
  * period jumps the grid to the week containing that period's start date
@@ -254,7 +257,10 @@ export function TimesheetGrid() {
 
       {rows.length === 0 ? (
         <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
-          <p className="text-sm text-zinc-600">No active projects are available to log time against.</p>
+          <p className="text-sm text-zinc-600">
+            No active projects are available to log time against. You are not currently assigned to any active
+            project - contact your project admin to get assigned.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-md border border-zinc-200">

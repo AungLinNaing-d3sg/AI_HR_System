@@ -5,7 +5,12 @@ import * as timesheetsApi from '@/lib/api/timesheets.api';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import type { CreateTimesheetEntryFormValues } from '@/lib/validators/timesheet.validators';
 
-/** Creates a new timesheet entry and invalidates every cached `['timesheets', 'week']` query so the grid refetches. */
+/**
+ * Creates a new timesheet entry and invalidates every cached
+ * `['timesheets', 'week']` query so the grid refetches, plus the
+ * `['timesheets', 'history']` list, since a newly-logged entry also appears
+ * there.
+ */
 export function useCreateTimesheetEntry() {
   const queryClient = useQueryClient();
 
@@ -13,6 +18,7 @@ export function useCreateTimesheetEntry() {
     mutationFn: (values: CreateTimesheetEntryFormValues) => timesheetsApi.createTimesheetEntry(values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['timesheets', 'week'] });
+      void queryClient.invalidateQueries({ queryKey: ['timesheets', 'history'] });
     },
   });
 

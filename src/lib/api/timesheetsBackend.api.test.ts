@@ -157,4 +157,32 @@ describe('timesheetsBackend.api (server)', () => {
       headers: { Authorization: 'Bearer access-token' },
     });
   });
+
+  it('getProjectAdminTimesheetSummary gets /TimesheetEntry/GetProjectAdminTimesheetSummary with a Bearer header and default (empty) query', async () => {
+    const dto = {
+      TotalHours: 40,
+      ApprovedHours: 20,
+      PendingHours: 20,
+      ProjectSummaries: [
+        { ProjectId: 'project-1', ProjectCode: 'D3SG001', ProjectName: 'STP Enhancement', TotalHours: 40, ApprovedHours: 20, PendingHours: 20 },
+      ],
+      Entries: [],
+    };
+    backendClient.get.mockResolvedValue({ data: dto });
+    const result = await timesheetsBackend.getProjectAdminTimesheetSummary('access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/TimesheetEntry/GetProjectAdminTimesheetSummary', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: {},
+    });
+    expect(result).toEqual(dto);
+  });
+
+  it('getProjectAdminTimesheetSummary forwards a projectId filter when given one', async () => {
+    backendClient.get.mockResolvedValue({ data: null });
+    await timesheetsBackend.getProjectAdminTimesheetSummary('access-token', { projectId: 'project-1' });
+    expect(backendClient.get).toHaveBeenCalledWith('/TimesheetEntry/GetProjectAdminTimesheetSummary', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { projectId: 'project-1' },
+    });
+  });
 });

@@ -10,7 +10,12 @@ export interface UpdateTimesheetEntryInput {
   values: UpdateTimesheetEntryFormValues;
 }
 
-/** Updates an existing timesheet entry's hours/notes and invalidates every cached `['timesheets', 'week']` query. */
+/**
+ * Updates an existing timesheet entry's hours/notes and invalidates every
+ * cached `['timesheets', 'week']` query, plus the `['timesheets', 'history']`
+ * list - editing an entry (including an already-approved one, which the
+ * backend resets to Pending Approval) changes what History shows for it too.
+ */
 export function useUpdateTimesheetEntry() {
   const queryClient = useQueryClient();
 
@@ -18,6 +23,7 @@ export function useUpdateTimesheetEntry() {
     mutationFn: ({ id, values }: UpdateTimesheetEntryInput) => timesheetsApi.updateTimesheetEntry(id, values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['timesheets', 'week'] });
+      void queryClient.invalidateQueries({ queryKey: ['timesheets', 'history'] });
     },
   });
 

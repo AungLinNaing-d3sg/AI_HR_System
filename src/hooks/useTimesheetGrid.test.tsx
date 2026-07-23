@@ -176,10 +176,16 @@ describe('useTimesheetGrid', () => {
     expect(timesheetsApi.updateTimesheetEntry).not.toHaveBeenCalled();
   });
 
-  it('does not allow editing an approved cell', async () => {
+  it('allows editing an already-approved cell, re-submitting it for re-approval', async () => {
     timesheetsApi.getTimesheetWeek.mockResolvedValue(
       weekWith({ entries: [{ ...existingEntry, isApproved: true }] })
     );
+    timesheetsApi.updateTimesheetEntry.mockResolvedValue({
+      id: 'entry-1',
+      hours: 2,
+      taskDescription: 'Frontend component development',
+      isApproved: false,
+    });
     const { result } = renderHook(() => useTimesheetGrid('2025-02-24'), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -193,8 +199,11 @@ describe('useTimesheetGrid', () => {
       await result.current.saveAll();
     });
 
-    // Even though the cell was locally edited, the approved cell is skipped when saving.
-    expect(timesheetsApi.updateTimesheetEntry).not.toHaveBeenCalled();
+    // Editing an approved cell is allowed - the backend resets it to Pending Approval.
+    expect(timesheetsApi.updateTimesheetEntry).toHaveBeenCalledWith('entry-1', {
+      hours: 2,
+      taskDescription: 'Frontend component development',
+    });
   });
 
   it('reflects a locked period via isLocked/canEdit', async () => {

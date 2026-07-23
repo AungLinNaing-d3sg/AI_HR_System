@@ -29,14 +29,14 @@ function sumHours(cells: readonly { hours: number }[]): number {
 }
 
 /**
- * Joins the active project list with this week's timesheet entries into one
- * row per project, Monday-first, for the `/timesheets` weekly grid. Every
- * active project gets a row (even with no logged hours yet) per the
- * wireframe's "Log your daily hours per project" framing
- * (`docs/HR_System_FE_wireframe.pdf`) - there is no per-user
- * project-assignment lookup endpoint in
- * `docs/HR_System_BE.postman_collection.json`, so the full active project
- * list is used rather than a narrower "my projects" subset.
+ * Joins the (already assigned-projects-only, see
+ * `app/api/timesheets/week/route.ts`) project list with this week's
+ * timesheet entries into one row per project, Monday-first, for the
+ * `/timesheets` weekly grid. Every project in the list gets a row (even with
+ * no logged hours yet) per the wireframe's "Log your daily hours per
+ * project" framing (`docs/HR_System_FE_wireframe.pdf`); `isActive` is
+ * filtered again here defensively even though the caller already narrows to
+ * active + assigned projects.
  */
 export function buildTimesheetGrid(
   projects: readonly Project[],

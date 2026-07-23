@@ -22,6 +22,11 @@ export interface TimesheetGridRowProps {
  * total, and a toggleable sub-row (a "note strip" under each day column,
  * per the wireframe's "click the info icon to add task notes" hint - see
  * `docs/HR_System_FE_wireframe.pdf`) to view/edit that day's task notes.
+ *
+ * A cell whose entry is already Approved stays editable (only `disabled`,
+ * e.g. a locked period, blocks it) - editing it resets it to Pending
+ * Approval and requires the Project Admin to re-approve it, so an
+ * "Approved" cell shows a hint explaining that instead of being locked out.
  */
 export function TimesheetGridRow({
   row,
@@ -64,12 +69,18 @@ export function TimesheetGridRow({
               max={row.maxDailyHours ?? MAX_ENTRY_HOURS}
               step={HOURS_STEP}
               value={cell.hoursInput}
-              disabled={disabled || cell.isApproved}
+              disabled={disabled}
               hasError={Boolean(cell.error)}
               placeholder="–"
               className="h-9 w-16 text-center"
               aria-label={`${formatDayLabel(cell.date)} hours for ${row.projectName}`}
-              aria-describedby={cell.error ? `${notesRowId}-${cell.date}-error` : undefined}
+              aria-describedby={
+                cell.error
+                  ? `${notesRowId}-${cell.date}-error`
+                  : cell.isApproved
+                    ? `${notesRowId}-${cell.date}-approved`
+                    : undefined
+              }
               onChange={(event) => onHoursChange(cell.date, event.target.value)}
             />
             {cell.error && (
@@ -77,9 +88,9 @@ export function TimesheetGridRow({
                 {cell.error}
               </p>
             )}
-            {cell.isApproved && (
-              <p className="mt-1 text-xs text-zinc-400" aria-hidden="true">
-                Approved
+            {!cell.error && cell.isApproved && (
+              <p id={`${notesRowId}-${cell.date}-approved`} className="mt-1 text-xs text-zinc-400">
+                Approved · editing resets to Pending
               </p>
             )}
           </td>
@@ -99,7 +110,7 @@ export function TimesheetGridRow({
             <td key={cell.date} className="px-2 py-3 align-top">
               <Textarea
                 value={cell.taskDescription}
-                disabled={disabled || cell.isApproved}
+                disabled={disabled}
                 rows={2}
                 placeholder="Add a note…"
                 className="h-16 min-h-16 w-36 text-xs"

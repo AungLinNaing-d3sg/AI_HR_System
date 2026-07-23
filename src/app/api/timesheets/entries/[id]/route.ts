@@ -2,10 +2,10 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as timesheetsBackend from '@/lib/api/timesheetsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
-import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, extractUserId, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
+import { getProjectAdminAssignedProjectIds } from '@/lib/utils/timesheetAccess';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { updateTimesheetEntrySchema } from '@/lib/validators/timesheet.validators';
 import type { TimesheetEntryUpdateResponsePayload } from '@/types/api.types';
@@ -18,9 +18,18 @@ interface RouteParams {
  * PUT /api/timesheets/entries/:id
  *
  * Updates the Hours/TaskDescription of an existing entry from the weekly
- * grid. The backend itself rejects edits to approved or period-locked
- * entries (see docs/HR_System_BE.postman_collection.json); this route
- * forwards that rejection rather than re-implementing the check.
+ * grid - including one that is already approved: per the latest
+ * `UpdateTimesheetEntry` contract (see
+ * docs/HR_System_BE.postman_collection.json), editing an approved entry is
+ * now allowed and the backend itself resets it to "Pending Approval"
+ * (`IsApproved: false`), requiring a Project Admin to re-approve it - the
+ * backend still independently rejects edits to a period-locked entry.
+ *
+ * `UpdateTimesheetEntry` is tagged only `[Auth]` with no ownership check
+ * documented, so - mirroring this same route's `DELETE` handler below - this
+ * route fetches the entry first and only allows the entry's own owner to
+ * edit it, closing an otherwise-open IDOR (any authenticated user could
+ * otherwise edit any entry by guessing/enumerating its id).
  */
 export async function PUT(request: Request, { params }: RouteParams): Promise<NextResponse> {
   const { id } = await params;
@@ -30,6 +39,11 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
 
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
+  }
+
+  const userId = extractUserId(claims);
+  if (!userId) {
+    return NextResponse.json({ message: 'Could not identify the current user.' }, { status: 401 });
   }
 
   let body: unknown;
@@ -48,14 +62,21 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
   }
 
   try {
+    const entry = await timesheetsBackend.getTimesheetEntryById(id, accessToken);
+    if (entry.UserId !== userId) {
+      return NextResponse.json({ message: 'You can only edit your own timesheet entries.' }, { status: 403 });
+    }
+
     const taskDescription = parsed.data.taskDescription || null;
     await timesheetsBackend.updateTimesheetEntry(id, { Hours: parsed.data.hours, TaskDescription: taskDescription }, accessToken);
 
     // `UpdateTimesheetEntry` returns no entry fields on success (see
     // `UpdateTimesheetEntryResponse` in api.types.ts), so the response here
     // echoes back what the caller already sent rather than a backend value.
+    // The entry is always Pending Approval after an edit (see doc comment
+    // above), regardless of what it was before, so that is reported too.
     return NextResponse.json<TimesheetEntryUpdateResponsePayload>(
-      { entry: { id, hours: parsed.data.hours, taskDescription } },
+      { entry: { id, hours: parsed.data.hours, taskDescription, isApproved: false } },
       { status: 200 }
     );
   } catch (error) {
@@ -76,10 +97,10 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
  * shape already flagged against this route's `PUT` handler, this route
  * fetches the entry first and enforces the same rule the
  * `/timesheets/history` UI already surfaces: a plain `User` may only delete
- * their own entry, `SystemAdmin`/`ProjectAdmin` (`PROJECT_MANAGEMENT_ROLES`)
- * may delete any entry, and an already-approved entry can never be deleted -
- * mirroring the backend's existing "no edits to an approved/locked entry"
- * rule for `UpdateTimesheetEntry`.
+ * their own entry, `SystemAdmin` may delete any entry, a `ProjectAdmin` may
+ * delete any entry belonging to a project they are themselves assigned to
+ * ("a Project Admin can only view/manage assigned project timesheets"), and
+ * an already-approved entry can never be deleted, regardless of role.
  */
 export async function DELETE(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   const { id } = await params;
@@ -93,7 +114,8 @@ export async function DELETE(_request: Request, { params }: RouteParams): Promis
 
   const role = extractRole(claims);
   const userId = extractUserId(claims);
-  const canManageAny = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
+  const isSystemAdmin = role === 'SystemAdmin';
+  const isProjectAdmin = role === 'ProjectAdmin';
 
   try {
     const entry = await timesheetsBackend.getTimesheetEntryById(id, accessToken);
@@ -102,7 +124,14 @@ export async function DELETE(_request: Request, { params }: RouteParams): Promis
       return NextResponse.json({ message: 'Approved timesheet entries cannot be deleted.' }, { status: 409 });
     }
 
-    if (!canManageAny && entry.UserId !== userId) {
+    const isOwnEntry = entry.UserId === userId;
+    let canManage = isOwnEntry || isSystemAdmin;
+    if (!canManage && isProjectAdmin) {
+      const assignedProjectIds = await getProjectAdminAssignedProjectIds(accessToken);
+      canManage = assignedProjectIds.has(entry.ProjectId);
+    }
+
+    if (!canManage) {
       return NextResponse.json(
         { message: 'You can only delete your own timesheet entries.' },
         { status: 403 }

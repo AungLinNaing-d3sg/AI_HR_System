@@ -15,6 +15,26 @@ function parseDateOnly(date: string): Date {
   return new Date(`${date}T00:00:00.000Z`);
 }
 
+/**
+ * Returns `date`'s calendar day (`YYYY-MM-DD`) as perceived in the caller's
+ * OWN local timezone (`getFullYear`/`getMonth`/`getDate`, not UTC). This is
+ * deliberately different from `toDateOnly`/`parseDateOnly` above, which are
+ * UTC-anchored so an *explicit* `YYYY-MM-DD` date string always means the
+ * same instant everywhere - `getLocalDateString` instead answers "what
+ * calendar day is it *for this user, right now*", which is what "today"
+ * needs to mean when defaulting the weekly grid or enforcing the
+ * one-entry-per-local-calendar-day rule (see
+ * `app/api/timesheets/entries/route.ts`). Without this, a user just after
+ * local midnight in a timezone ahead of UTC (e.g. UTC+8) would have "today"
+ * resolved against the *previous* UTC day.
+ */
+export function getLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /** True for a syntactically valid, real `YYYY-MM-DD` calendar date. */
 export function isValidDateString(value: string): boolean {
   if (!DATE_STRING_PATTERN.test(value)) return false;
@@ -30,12 +50,17 @@ export function addDays(date: string, amount: number): string {
 }
 
 /**
- * Returns the Monday (`YYYY-MM-DD`) of the ISO week containing `date`
- * (defaults to "today" in UTC, so weekly-grid defaults stay deterministic
- * regardless of the caller's local timezone).
+ * Returns the Monday (`YYYY-MM-DD`) of the ISO week containing `date`. When
+ * `date` is omitted, "today" is resolved via `getLocalDateString` (the
+ * caller's own local calendar day), not UTC - so the weekly grid's default
+ * week, "This week" button, and same-day submission checks all agree with
+ * what the user's own clock says "today" is, even close to local midnight.
+ * An explicitly-passed `date` (e.g. jumping to a specific entry's week) is
+ * still resolved via the UTC-anchored `toDateOnly`/`parseDateOnly` helpers
+ * above, since that's an unambiguous calendar date, not "now".
  */
-export function getMondayOfWeek(date: Date = new Date()): string {
-  const dateString = toDateOnly(date);
+export function getMondayOfWeek(date?: Date): string {
+  const dateString = date ? toDateOnly(date) : getLocalDateString();
   const parsed = parseDateOnly(dateString);
   const day = parsed.getUTCDay(); // 0 (Sun) .. 6 (Sat)
   const diffToMonday = day === 0 ? -6 : 1 - day;

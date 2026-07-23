@@ -13,6 +13,7 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../lib/api/projectsBackend.api', () => ({
   getProjectList: jest.fn(),
+  getProjectAssignments: jest.fn(),
 }));
 
 jest.mock('../../../../lib/api/timesheetsBackend.api', () => ({
@@ -22,6 +23,7 @@ jest.mock('../../../../lib/api/timesheetsBackend.api', () => ({
 
 const projectsBackend = jest.requireMock('../../../../lib/api/projectsBackend.api') as {
   getProjectList: jest.Mock;
+  getProjectAssignments: jest.Mock;
 };
 const timesheetsBackend = jest.requireMock('../../../../lib/api/timesheetsBackend.api') as {
   getTimesheetPeriods: jest.Mock;
@@ -81,6 +83,8 @@ describe('GET /api/timesheets/week', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     projectsBackend.getProjectList.mockReset();
+    projectsBackend.getProjectAssignments.mockReset();
+    projectsBackend.getProjectAssignments.mockResolvedValue([{ UserId: 'user-1', IsActive: true }]);
     timesheetsBackend.getTimesheetPeriods.mockReset();
     timesheetsBackend.getTimesheetEntries.mockReset();
   });
@@ -126,6 +130,44 @@ describe('GET /api/timesheets/week', () => {
     expect(body.projects).toHaveLength(1);
     expect(body.entries).toHaveLength(1);
     expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(token, { userId: 'user-1' });
+  });
+
+  it('excludes an active project the caller is not assigned to', async () => {
+    const token = tokenFor();
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    const unassignedProject = { ...projectDto, Id: 'project-2', Code: 'PRJ-BETA' };
+    projectsBackend.getProjectList.mockResolvedValue([projectDto, unassignedProject]);
+    projectsBackend.getProjectAssignments.mockImplementation((projectId: string) =>
+      Promise.resolve(
+        projectId === 'project-1' ? [{ UserId: 'user-1', IsActive: true }] : [{ UserId: 'someone-else', IsActive: true }]
+      )
+    );
+    timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodDto]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([entryDto]);
+
+    const response = await GET(requestFor('2025-02-24'));
+    const body = await response.json();
+
+    expect(body.projects).toHaveLength(1);
+    expect(body.projects[0].id).toBe('project-1');
+  });
+
+  it('excludes an inactive project even if the caller is assigned to it', async () => {
+    const token = tokenFor();
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    projectsBackend.getProjectList.mockResolvedValue([{ ...projectDto, IsActive: false }]);
+    timesheetsBackend.getTimesheetPeriods.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+
+    const response = await GET(requestFor('2025-02-24'));
+    const body = await response.json();
+
+    expect(body.projects).toEqual([]);
+    expect(projectsBackend.getProjectAssignments).not.toHaveBeenCalled();
   });
 
   it('normalizes a non-Monday weekStart to the Monday of its week', async () => {

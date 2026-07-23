@@ -6,6 +6,7 @@ import type {
   CreateTimesheetEntryRequest,
   CreateTimesheetPeriodRequest,
   LockTimesheetPeriodResponseDto,
+  ProjectAdminTimesheetSummaryResponse,
   TimesheetEntryListResponse,
   TimesheetEntryResponse,
   TimesheetPeriodListResponse,
@@ -155,4 +156,29 @@ export async function deleteTimesheetEntry(id: string, accessToken: string): Pro
   await backendClient.delete(`/TimesheetEntry/DeleteTimesheetEntry/${id}`, {
     headers: authHeader(accessToken),
   });
+}
+
+export interface ProjectAdminTimesheetSummaryQuery {
+  projectId?: string;
+}
+
+/**
+ * A `ProjectAdmin`'s own assigned-project timesheet summary - aggregate
+ * hours plus the underlying entries, scoped server-side to the calling
+ * user's assigned projects (optionally narrowed to one project via
+ * `projectId`). This is the source of truth `app/api/timesheets/history` and
+ * the entry approve/delete routes use to enforce "a Project Admin can only
+ * view/manage timesheets for projects they are assigned to" (see
+ * `lib/utils/timesheetAccess.ts`), since `GetAllTimesheetEntries` itself is
+ * tagged only `[Auth]` with no such scoping.
+ */
+export async function getProjectAdminTimesheetSummary(
+  accessToken: string,
+  query: ProjectAdminTimesheetSummaryQuery = {}
+): Promise<ProjectAdminTimesheetSummaryResponse> {
+  const response = await backendClient.get<ProjectAdminTimesheetSummaryResponse>(
+    '/TimesheetEntry/GetProjectAdminTimesheetSummary',
+    { headers: authHeader(accessToken), params: query }
+  );
+  return response.data;
 }

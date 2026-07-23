@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../lib/api/timesheetsBackend.api', () => ({
   getTimesheetEntries: jest.fn(),
+  getProjectAdminTimesheetSummary: jest.fn(),
 }));
 
 const timesheetsBackend = jest.requireMock('../../../../lib/api/timesheetsBackend.api') as {
   getTimesheetEntries: jest.Mock;
+  getProjectAdminTimesheetSummary: jest.Mock;
 };
 
 import { GET } from './route';
@@ -50,6 +52,7 @@ describe('GET /api/timesheets/history', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     timesheetsBackend.getTimesheetEntries.mockReset();
+    timesheetsBackend.getProjectAdminTimesheetSummary.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -75,15 +78,40 @@ describe('GET /api/timesheets/history', () => {
     expect(body.entries[0].projectName).toBe('Project Helix');
   });
 
-  it('requests every entry (no userId filter) for a ProjectAdmin', async () => {
+  it('scopes a ProjectAdmin to their own assigned-project entries via GetProjectAdminTimesheetSummary', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
     );
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([entryDto]);
+    timesheetsBackend.getProjectAdminTimesheetSummary.mockResolvedValue({
+      TotalHours: 8,
+      ApprovedHours: 0,
+      PendingHours: 8,
+      ProjectSummaries: [
+        { ProjectId: 'project-1', ProjectCode: 'PRJ-001', ProjectName: 'Project Helix', TotalHours: 8, ApprovedHours: 0, PendingHours: 8 },
+      ],
+      Entries: [entryDto],
+    });
 
-    await GET();
+    const response = await GET();
+    const body = await response.json();
 
-    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(expect.any(String), {});
+    expect(response.status).toBe(200);
+    expect(timesheetsBackend.getProjectAdminTimesheetSummary).toHaveBeenCalledWith(expect.any(String));
+    expect(timesheetsBackend.getTimesheetEntries).not.toHaveBeenCalled();
+    expect(body.entries).toHaveLength(1);
+    expect(body.entries[0].projectName).toBe('Project Helix');
+  });
+
+  it('returns an empty list for a ProjectAdmin with no assigned projects (no Data on the summary)', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    timesheetsBackend.getProjectAdminTimesheetSummary.mockResolvedValue(null);
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.entries).toEqual([]);
   });
 
   it('requests every entry (no userId filter) for a SystemAdmin', async () => {

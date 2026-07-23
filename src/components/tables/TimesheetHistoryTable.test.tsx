@@ -121,13 +121,25 @@ describe('TimesheetHistoryTable', () => {
     await waitFor(() => expect(timesheetsApi.approveTimesheetEntry).toHaveBeenCalledWith('entry-1'));
   });
 
-  it('shows "Locked" (no action) for an already-approved entry, regardless of who is viewing', async () => {
+  it('shows "Locked" (no action) for an already-approved entry that is not the viewer\'s own and needs no review', async () => {
+    mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'admin-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Lin Thit Htoo');
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+  });
+
+  it("shows an Edit link (not Locked) for the signed-in user's own already-approved entry, since editing resets it to Pending Approval", async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
     timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
-    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument();
+    const editLinks = screen.getAllByRole('link', { name: 'Edit' });
+    expect(editLinks).toHaveLength(2);
+    expect(editLinks[1]).toHaveAttribute('title', 'Editing this entry resets it to Pending Approval for re-review.');
   });
 
   it('shows an "Edit" link to the timesheet grid for the signed-in user\'s own pending entry', async () => {
@@ -136,7 +148,8 @@ describe('TimesheetHistoryTable', () => {
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
-    const editLink = screen.getByRole('link', { name: 'Edit' });
+    // Both entries belong to user-1, so both are editable; the first (entry-1, pending) is asserted here.
+    const [editLink] = screen.getAllByRole('link', { name: 'Edit' });
     // 2025-03-01 is a Saturday - its Monday is 2025-02-24.
     expect(editLink).toHaveAttribute('href', '/timesheets?week=2025-02-24');
   });

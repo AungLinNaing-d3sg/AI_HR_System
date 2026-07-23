@@ -3,6 +3,7 @@ import {
   formatDayHeader,
   formatDayLabel,
   formatWeekRangeLabel,
+  getLocalDateString,
   getMondayOfWeek,
   getWeekDates,
   isValidDateString,
@@ -43,6 +44,20 @@ describe('addDays', () => {
   });
 });
 
+describe('getLocalDateString', () => {
+  it('formats a date using local year/month/day, not UTC', () => {
+    // Jan 2 2025, 00:30 local time - if this were sliced from `.toISOString()`
+    // in a timezone ahead of UTC, it would incorrectly report Jan 1.
+    const date = new Date(2025, 0, 2, 0, 30);
+    expect(getLocalDateString(date)).toBe('2025-01-02');
+  });
+
+  it('pads single-digit months and days', () => {
+    const date = new Date(2025, 2, 5);
+    expect(getLocalDateString(date)).toBe('2025-03-05');
+  });
+});
+
 describe('getMondayOfWeek', () => {
   it('returns the same date when given a Monday', () => {
     expect(getMondayOfWeek(new Date('2025-02-24T12:00:00.000Z'))).toBe('2025-02-24');
@@ -54,6 +69,15 @@ describe('getMondayOfWeek', () => {
 
   it('returns the prior Monday for a Sunday (ISO week wraps back, not forward)', () => {
     expect(getMondayOfWeek(new Date('2025-03-02T00:00:00.000Z'))).toBe('2025-02-24');
+  });
+
+  it('defaults to the LOCAL calendar day, not the UTC day, when called with no argument', () => {
+    // System clock: Mon Feb 24 2025, 23:30 *local* time. A timezone offset
+    // that pushes this past UTC midnight (e.g. UTC-1) would make the naive
+    // `new Date().toISOString()` slice report Feb 25 (a Tuesday) instead.
+    jest.useFakeTimers().setSystemTime(new Date(2025, 1, 24, 23, 30));
+    expect(getMondayOfWeek()).toBe('2025-02-24');
+    jest.useRealTimers();
   });
 });
 

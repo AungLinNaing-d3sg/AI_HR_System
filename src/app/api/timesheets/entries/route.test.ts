@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../lib/api/timesheetsBackend.api', () => ({
   createTimesheetEntry: jest.fn(),
+  getTimesheetEntries: jest.fn(),
 }));
 
 const timesheetsBackend = jest.requireMock('../../../../lib/api/timesheetsBackend.api') as {
   createTimesheetEntry: jest.Mock;
+  getTimesheetEntries: jest.Mock;
 };
 
 import { POST } from './route';
@@ -62,6 +64,8 @@ describe('POST /api/timesheets/entries', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     timesheetsBackend.createTimesheetEntry.mockReset();
+    timesheetsBackend.getTimesheetEntries.mockReset();
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -107,6 +111,10 @@ describe('POST /api/timesheets/entries', () => {
 
     expect(response.status).toBe(201);
     expect(body.entry.hours).toBe(6);
+    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(token, {
+      userId: 'user-1',
+      projectId: 'project-1',
+    });
     expect(timesheetsBackend.createTimesheetEntry).toHaveBeenCalledWith(
       {
         ProjectId: 'project-1',
@@ -117,6 +125,29 @@ describe('POST /api/timesheets/entries', () => {
       },
       token
     );
+  });
+
+  it('returns 409 when the user already has an entry for this project on this day', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor() } : undefined
+    );
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([{ ...dto, EntryDate: '2025-02-24' }]);
+
+    const response = await POST(jsonRequest(validPayload));
+    expect(response.status).toBe(409);
+    expect(timesheetsBackend.createTimesheetEntry).not.toHaveBeenCalled();
+  });
+
+  it('allows creating an entry for the same project on a different day', async () => {
+    const token = tokenFor('User');
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([{ ...dto, EntryDate: '2025-02-25' }]);
+    timesheetsBackend.createTimesheetEntry.mockResolvedValue(dto);
+
+    const response = await POST(jsonRequest(validPayload));
+    expect(response.status).toBe(201);
   });
 
   it('returns a normalized error when the backend call fails', async () => {

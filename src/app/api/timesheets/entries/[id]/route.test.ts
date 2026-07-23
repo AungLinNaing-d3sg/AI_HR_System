@@ -15,12 +15,14 @@ jest.mock('../../../../../lib/api/timesheetsBackend.api', () => ({
   updateTimesheetEntry: jest.fn(),
   getTimesheetEntryById: jest.fn(),
   deleteTimesheetEntry: jest.fn(),
+  getProjectAdminTimesheetSummary: jest.fn(),
 }));
 
 const timesheetsBackend = jest.requireMock('../../../../../lib/api/timesheetsBackend.api') as {
   updateTimesheetEntry: jest.Mock;
   getTimesheetEntryById: jest.Mock;
   deleteTimesheetEntry: jest.Mock;
+  getProjectAdminTimesheetSummary: jest.Mock;
 };
 
 import { DELETE, PUT } from './route';
@@ -49,10 +51,26 @@ function paramsFor(id: string) {
 
 const validPayload = { hours: 4, taskDescription: 'Updated notes' };
 
+function existingEntry(overrides: Record<string, unknown> = {}) {
+  return {
+    Id: 'entry-1',
+    UserId: 'user-1',
+    ProjectId: 'project-1',
+    TimesheetPeriodId: 'period-1',
+    EntryDate: '2025-02-24',
+    Hours: 6,
+    TaskDescription: 'Frontend component development',
+    IsApproved: false,
+    ...overrides,
+  };
+}
+
 describe('PUT /api/timesheets/entries/:id', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     timesheetsBackend.updateTimesheetEntry.mockReset();
+    timesheetsBackend.getTimesheetEntryById.mockReset();
+    timesheetsBackend.getTimesheetEntryById.mockResolvedValue(existingEntry());
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -73,7 +91,7 @@ describe('PUT /api/timesheets/entries/:id', () => {
   });
 
   it('updates the entry with a valid payload', async () => {
-    const token = tokenFor();
+    const token = tokenFor('User', 'user-1');
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
@@ -85,7 +103,7 @@ describe('PUT /api/timesheets/entries/:id', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.entry).toEqual({ id: 'entry-1', hours: 4, taskDescription: 'Updated notes' });
+    expect(body.entry).toEqual({ id: 'entry-1', hours: 4, taskDescription: 'Updated notes', isApproved: false });
     expect(timesheetsBackend.updateTimesheetEntry).toHaveBeenCalledWith(
       'entry-1',
       { Hours: 4, TaskDescription: 'Updated notes' },
@@ -93,11 +111,39 @@ describe('PUT /api/timesheets/entries/:id', () => {
     );
   });
 
-  it('returns a normalized error when the backend rejects a locked entry', async () => {
+  it('allows editing an already-approved entry (the backend resets it to Pending Approval)', async () => {
+    const token = tokenFor('User', 'user-1');
     mockCookieStore.get.mockImplementation((name: string) =>
-      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor() } : undefined
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
-    timesheetsBackend.updateTimesheetEntry.mockRejectedValue(new Error('entry is approved'));
+    timesheetsBackend.getTimesheetEntryById.mockResolvedValue(existingEntry({ IsApproved: true }));
+    timesheetsBackend.updateTimesheetEntry.mockResolvedValue(undefined);
+
+    const response = await PUT(jsonRequest(validPayload), paramsFor('entry-1'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.entry.isApproved).toBe(false);
+    expect(timesheetsBackend.updateTimesheetEntry).toHaveBeenCalled();
+  });
+
+  it("returns 403 when a caller tries to edit someone else's entry", async () => {
+    const token = tokenFor('User', 'user-1');
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    timesheetsBackend.getTimesheetEntryById.mockResolvedValue(existingEntry({ UserId: 'someone-else' }));
+
+    const response = await PUT(jsonRequest(validPayload), paramsFor('entry-1'));
+    expect(response.status).toBe(403);
+    expect(timesheetsBackend.updateTimesheetEntry).not.toHaveBeenCalled();
+  });
+
+  it('returns a normalized error when the backend rejects a locked period', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User', 'user-1') } : undefined
+    );
+    timesheetsBackend.updateTimesheetEntry.mockRejectedValue(new Error('timesheet period is locked'));
 
     const response = await PUT(jsonRequest(validPayload), paramsFor('entry-1'));
     expect(response.status).toBe(500);
@@ -125,6 +171,7 @@ describe('DELETE /api/timesheets/entries/:id', () => {
     mockCookieStore.get.mockReset();
     timesheetsBackend.getTimesheetEntryById.mockReset();
     timesheetsBackend.deleteTimesheetEntry.mockReset();
+    timesheetsBackend.getProjectAdminTimesheetSummary.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -163,8 +210,49 @@ describe('DELETE /api/timesheets/entries/:id', () => {
     expect(timesheetsBackend.deleteTimesheetEntry).not.toHaveBeenCalled();
   });
 
-  it("allows a ProjectAdmin to delete another user's pending entry", async () => {
+  it("allows a ProjectAdmin to delete another user's pending entry for a project they are assigned to", async () => {
     const token = tokenFor('ProjectAdmin', 'admin-1');
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    timesheetsBackend.getTimesheetEntryById.mockResolvedValue(ownedEntry({ UserId: 'someone-else' }));
+    timesheetsBackend.getProjectAdminTimesheetSummary.mockResolvedValue({
+      TotalHours: 0,
+      ApprovedHours: 0,
+      PendingHours: 0,
+      ProjectSummaries: [
+        { ProjectId: 'project-1', ProjectCode: 'PRJ-001', ProjectName: 'Project Helix', TotalHours: 0, ApprovedHours: 0, PendingHours: 0 },
+      ],
+      Entries: [],
+    });
+    timesheetsBackend.deleteTimesheetEntry.mockResolvedValue(undefined);
+
+    const response = await DELETE(deleteRequest, paramsFor('entry-1'));
+    expect(response.status).toBe(200);
+    expect(timesheetsBackend.deleteTimesheetEntry).toHaveBeenCalledWith('entry-1', token);
+  });
+
+  it('returns 403 when a ProjectAdmin tries to delete an entry for a project they are not assigned to', async () => {
+    const token = tokenFor('ProjectAdmin', 'admin-1');
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    timesheetsBackend.getTimesheetEntryById.mockResolvedValue(ownedEntry({ UserId: 'someone-else', ProjectId: 'project-99' }));
+    timesheetsBackend.getProjectAdminTimesheetSummary.mockResolvedValue({
+      TotalHours: 0,
+      ApprovedHours: 0,
+      PendingHours: 0,
+      ProjectSummaries: [],
+      Entries: [],
+    });
+
+    const response = await DELETE(deleteRequest, paramsFor('entry-1'));
+    expect(response.status).toBe(403);
+    expect(timesheetsBackend.deleteTimesheetEntry).not.toHaveBeenCalled();
+  });
+
+  it("allows a SystemAdmin to delete another user's pending entry without any project-assignment check", async () => {
+    const token = tokenFor('SystemAdmin', 'sysadmin-1');
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
@@ -173,7 +261,7 @@ describe('DELETE /api/timesheets/entries/:id', () => {
 
     const response = await DELETE(deleteRequest, paramsFor('entry-1'));
     expect(response.status).toBe(200);
-    expect(timesheetsBackend.deleteTimesheetEntry).toHaveBeenCalledWith('entry-1', token);
+    expect(timesheetsBackend.getProjectAdminTimesheetSummary).not.toHaveBeenCalled();
   });
 
   it('returns 409 when the entry is already approved, even for the owner', async () => {

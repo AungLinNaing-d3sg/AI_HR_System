@@ -189,8 +189,12 @@ export function useTimesheetGrid(initialWeekStart?: string) {
         for (const [date, edit] of Object.entries(byDate)) {
           const row = baseRows.find((candidate) => candidate.projectId === projectId);
           const cell = row?.cells.find((candidate) => candidate.date === date);
-          if (!cell || cell.isApproved) continue;
+          if (!cell) continue;
 
+          // An already-approved cell is still editable, not skipped: per the
+          // latest `UpdateTimesheetEntry` contract, editing it resets it to
+          // Pending Approval on the backend, requiring Project Admin
+          // re-approval - see `TimesheetGridRow`'s "Approved" hint.
           const hours = edit.hoursInput === '' ? 0 : Number(edit.hoursInput);
           const taskDescription = edit.taskDescription;
 

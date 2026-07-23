@@ -6,6 +6,7 @@ import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
+import { getProjectAdminAssignedProjectIds } from '@/lib/utils/timesheetAccess';
 import type { ApproveTimesheetEntryResponsePayload } from '@/types/api.types';
 
 interface RouteParams {
@@ -20,7 +21,10 @@ interface RouteParams {
  * docs/HR_System_BE.postman_collection.json (no backend-enforced role), so
  * this is a frontend UX-level gate - same `PROJECT_MANAGEMENT_ROLES` used to
  * gate `/projects` - restricting the action to managers reviewing their
- * team's hours rather than every authenticated user.
+ * team's hours rather than every authenticated user. A `ProjectAdmin` is
+ * further restricted to only the projects they are themselves assigned to
+ * ("a Project Admin can only view/manage assigned project timesheets") -
+ * `SystemAdmin` has unrestricted access.
  */
 export async function PUT(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   const { id } = await params;
@@ -38,6 +42,17 @@ export async function PUT(_request: Request, { params }: RouteParams): Promise<N
   }
 
   try {
+    if (role === 'ProjectAdmin') {
+      const entry = await timesheetsBackend.getTimesheetEntryById(id, accessToken);
+      const assignedProjectIds = await getProjectAdminAssignedProjectIds(accessToken);
+      if (!assignedProjectIds.has(entry.ProjectId)) {
+        return NextResponse.json(
+          { message: 'You can only approve timesheet entries for projects you are assigned to.' },
+          { status: 403 }
+        );
+      }
+    }
+
     const dto = await timesheetsBackend.approveTimesheetEntry(id, accessToken);
 
     return NextResponse.json<ApproveTimesheetEntryResponsePayload>(

@@ -876,6 +876,100 @@ export interface CurrencyResponsePayload {
 }
 
 /**
+ * Raw payload for `GET /ExchangeRate/GetAllExchangeRates`, verified against
+ * the documented example response - paginated, like `CurrencyListResponseDto`.
+ * Note `FromCurrency`/`ToCurrency` are nested refs on the list/detail
+ * endpoints, unlike the Create/Update mutation responses below which only
+ * echo the raw ids.
+ */
+export interface ExchangeRateCurrencyRefDto {
+  Id: string;
+  Code: string;
+  Symbol: string;
+}
+
+export interface ExchangeRateDto {
+  Id: string;
+  FromCurrency: ExchangeRateCurrencyRefDto;
+  ToCurrency: ExchangeRateCurrencyRefDto;
+  Rate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+  CreatedAt: string;
+}
+
+export interface ExchangeRateListResponseDto {
+  Items: ExchangeRateDto[];
+  TotalCount: number;
+  Page: number;
+  PageSize: number;
+}
+
+/** Request body for `POST /ExchangeRate/CreateExchangeRate`. */
+export interface CreateExchangeRateRequest {
+  FromCurrencyId: string;
+  ToCurrencyId: string;
+  Rate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+}
+
+/**
+ * Request body for `PUT /ExchangeRate/UpdateExchangeRate/{id}` -
+ * deliberately narrower than `CreateExchangeRateRequest`: per the backend
+ * contract (see docs/HR_System_BE.postman_collection.json) only the rate,
+ * effective date, and active status can be changed after creation -
+ * `FromCurrencyId`/`ToCurrencyId` are fixed at creation time.
+ */
+export interface UpdateExchangeRateRequest {
+  Rate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+}
+
+/**
+ * Raw response `Data` for Create/Update ExchangeRate, verified against the
+ * documented example responses - deliberately lighter than `ExchangeRateDto`
+ * (only the currency ids, no nested `Code`/`Symbol`), unlike
+ * `CurrencyResponse`'s Create/Update which already return the full row.
+ */
+export interface ExchangeRateMutationResponseDto {
+  Id: string;
+  FromCurrencyId: string;
+  ToCurrencyId: string;
+  Rate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+}
+
+/** `DeleteExchangeRate` returns `Data: null` on success, verified against the documented example response. */
+export type DeleteExchangeRateResponse = null;
+
+/** Shape returned by `GET /api/exchange-rates`. */
+export interface ExchangeRateListResponsePayload {
+  exchangeRates: import('./domain.types').ExchangeRate[];
+}
+
+/**
+ * Shape returned by `POST /api/exchange-rates` and `PUT
+ * /api/exchange-rates/:id` - deliberately lighter than a full
+ * `ExchangeRate` (currency ids only, no resolved `code`/`symbol`), mirroring
+ * `ExchangeRateMutationResponseDto`'s own partial shape (see above). Callers
+ * invalidate `['exchangeRates']` to see the full row (with resolved
+ * currency code/symbol) reflected in the table.
+ */
+export interface ExchangeRateMutationResponsePayload {
+  exchangeRate: {
+    id: string;
+    fromCurrencyId: string;
+    toCurrencyId: string;
+    rate: number;
+    effectiveDate: string;
+    isActive: boolean;
+  };
+}
+
+/**
  * Raw payload for `GET /Country/GetAllCountries`, verified against the
  * documented example response - paginated, like `CurrencyListResponseDto`.
  * Unlike `CurrencyDto`, the backend does not return a `Symbol`/

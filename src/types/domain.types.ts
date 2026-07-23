@@ -333,6 +333,30 @@ export interface Currency {
   isActive: boolean;
 }
 
+/** The currency on one side of an `ExchangeRate` pair - see `GET /ExchangeRate/GetAllExchangeRates`. */
+export interface ExchangeRateCurrencyRef {
+  id: string;
+  code: string;
+  symbol: string;
+}
+
+/**
+ * A conversion rate from one currency to another - see
+ * `GET /ExchangeRate/GetAllExchangeRates`. Backs `/admin/exchange-rates`
+ * (`docs/HR_System_FE_wireframe.pdf`): currency summary cards + a
+ * From/To/Rate/Effective date table, always shown FROM the current base
+ * currency (e.g. SGD -> USD, SGD -> INR) - used to convert invoice totals
+ * when an invoice's currency differs from the base currency.
+ */
+export interface ExchangeRate {
+  id: string;
+  fromCurrency: ExchangeRateCurrencyRef;
+  toCurrency: ExchangeRateCurrencyRef;
+  rate: number;
+  effectiveDate: string;
+  isActive: boolean;
+}
+
 /**
  * A supported country (e.g. "Singapore") - see `GET /Country/GetAllCountries`.
  * Backs the optional Country dropdown on the Create User form (`CreateUser`

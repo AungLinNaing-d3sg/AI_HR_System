@@ -16,9 +16,9 @@ export const REFRESH_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 /**
  * `/admin/users` (matches `resolveRouteAccess`'s prefix check, so this also
  * covers `/admin/users/create` and any future `/admin/users/*` sub-route).
- * `/admin/currencies` follows the same convention for the Currency
- * management page.
+ * `/admin/currencies`/`/admin/exchange-rates` follow the same convention for
+ * the Currency/Exchange Rate management pages.
  */
-export const SYSTEM_ADMIN_ONLY_ROUTES = ['/admin/users', '/admin/currencies'];
+export const SYSTEM_ADMIN_ONLY_ROUTES = ['/admin/users', '/admin/currencies', '/admin/exchange-rates'];
 
 export const PUBLIC_ROUTES = ['/login'];

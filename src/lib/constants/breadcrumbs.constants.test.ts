@@ -56,6 +56,13 @@ describe('getBreadcrumbs', () => {
     ]);
   });
 
+  it('returns the Exchange Rates management trail', () => {
+    expect(getBreadcrumbs('/admin/exchange-rates')).toEqual([
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Exchange Rates' },
+    ]);
+  });
+
   it('falls back to just Dashboard for an unknown path', () => {
     expect(getBreadcrumbs('/unknown')).toEqual([{ label: 'Dashboard', href: '/dashboard' }]);
   });

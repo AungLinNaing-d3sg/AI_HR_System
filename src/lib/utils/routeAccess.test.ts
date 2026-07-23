@@ -97,6 +97,30 @@ describe('resolveRouteAccess', () => {
     ).toEqual({ type: 'redirect', destination: 'forbidden' });
   });
 
+  it('allows a SystemAdmin on /admin/rate-cards', () => {
+    expect(
+      resolveRouteAccess({
+        pathname: '/admin/rate-cards',
+        hasAccessToken: true,
+        isAccessTokenExpired: false,
+        hasRefreshToken: true,
+        role: 'SystemAdmin',
+      })
+    ).toEqual({ type: 'allow' });
+  });
+
+  it('redirects to forbidden when a non-admin hits /admin/rate-cards', () => {
+    expect(
+      resolveRouteAccess({
+        pathname: '/admin/rate-cards',
+        hasAccessToken: true,
+        isAccessTokenExpired: false,
+        hasRefreshToken: true,
+        role: 'ProjectAdmin',
+      })
+    ).toEqual({ type: 'redirect', destination: 'forbidden' });
+  });
+
   it('redirects to forbidden for a nested path under a SystemAdmin-only route', () => {
     expect(
       resolveRouteAccess({

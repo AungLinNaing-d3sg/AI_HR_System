@@ -17,9 +17,10 @@ import { resolveRouteAccess } from '@/lib/utils/routeAccess';
  *
  * This intentionally only guards the routes this feature owns
  * (`/dashboard`, `/profile`, `/admin/users/create`, `/admin/currencies`,
- * `/admin/exchange-rates`, `/projects`, `/timesheets`, `/reports`,
- * `/invoices`) rather than acting as a blanket catch-all, so unrelated
- * existing routes (e.g. `/login`, `/forbidden`) are left untouched.
+ * `/admin/exchange-rates`, `/admin/rate-cards`, `/projects`, `/timesheets`,
+ * `/reports`, `/invoices`) rather than acting as a blanket catch-all, so
+ * unrelated existing routes (e.g. `/login`, `/forbidden`) are left
+ * untouched.
  */
 function buildLoginRedirect(request: NextRequest): NextResponse {
   const loginUrl = new URL('/login', request.url);
@@ -103,6 +104,8 @@ export const config = {
     '/admin/currencies/:path*',
     '/admin/exchange-rates',
     '/admin/exchange-rates/:path*',
+    '/admin/rate-cards',
+    '/admin/rate-cards/:path*',
     '/projects',
     '/projects/:path*',
     '/timesheets',

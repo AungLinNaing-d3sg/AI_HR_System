@@ -994,3 +994,112 @@ export interface CountryListResponseDto {
 export interface CountryListResponsePayload {
   countries: import('./domain.types').Country[];
 }
+
+/**
+ * Raw payload for `GET /RateCard/GetAllRateCards`, verified against the
+ * documented example response - paginated, like `CurrencyListResponseDto`.
+ * `Country`/`ResourceRoleType`/`Currency` are nested refs on the list/detail
+ * DTO, mirroring `ExchangeRateDto`'s `FromCurrency`/`ToCurrency` pattern.
+ */
+export interface RateCardCountryRefDto {
+  Id: string;
+  Code: string;
+  Name: string;
+}
+
+export interface RateCardResourceRoleTypeRefDto {
+  Id: string;
+  Name: string;
+}
+
+export interface RateCardCurrencyRefDto {
+  Id: string;
+  Code: string;
+  Symbol: string;
+}
+
+export interface RateCardDto {
+  Id: string;
+  Country: RateCardCountryRefDto;
+  ResourceRoleType: RateCardResourceRoleTypeRefDto;
+  Currency: RateCardCurrencyRefDto;
+  HourlyRate: number;
+  BillingRate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+}
+
+export interface RateCardListResponseDto {
+  Items: RateCardDto[];
+  TotalCount: number;
+  Page: number;
+  PageSize: number;
+}
+
+/** Shape returned by `GET /api/rate-cards`. */
+export interface RateCardListResponsePayload {
+  rateCards: import('./domain.types').RateCard[];
+}
+
+/** Request body for `POST /RateCard/CreateRateCard`. */
+export interface CreateRateCardRequest {
+  CountryId: string;
+  ResourceRoleTypeId: string;
+  CurrencyId: string;
+  HourlyRate: number;
+  BillingRate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+}
+
+/**
+ * Request body for `PUT /RateCard/UpdateRateCard/{id}` - deliberately
+ * narrower than `CreateRateCardRequest`: per the backend contract (see
+ * docs/HR_System_BE.postman_collection.json), a rate card's country/role/
+ * currency are fixed at creation time - only rates, effective date, and
+ * active status can be changed after creation.
+ */
+export interface UpdateRateCardRequest {
+  HourlyRate: number;
+  BillingRate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+}
+
+/**
+ * Raw response `Data` for Create/Update RateCard, verified against the
+ * documented example responses - deliberately lighter than `RateCardDto`
+ * (flat `CountryId`/`ResourceRoleTypeId`/`CurrencyId`, no resolved
+ * name/code/symbol refs), mirroring `ExchangeRateMutationResponseDto`'s own
+ * partial shape.
+ */
+export interface RateCardMutationResponseDto {
+  Id: string;
+  CountryId: string;
+  ResourceRoleTypeId: string;
+  CurrencyId: string;
+  HourlyRate: number;
+  BillingRate: number;
+  EffectiveDate: string;
+  IsActive: boolean;
+}
+
+/**
+ * Shape returned by the create/update RateCard Route Handlers - flat ids for
+ * `country`/`resourceRoleType`/`currency` (no resolved code/name/symbol),
+ * mirroring `RateCardMutationResponseDto`'s own partial shape (see above).
+ * Callers needing the resolved refs use the `['rateCards']` list
+ * (`useRateCards`), which this mutation invalidates.
+ */
+export interface RateCardMutationResponsePayload {
+  rateCard: {
+    id: string;
+    countryId: string;
+    resourceRoleTypeId: string;
+    currencyId: string;
+    hourlyRate: number;
+    billingRate: number;
+    effectiveDate: string;
+    isActive: boolean;
+  };
+}

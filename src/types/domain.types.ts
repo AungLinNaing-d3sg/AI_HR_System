@@ -367,3 +367,44 @@ export interface Country {
   code: string;
   name: string;
 }
+
+/** The country a `RateCard` applies to - see `GET /RateCard/GetAllRateCards`. */
+export interface RateCardCountryRef {
+  id: string;
+  code: string;
+  name: string;
+}
+
+/** The resource role type a `RateCard` applies to - see `GET /RateCard/GetAllRateCards`. */
+export interface RateCardResourceRoleTypeRef {
+  id: string;
+  name: string;
+}
+
+/** The currency a `RateCard`'s rates are denominated in - see `GET /RateCard/GetAllRateCards`. */
+export interface RateCardCurrencyRef {
+  id: string;
+  code: string;
+  symbol: string;
+}
+
+/**
+ * A daily billing rate for a country + resource role type combination - see
+ * `GET /RateCard/GetAllRateCards`. Backs `/admin/rate-cards`
+ * (`docs/HR_System_FE_wireframe.pdf`): country summary cards, a country
+ * dropdown filter, and a Country/Role/Rate/Currency/Effective date table,
+ * used for cost (`hourlyRate`) and invoice billing (`billingRate`)
+ * calculations. A rate card's country/role/currency are fixed at creation
+ * time - only the rates, effective date, and active status can change
+ * afterwards (see `updateRateCardSchema`'s comment).
+ */
+export interface RateCard {
+  id: string;
+  country: RateCardCountryRef;
+  resourceRoleType: RateCardResourceRoleTypeRef;
+  currency: RateCardCurrencyRef;
+  hourlyRate: number;
+  billingRate: number;
+  effectiveDate: string;
+  isActive: boolean;
+}

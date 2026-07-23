@@ -19,6 +19,11 @@ export const REFRESH_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
  * `/admin/currencies`/`/admin/exchange-rates` follow the same convention for
  * the Currency/Exchange Rate management pages.
  */
-export const SYSTEM_ADMIN_ONLY_ROUTES = ['/admin/users', '/admin/currencies', '/admin/exchange-rates'];
+export const SYSTEM_ADMIN_ONLY_ROUTES = [
+  '/admin/users',
+  '/admin/currencies',
+  '/admin/exchange-rates',
+  '/admin/rate-cards',
+];
 
 export const PUBLIC_ROUTES = ['/login'];

@@ -63,6 +63,13 @@ describe('getBreadcrumbs', () => {
     ]);
   });
 
+  it('returns the Rate Cards management trail', () => {
+    expect(getBreadcrumbs('/admin/rate-cards')).toEqual([
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Rate Cards' },
+    ]);
+  });
+
   it('falls back to just Dashboard for an unknown path', () => {
     expect(getBreadcrumbs('/unknown')).toEqual([{ label: 'Dashboard', href: '/dashboard' }]);
   });

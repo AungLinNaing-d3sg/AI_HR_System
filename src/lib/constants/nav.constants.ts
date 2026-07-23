@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Clock,
   Coins,
+  CreditCard,
   FolderKanban,
   LayoutGrid,
   Receipt,
@@ -20,10 +21,10 @@ import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
  * (`docs/HR_System_FE_wireframe.pdf`) explicitly calls out "all sidebar
  * links navigate without 404" as a bug it hit and fixed, so this list must
  * stay in lockstep with `src/app/**` rather than mirroring every domain the
- * wireframe's mock prototype showed (Rate Cards/Countries are not built yet -
- * see the repo root CLAUDE.md; Reports, Invoices, Currencies, and Exchange
- * Rates now are). Section title/order and per-item icons otherwise follow
- * the wireframe's sidebar exactly.
+ * wireframe's mock prototype showed (Countries is not built yet - see the
+ * repo root CLAUDE.md; Reports, Invoices, Currencies, Exchange Rates, and
+ * Rate Cards now are). Section title/order and per-item icons otherwise
+ * follow the wireframe's sidebar exactly.
  */
 export interface NavItem {
   label: string;
@@ -71,6 +72,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { label: 'Users', href: '/admin/users', icon: Users, roles: ['SystemAdmin'] },
       { label: 'Currencies', href: '/admin/currencies', icon: Coins, roles: ['SystemAdmin'] },
       { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: ArrowLeftRight, roles: ['SystemAdmin'] },
+      { label: 'Rate Cards', href: '/admin/rate-cards', icon: CreditCard, roles: ['SystemAdmin'] },
     ],
   },
 ];

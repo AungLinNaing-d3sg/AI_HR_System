@@ -59,6 +59,20 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: 'Exchange Rates' })).not.toBeInTheDocument();
   });
 
+  it('shows the Rate Cards link to a SystemAdmin and links it to /admin/rate-cards', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin' });
+    render(<Sidebar />);
+    expect(screen.getByRole('link', { name: 'Rate Cards' })).toHaveAttribute('href', '/admin/rate-cards');
+  });
+
+  it('hides the Rate Cards link from a non-SystemAdmin role', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'User' });
+    render(<Sidebar />);
+    expect(screen.queryByRole('link', { name: 'Rate Cards' })).not.toBeInTheDocument();
+  });
+
   it('shows the Billing/Invoices item to a ProjectAdmin but hides it from a plain User', () => {
     mockPathname = '/dashboard';
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });

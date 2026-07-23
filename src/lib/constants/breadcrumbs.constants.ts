@@ -32,6 +32,7 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
   if (pathname === '/admin/users/create') return [DASHBOARD, { label: 'Create User' }];
   if (pathname === '/admin/currencies') return [DASHBOARD, { label: 'Currencies' }];
   if (pathname === '/admin/exchange-rates') return [DASHBOARD, { label: 'Exchange Rates' }];
+  if (pathname === '/admin/rate-cards') return [DASHBOARD, { label: 'Rate Cards' }];
   if (pathname === '/reports') return [DASHBOARD, { label: 'Reports' }];
   if (pathname === '/reports/timesheet') return [DASHBOARD, REPORTS, { label: 'Timesheet Report' }];
   if (pathname === '/reports/roles-summary') return [DASHBOARD, REPORTS, { label: 'Roles Summary' }];

@@ -91,7 +91,7 @@ describe('auth.api (client)', () => {
     expect(result).toEqual([role]);
   });
 
-  it('getUserList gets /auth/user-list and returns the candidate user list', async () => {
+  it('searchUsers gets /auth/search-users with the query sent as both email and userName, returning matches', async () => {
     const candidate: UserListItem = {
       userId: 'user-2',
       firstName: 'Jane',
@@ -99,8 +99,10 @@ describe('auth.api (client)', () => {
       email: 'jane@example.com',
     };
     axiosInstance.get.mockResolvedValue({ data: { users: [candidate] } });
-    const result = await authApi.getUserList();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/user-list');
+    const result = await authApi.searchUsers('jane');
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/search-users', {
+      params: { email: 'jane', userName: 'jane' },
+    });
     expect(result).toEqual([candidate]);
   });
 

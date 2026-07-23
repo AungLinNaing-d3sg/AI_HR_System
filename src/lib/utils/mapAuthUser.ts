@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { RoleDto, UserListItemDto } from '@/types/api.types';
+import type { RoleDto, UserListItemDto, UserSearchItemDto } from '@/types/api.types';
 import type { AuthenticatedUser, Role, UserListItem, UserRole } from '@/types/domain.types';
 
 /**
@@ -68,4 +68,24 @@ export function mapUserListItem(dto: UserListItemDto): UserListItem {
 
 export function mapUserListItemList(dtos: UserListItemDto[]): UserListItem[] {
   return dtos.map(mapUserListItem);
+}
+
+/**
+ * Maps a single `GET /Auth/SearchUsers` item (PascalCase) to the app's
+ * camelCase `UserListItem` domain model used by the searchable "Add User to
+ * Project" combobox. Only forwards the fields the combobox needs - role,
+ * country, and active-status fields the search endpoint additionally
+ * returns are intentionally dropped, same as `mapUserListItem`.
+ */
+export function mapUserSearchItem(dto: UserSearchItemDto): UserListItem {
+  return {
+    userId: dto.UserId,
+    firstName: dto.FirstName,
+    lastName: dto.LastName,
+    email: dto.Email,
+  };
+}
+
+export function mapUserSearchItemList(dtos: UserSearchItemDto[]): UserListItem[] {
+  return dtos.map(mapUserSearchItem);
 }

@@ -1,6 +1,14 @@
-import { mapAuthUser, mapRole, mapRoleList, mapUserListItem, mapUserListItemList } from './mapAuthUser';
+import {
+  mapAuthUser,
+  mapRole,
+  mapRoleList,
+  mapUserListItem,
+  mapUserListItemList,
+  mapUserSearchItem,
+  mapUserSearchItemList,
+} from './mapAuthUser';
 import type { MapAuthUserDto } from './mapAuthUser';
-import type { RoleDto, UserListItemDto } from '@/types/api.types';
+import type { RoleDto, UserListItemDto, UserSearchItemDto } from '@/types/api.types';
 
 describe('mapAuthUser', () => {
   const dto: MapAuthUserDto = {
@@ -118,5 +126,53 @@ describe('mapUserListItemList', () => {
 
   it('returns an empty array for an empty list', () => {
     expect(mapUserListItemList([])).toEqual([]);
+  });
+});
+
+describe('mapUserSearchItem', () => {
+  const userSearchItemDto: UserSearchItemDto = {
+    UserId: 'user-2',
+    Username: 'jane.doe',
+    Email: 'jane@example.com',
+    FirstName: 'Jane',
+    LastName: 'Doe',
+    EmployeeId: 'EMP-002',
+    RoleName: 'ProjectAdmin',
+    CountryId: 'country-1',
+    CountryCode: 'SG',
+    CountryName: 'Singapore',
+    IsActive: true,
+  };
+
+  it('maps only the fields the domain model declares, dropping role/country/active-status', () => {
+    const mapped = mapUserSearchItem(userSearchItemDto) as unknown as Record<string, unknown>;
+    expect(mapped).toEqual({
+      userId: 'user-2',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+    });
+    expect(Object.keys(mapped).sort()).toEqual(['userId', 'firstName', 'lastName', 'email'].sort());
+  });
+});
+
+describe('mapUserSearchItemList', () => {
+  const userSearchItemDto: UserSearchItemDto = {
+    UserId: 'user-2',
+    Username: 'jane.doe',
+    Email: 'jane@example.com',
+    FirstName: 'Jane',
+    LastName: 'Doe',
+    EmployeeId: null,
+  };
+
+  it('maps an array of DTOs', () => {
+    const result = mapUserSearchItemList([userSearchItemDto, { ...userSearchItemDto, UserId: 'user-3' }]);
+    expect(result).toHaveLength(2);
+    expect(result[1].userId).toBe('user-3');
+  });
+
+  it('returns an empty array for an empty list', () => {
+    expect(mapUserSearchItemList([])).toEqual([]);
   });
 });

@@ -80,12 +80,15 @@ export interface Role {
 }
 
 /**
- * A candidate user for the `/projects/:id/assignments` "Add User to
- * Project" dropdown, sourced from the paginated `GET /Auth/GetUserList`
- * (see `app/api/auth/user-list/route.ts`) - every user account in the
- * system, not filtered by current project assignment (unlike the
- * now-removed `/Auth/GetUnassignedUsers` endpoint this app previously used
- * for the same dropdown).
+ * A user account as surfaced to the browser by two distinct BFF routes that
+ * both map from the backend's PascalCase Auth user shape: the `SystemAdmin`
+ * `/admin/users` management table (paginated `GET /Auth/GetUserList`, see
+ * `app/api/auth/users/route.ts`) and the searchable "Add User to Project"
+ * combobox on `/projects/:id/assignments` (free-text `GET /Auth/SearchUsers`,
+ * see `app/api/auth/search-users/route.ts` and `useUserSearch`) - every user
+ * account in the system, not filtered by current project assignment (unlike
+ * the now-removed `/Auth/GetUnassignedUsers` endpoint this app previously
+ * used for that same dropdown).
  */
 export interface UserListItem {
   userId: string;

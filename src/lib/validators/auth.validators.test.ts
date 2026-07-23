@@ -2,6 +2,7 @@ import {
   changePasswordSchema,
   createUserSchema,
   loginSchema,
+  searchUsersQuerySchema,
   updateProfileSchema,
 } from './auth.validators';
 
@@ -150,5 +151,37 @@ describe('createUserSchema', () => {
   it('accepts a valid GUID countryId', () => {
     const result = createUserSchema.safeParse({ ...valid, countryId: '22222222-2222-2222-2222-222222222201' });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('searchUsersQuerySchema', () => {
+  it('accepts a query with both email and userName at the minimum length', () => {
+    const result = searchUsersQuerySchema.safeParse({ email: 'jd', userName: 'jd' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a query with only userName present, at the minimum length', () => {
+    const result = searchUsersQuerySchema.safeParse({ userName: 'jd' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a query with only email present, at the minimum length', () => {
+    const result = searchUsersQuerySchema.safeParse({ email: 'jd' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects when neither email nor userName is provided', () => {
+    const result = searchUsersQuerySchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a search term shorter than the minimum length', () => {
+    const result = searchUsersQuerySchema.safeParse({ email: 'j', userName: 'j' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an empty-string search term', () => {
+    const result = searchUsersQuerySchema.safeParse({ email: '', userName: '' });
+    expect(result.success).toBe(false);
   });
 });

@@ -112,4 +112,17 @@ describe('authBackend.api (server)', () => {
       params: { pageNo: 2, pageSize: 20 },
     });
   });
+
+  it('searchUsers gets /Auth/SearchUsers with a Bearer header and the given email/userName params', async () => {
+    const results = [
+      { UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null },
+    ];
+    backendClient.get.mockResolvedValue({ data: results });
+    const result = await authBackend.searchUsers({ email: 'jdoe', userName: 'jdoe' }, 'access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Auth/SearchUsers', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { email: 'jdoe', userName: 'jdoe' },
+    });
+    expect(result).toEqual(results);
+  });
 });

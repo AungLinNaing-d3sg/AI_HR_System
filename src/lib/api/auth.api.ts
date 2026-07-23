@@ -3,7 +3,7 @@ import type {
   AuthResponsePayload,
   CreateUserResponsePayload,
   RoleListResponsePayload,
-  UserListResponsePayload,
+  SearchUsersResponsePayload,
   UsersListResponsePayload,
 } from '@/types/api.types';
 import type { AuthenticatedUser, CreatedUser, Role, UserListItem } from '@/types/domain.types';
@@ -51,9 +51,18 @@ export async function getRoles(): Promise<Role[]> {
   return data.roles;
 }
 
-/** Candidate users (paginated user list, first page) for the "Add User to Project" dropdown. */
-export async function getUserList(): Promise<UserListItem[]> {
-  const { data } = await axiosInstance.get<UserListResponsePayload>('/auth/user-list');
+/**
+ * Free-text user search for the searchable "Add User to Project" combobox on
+ * `/projects/:id/assignments` - replaces the previously used, non-search
+ * `getUserList`/`/auth/user-list` dropdown. `query` (the combobox's as-you-
+ * type text) is sent to the BFF route as both `email` and `userName`; see
+ * `useUserSearch`, which debounces and only calls this once the query meets
+ * `MIN_USER_SEARCH_QUERY_LENGTH`.
+ */
+export async function searchUsers(query: string): Promise<UserListItem[]> {
+  const { data } = await axiosInstance.get<SearchUsersResponsePayload>('/auth/search-users', {
+    params: { email: query, userName: query },
+  });
   return data.users;
 }
 

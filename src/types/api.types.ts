@@ -144,6 +144,34 @@ export interface GetUserListResponse {
   Items: UserListItemDto[];
 }
 
+/**
+ * A single row returned by `GET /Auth/SearchUsers?email=&userName=` - the
+ * data source for the searchable "Add User to Project" combobox on
+ * `/projects/:id/assignments` (see `app/api/auth/search-users/route.ts`),
+ * replacing the previously used, non-search `GET /Auth/GetUserList` dropdown
+ * (see the removed `app/api/auth/user-list/route.ts`). Unlike
+ * `UserListItemDto`'s paginated envelope, `SearchUsers`' response `Data` is a
+ * plain array, and each row additionally carries role/country/active-status
+ * fields this app doesn't currently surface in the combobox (only the fields
+ * `UserListItem` already models are mapped through).
+ */
+export interface UserSearchItemDto {
+  UserId: string;
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  EmployeeId: string | null;
+  RoleName?: string | null;
+  CountryId?: string | null;
+  CountryCode?: string | null;
+  CountryName?: string | null;
+  IsActive?: boolean;
+}
+
+/** Raw response for `GET /Auth/SearchUsers` - a plain array, not the `GetUserList` paging envelope. */
+export type SearchUsersResponse = UserSearchItemDto[];
+
 /** Shape returned by `GET /api/auth/roles` to the browser. */
 export interface RoleListResponsePayload {
   roles: import('./domain.types').Role[];
@@ -252,7 +280,8 @@ export interface ProjectAssignmentListResponsePayload {
   assignments: import('./domain.types').ProjectAssignment[];
 }
 
-export interface UserListResponsePayload {
+/** Shape returned by `GET /api/auth/search-users` to the browser. */
+export interface SearchUsersResponsePayload {
   users: import('./domain.types').UserListItem[];
 }
 

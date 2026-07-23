@@ -5,7 +5,15 @@ import * as projectsApi from '@/lib/api/projects.api';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import type { AssignResourceFormValues } from '@/lib/validators/project.validators';
 
-/** Assigns a user resource to a project and invalidates its cached assignments/user-list queries. */
+/**
+ * Assigns a user resource to a project and invalidates its cached
+ * assignments. The searchable "Add User" combobox's own results
+ * (`['auth', 'search-users', ...]`, see `useUserSearch`) don't need
+ * invalidating here: unlike the removed `GetUnassignedUsers`/`useUserList`
+ * dropdown this replaces, `GET /Auth/SearchUsers` isn't scoped to a
+ * project's current assignments, so a newly-assigned user still matches a
+ * future search.
+ */
 export function useAssignResource(projectId: string) {
   const queryClient = useQueryClient();
 
@@ -13,7 +21,6 @@ export function useAssignResource(projectId: string) {
     mutationFn: (values: AssignResourceFormValues) => projectsApi.assignResource(projectId, values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'assignments'] });
-      void queryClient.invalidateQueries({ queryKey: ['auth', 'user-list'] });
     },
   });
 

@@ -43,3 +43,17 @@ export const USER_ROLE_BADGE_CLASSNAMES: Record<KnownUserRoleName, string> = {
 export function isKnownUserRoleName(value: string | null | undefined): value is KnownUserRoleName {
   return typeof value === 'string' && (KNOWN_USER_ROLE_NAMES as readonly string[]).includes(value);
 }
+
+/**
+ * Shared by the searchable "Add User to Project" combobox on
+ * `/projects/:id/assignments` (`UserSearchCombobox`, `useUserSearch`,
+ * `useDebounce`) and `GET /api/auth/search-users`'s query validation
+ * (`searchUsersQuerySchema`) - the as-you-type query text must reach this
+ * length, after the debounce below elapses, before a `GET /Auth/SearchUsers`
+ * request fires. Keeps the backend from being hit on every keystroke or with
+ * an overly broad 1-character search.
+ */
+export const MIN_USER_SEARCH_QUERY_LENGTH = 2;
+
+/** How long the combobox waits after the last keystroke before searching. */
+export const USER_SEARCH_DEBOUNCE_MS = 300;

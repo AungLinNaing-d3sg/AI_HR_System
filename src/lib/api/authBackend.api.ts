@@ -12,6 +12,7 @@ import type {
   LogoutRequest,
   RefreshTokenRequest,
   RefreshTokenResponse,
+  SearchUsersResponse,
   UpdateProfileRequest,
   UpdateProfileResponse,
 } from '@/types/api.types';
@@ -82,12 +83,14 @@ export interface GetUserListQuery {
 }
 
 /**
- * Paginated list of every user account in the system - candidates for the
- * "Add User to Project" dropdown on `/projects/:id/assignments`. Replaces
- * the removed `/Auth/GetUnassignedUsers` endpoint this app previously
- * called for that same dropdown; defaults to the first page of 10 users
- * (`pageNo=1&pageSize=10`), matching the dropdown's current, non-paginated
- * UI.
+ * Paginated list of every user account in the system - backs the
+ * `SystemAdmin`-only `/admin/users` management table (see
+ * `app/api/auth/users/route.ts`, which requests a large single page via
+ * `USERS_PAGE_SIZE`). Previously also powered the "Add User to Project"
+ * dropdown on `/projects/:id/assignments` (defaulting to `pageNo=1&
+ * pageSize=10` for that use case); that dropdown now searches instead, via
+ * `searchUsers`/`GET /Auth/SearchUsers` below (see the removed
+ * `app/api/auth/user-list/route.ts`).
  */
 export async function getUserList(
   accessToken: string,
@@ -97,6 +100,30 @@ export async function getUserList(
   const response = await backendClient.get<GetUserListResponse>('/Auth/GetUserList', {
     headers: authHeader(accessToken),
     params: { pageNo, pageSize },
+  });
+  return response.data;
+}
+
+export interface SearchUsersQuery {
+  email?: string;
+  userName?: string;
+}
+
+/**
+ * Free-text user search backing the searchable "Add User to Project"
+ * combobox on `/projects/:id/assignments` - replaces the previously used,
+ * non-search `GET /Auth/GetUserList` dropdown (see the removed
+ * `app/api/auth/user-list/route.ts`). The Route Handler sends the browser's
+ * as-you-type query as both `email` and `userName` (see `useUserSearch`), so
+ * the backend matches a user by either field.
+ */
+export async function searchUsers(
+  query: SearchUsersQuery,
+  accessToken: string
+): Promise<SearchUsersResponse> {
+  const response = await backendClient.get<SearchUsersResponse>('/Auth/SearchUsers', {
+    headers: authHeader(accessToken),
+    params: query,
   });
   return response.data;
 }

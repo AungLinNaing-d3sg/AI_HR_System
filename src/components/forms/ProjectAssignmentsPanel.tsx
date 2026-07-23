@@ -2,14 +2,13 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { UserMinus, UserPlus } from 'lucide-react';
 import { useAssignResource } from '@/hooks/useAssignResource';
 import { useProject } from '@/hooks/useProject';
 import { useProjectAssignments } from '@/hooks/useProjectAssignments';
 import { useRemoveResource } from '@/hooks/useRemoveResource';
 import { useResourceRoleTypes } from '@/hooks/useResourceRoleTypes';
-import { useUserList } from '@/hooks/useUserList';
 import { Alert } from '@/components/ui/Alert';
 import { BackLink } from '@/components/common/BackLink';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +17,7 @@ import { FieldError } from '@/components/ui/FieldError';
 import { getInitials } from '@/lib/utils/getInitials';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
+import { UserSearchCombobox } from '@/components/common/UserSearchCombobox';
 import { assignResourceSchema, type AssignResourceFormValues } from '@/lib/validators/project.validators';
 import type { ProjectAssignment } from '@/types/domain.types';
 
@@ -30,11 +30,12 @@ function formatDate(value: string): string {
 /**
  * `/projects/:id/assignments` panel (`docs/HR_System_FE_wireframe.pdf`):
  * lists currently assigned resources with a Remove action per row (confirmed
- * via `ConfirmDialog`), and an "Add User" form whose dropdown is populated
- * from `useUserList` - the first page of the paginated user list, per
- * `GET /Auth/GetUserList?pageNo=1&pageSize=10` (see
- * `app/api/auth/user-list/route.ts`), replacing the previously used
- * `GET /Auth/GetUnassignedUsers`.
+ * via `ConfirmDialog`), and an "Add User" form whose user field is a
+ * searchable combobox (`UserSearchCombobox`) that queries
+ * `GET /Auth/SearchUsers?email={q}&userName={q}` as the user types (see
+ * `useUserSearch`, `app/api/auth/search-users/route.ts`), replacing the
+ * previously used, non-search `useUserList`/`GET /Auth/GetUserList` dropdown
+ * (see the removed `app/api/auth/user-list/route.ts`).
  */
 export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
   const { project } = useProject(projectId);
@@ -45,12 +46,6 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
     error: assignmentsError,
     refetch: refetchAssignments,
   } = useProjectAssignments(projectId);
-  const {
-    users: candidateUsers,
-    isLoading: isLoadingUsers,
-    isError: isCandidateUsersError,
-    error: candidateUsersError,
-  } = useUserList();
   const { roleTypes, isLoading: isLoadingRoleTypes } = useResourceRoleTypes();
   const { assignResource, isAssigning, error: assignError, reset: resetAssignError } = useAssignResource(projectId);
   const { removeResource, isRemoving, error: removeError, reset: resetRemoveError } = useRemoveResource(projectId);
@@ -60,6 +55,7 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
   const {
     register,
     handleSubmit,
+    control,
     reset: resetForm,
     formState: { errors },
   } = useForm<AssignResourceFormValues>({
@@ -181,7 +177,7 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
         className="rounded-lg border border-zinc-200 bg-white p-5"
       >
         <h2 className="text-sm font-semibold text-zinc-900">Add User to Project</h2>
-        <p className="mb-4 text-sm text-zinc-500">Select a user to assign to this project.</p>
+        <p className="mb-4 text-sm text-zinc-500">Search for a user by name or email to assign to this project.</p>
 
         {assignError && (
           <div className="mb-4">
@@ -189,29 +185,23 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
           </div>
         )}
 
-        {isCandidateUsersError && (
-          <div className="mb-4">
-            <Alert variant="error">{candidateUsersError ?? 'Could not load candidate users.'}</Alert>
-          </div>
-        )}
-
         <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div>
             <Label htmlFor="userId">User</Label>
-            <Select
-              id="userId"
-              hasError={Boolean(errors.userId)}
-              aria-describedby={errors.userId ? 'userId-error' : undefined}
-              disabled={isLoadingUsers}
-              {...register('userId')}
-            >
-              <option value="">{isLoadingUsers ? 'Loading users…' : 'Select a user'}</option>
-              {candidateUsers.map((user) => (
-                <option key={user.userId} value={user.userId}>
-                  {user.firstName} {user.lastName} ({user.email})
-                </option>
-              ))}
-            </Select>
+            <Controller
+              name="userId"
+              control={control}
+              render={({ field }) => (
+                <UserSearchCombobox
+                  id="userId"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  hasError={Boolean(errors.userId)}
+                  aria-describedby={errors.userId ? 'userId-error' : undefined}
+                />
+              )}
+            />
             <FieldError id="userId-error" message={errors.userId?.message} />
           </div>
 
@@ -239,10 +229,6 @@ export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
             {isAssigning ? 'Adding…' : 'Add User'}
           </Button>
         </div>
-
-        {candidateUsers.length === 0 && !isLoadingUsers && !isCandidateUsersError && (
-          <p className="mt-3 text-xs text-zinc-500">No users are currently available to assign.</p>
-        )}
       </form>
 
       <ConfirmDialog

@@ -13,7 +13,7 @@ jest.mock('../../lib/api/projects.api', () => ({
 }));
 
 jest.mock('../../lib/api/auth.api', () => ({
-  getUserList: jest.fn(),
+  searchUsers: jest.fn(),
 }));
 
 jest.mock('../../lib/api/resourceRoleTypes.api', () => ({
@@ -28,7 +28,7 @@ const projectsApi = jest.requireMock('../../lib/api/projects.api') as {
 };
 
 const authApi = jest.requireMock('../../lib/api/auth.api') as {
-  getUserList: jest.Mock;
+  searchUsers: jest.Mock;
 };
 
 const resourceRoleTypesApi = jest.requireMock('../../lib/api/resourceRoleTypes.api') as {
@@ -79,10 +79,10 @@ describe('ProjectAssignmentsPanel', () => {
     projectsApi.getProjectAssignments.mockReset();
     projectsApi.assignResource.mockReset();
     projectsApi.removeResource.mockReset();
-    authApi.getUserList.mockReset();
+    authApi.searchUsers.mockReset();
     resourceRoleTypesApi.getResourceRoleTypes.mockReset();
     projectsApi.getProject.mockResolvedValue(project);
-    authApi.getUserList.mockResolvedValue(candidateUsers);
+    authApi.searchUsers.mockResolvedValue(candidateUsers);
     resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
   });
 
@@ -99,20 +99,12 @@ describe('ProjectAssignmentsPanel', () => {
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 
-  it('shows an error alert when candidate users fail to load', async () => {
-    projectsApi.getProjectAssignments.mockResolvedValue([]);
-    authApi.getUserList.mockRejectedValue(new Error('network down'));
-    renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
-
-    expect(await screen.findByText(/could not load candidate users/i)).toBeInTheDocument();
-  });
-
-  it('shows an empty-state row and the candidate-user dropdown when nobody is assigned yet', async () => {
+  it('shows an empty-state row and the searchable user combobox when nobody is assigned yet', async () => {
     projectsApi.getProjectAssignments.mockResolvedValue([]);
     renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
 
     expect(await screen.findByText(/no users are assigned to this project yet/i)).toBeInTheDocument();
-    expect(await screen.findByRole('option', { name: /jane doe/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'User' })).toBeInTheDocument();
   });
 
   it('renders the assigned user (e.g. Alex Kumar) with their role and a Remove action', async () => {
@@ -124,14 +116,19 @@ describe('ProjectAssignmentsPanel', () => {
     expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
   });
 
-  it('submits the Add User form with the selected user and role', async () => {
+  it('searches for a user as the admin types and submits the Add User form with the selected user and role', async () => {
     const user = userEvent.setup();
     projectsApi.getProjectAssignments.mockResolvedValue([]);
     projectsApi.assignResource.mockResolvedValue([...assignments]);
     renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
 
-    await screen.findByRole('option', { name: /jane doe/i });
-    await user.selectOptions(screen.getByLabelText('User'), 'user-2');
+    const userField = await screen.findByRole('combobox', { name: 'User' });
+    await user.type(userField, 'jane');
+    await waitFor(() => expect(authApi.searchUsers).toHaveBeenCalledWith('jane'));
+
+    const option = await screen.findByRole('option', { name: /jane doe/i });
+    await user.click(option);
+
     await user.selectOptions(screen.getByLabelText('Role'), 'role-1');
     await user.click(screen.getByRole('button', { name: 'Add User' }));
 
@@ -141,6 +138,18 @@ describe('ProjectAssignmentsPanel', () => {
         resourceRoleTypeId: 'role-1',
       })
     );
+  });
+
+  it('shows a validation error when submitting without selecting a user', async () => {
+    const user = userEvent.setup();
+    projectsApi.getProjectAssignments.mockResolvedValue([]);
+    renderWithProviders(<ProjectAssignmentsPanel projectId="project-1" />);
+
+    await user.selectOptions(await screen.findByLabelText('Role'), 'role-1');
+    await user.click(screen.getByRole('button', { name: 'Add User' }));
+
+    expect(await screen.findByText(/select a user to assign/i)).toBeInTheDocument();
+    expect(projectsApi.assignResource).not.toHaveBeenCalled();
   });
 
   it('opens a confirm dialog before removing and calls removeResource on confirm', async () => {

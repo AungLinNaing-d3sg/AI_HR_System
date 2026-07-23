@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MIN_USER_SEARCH_QUERY_LENGTH } from '@/lib/constants/user.constants';
 
 /**
  * Requires at least one lowercase letter, one uppercase letter, one digit,
@@ -83,3 +84,29 @@ export const createUserSchema = z.object({
     .regex(GUID_REGEX, 'Select a valid role.'),
 });
 export type CreateUserFormValues = z.infer<typeof createUserSchema>;
+
+/**
+ * Validates the `URLSearchParams` `GET /api/auth/search-users` reads off
+ * `request.url` (see `lib/utils/searchParams.ts`'s `pickSearchParams`) before
+ * forwarding to `GET /Auth/SearchUsers?email=&userName=`. Both params are
+ * optional individually, but at least one must be present and long enough to
+ * avoid an overly broad (or empty) backend query - the client always sends
+ * the same as-you-type text as both (see `auth.api.ts#searchUsers`), so in
+ * practice this only ever rejects a query shorter than
+ * `MIN_USER_SEARCH_QUERY_LENGTH`.
+ */
+export const searchUsersQuerySchema = z
+  .object({
+    email: z.string().trim().max(200, 'Search term is too long.').optional(),
+    userName: z.string().trim().max(100, 'Search term is too long.').optional(),
+  })
+  .refine(
+    (data) =>
+      (data.email?.length ?? 0) >= MIN_USER_SEARCH_QUERY_LENGTH ||
+      (data.userName?.length ?? 0) >= MIN_USER_SEARCH_QUERY_LENGTH,
+    {
+      message: `Enter at least ${MIN_USER_SEARCH_QUERY_LENGTH} characters to search.`,
+      path: ['userName'],
+    }
+  );
+export type SearchUsersQueryValues = z.infer<typeof searchUsersQuerySchema>;

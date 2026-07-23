@@ -35,6 +35,14 @@ describe('Sidebar', () => {
     mockUseAuth.mockReturnValue({ role: 'User' });
     render(<Sidebar />);
     expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Currencies' })).not.toBeInTheDocument();
+  });
+
+  it('shows the Currencies link to a SystemAdmin and links it to /admin/currencies', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin' });
+    render(<Sidebar />);
+    expect(screen.getByRole('link', { name: 'Currencies' })).toHaveAttribute('href', '/admin/currencies');
   });
 
   it('shows the Billing/Invoices item to a ProjectAdmin but hides it from a plain User', () => {

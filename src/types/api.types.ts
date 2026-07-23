@@ -782,6 +782,36 @@ export interface CurrencyListResponsePayload {
   currencies: import('./domain.types').Currency[];
 }
 
+/** Request body for `POST /Currency/CreateCurrency`. */
+export interface CreateCurrencyRequest {
+  Code: string;
+  Name: string;
+  Symbol: string;
+  IsBaseCurrency: boolean;
+  IsActive: boolean;
+}
+
+/**
+ * Request body for `PUT /Currency/UpdateCurrency/{id}` - deliberately
+ * narrower than `CreateCurrencyRequest`: per the backend contract (see
+ * docs/HR_System_BE.postman_collection.json) only the name, symbol, and
+ * active status can be changed after creation - `Code` and `IsBaseCurrency`
+ * are fixed at creation time.
+ */
+export interface UpdateCurrencyRequest {
+  Name: string;
+  Symbol: string;
+  IsActive: boolean;
+}
+
+/** Raw response `Data` for Create/Update Currency - a single `CurrencyDto`. */
+export type CurrencyResponse = CurrencyDto;
+
+/** Shape returned by the create/update Currency Route Handlers. */
+export interface CurrencyResponsePayload {
+  currency: import('./domain.types').Currency;
+}
+
 /**
  * Raw payload for `GET /Country/GetAllCountries`, verified against the
  * documented example response - paginated, like `CurrencyListResponseDto`.

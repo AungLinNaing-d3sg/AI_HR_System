@@ -49,6 +49,13 @@ describe('getBreadcrumbs', () => {
     ]);
   });
 
+  it('returns the Currencies management trail', () => {
+    expect(getBreadcrumbs('/admin/currencies')).toEqual([
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Currencies' },
+    ]);
+  });
+
   it('falls back to just Dashboard for an unknown path', () => {
     expect(getBreadcrumbs('/unknown')).toEqual([{ label: 'Dashboard', href: '/dashboard' }]);
   });

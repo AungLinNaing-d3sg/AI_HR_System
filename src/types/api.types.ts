@@ -320,6 +320,31 @@ export interface ResourceRoleTypeListResponsePayload {
 }
 
 /**
+ * Request body shared by `POST /ResourceRoleType/CreateResourceRoleType` and
+ * `PUT /ResourceRoleType/UpdateResourceRoleType/{id}` (verified against
+ * docs/HR_System_BE.postman_collection.json) - both accept the same shape:
+ * `Name` (required, must be unique) and an optional `Description`.
+ */
+export interface CreateResourceRoleTypeRequest {
+  Name: string;
+  Description?: string | null;
+}
+
+/** `UpdateResourceRoleType` accepts the same fields as `CreateResourceRoleType`. */
+export type UpdateResourceRoleTypeRequest = CreateResourceRoleTypeRequest;
+
+/** Raw response `Data` for Create/Update Resource Role Type - a single `ResourceRoleTypeDto`. */
+export type ResourceRoleTypeResponse = ResourceRoleTypeDto;
+
+/** `DeleteResourceRoleType` returns `Data: null` on success, verified against the documented example response. */
+export type DeleteResourceRoleTypeResponse = null;
+
+/** Shape returned by the create/update Resource Role Type Route Handlers. */
+export interface ResourceRoleTypeResponsePayload {
+  roleType: import('./domain.types').ResourceRoleType;
+}
+
+/**
  * Raw Timesheet Period/Entry payloads as returned by the backend (see
  * docs/HR_System_BE.postman_collection.json's `TimesheetPeriod`/
  * `TimesheetEntry` request/response examples).

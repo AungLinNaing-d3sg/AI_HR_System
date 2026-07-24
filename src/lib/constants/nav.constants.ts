@@ -1,6 +1,7 @@
 import {
   ArrowLeftRight,
   BarChart3,
+  Briefcase,
   CalendarRange,
   ClipboardList,
   Clock,
@@ -22,9 +23,13 @@ import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
  * (`docs/HR_System_FE_wireframe.pdf`) explicitly calls out "all sidebar
  * links navigate without 404" as a bug it hit and fixed, so this list must
  * stay in lockstep with `src/app/**` (Reports, Invoices, Currencies,
- * Exchange Rates, Rate Cards, and Countries are all built - see the repo
- * root CLAUDE.md). Section title/order and per-item icons otherwise follow
- * the wireframe's sidebar exactly.
+ * Exchange Rates, Rate Cards, Countries, and Resource Role Types are all
+ * built - see the repo root CLAUDE.md). Section title/order and per-item
+ * icons otherwise follow the wireframe's sidebar exactly; Resource Role
+ * Types has no dedicated screen in the wireframe (it only ever shows
+ * Users/Currencies/Exchange Rates/Rate Cards/Countries under
+ * Administration), so its entry is appended last and styled to match its
+ * siblings rather than any specific wireframe mock.
  */
 export interface NavItem {
   label: string;
@@ -74,6 +79,12 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: ArrowLeftRight, roles: ['SystemAdmin'] },
       { label: 'Rate Cards', href: '/admin/rate-cards', icon: CreditCard, roles: ['SystemAdmin'] },
       { label: 'Countries', href: '/admin/countries', icon: Globe, roles: ['SystemAdmin'] },
+      {
+        label: 'Resource Role Types',
+        href: '/admin/resource-role-types',
+        icon: Briefcase,
+        roles: ['SystemAdmin'],
+      },
     ],
   },
 ];

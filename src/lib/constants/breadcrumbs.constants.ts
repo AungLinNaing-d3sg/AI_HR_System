@@ -34,6 +34,7 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
   if (pathname === '/admin/exchange-rates') return [DASHBOARD, { label: 'Exchange Rates' }];
   if (pathname === '/admin/rate-cards') return [DASHBOARD, { label: 'Rate Cards' }];
   if (pathname === '/admin/countries') return [DASHBOARD, { label: 'Countries' }];
+  if (pathname === '/admin/resource-role-types') return [DASHBOARD, { label: 'Resource Role Types' }];
   if (pathname === '/reports') return [DASHBOARD, { label: 'Reports' }];
   if (pathname === '/reports/timesheet') return [DASHBOARD, REPORTS, { label: 'Timesheet Report' }];
   if (pathname === '/reports/roles-summary') return [DASHBOARD, REPORTS, { label: 'Roles Summary' }];

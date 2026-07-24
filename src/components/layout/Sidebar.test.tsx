@@ -87,6 +87,23 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: 'Countries' })).not.toBeInTheDocument();
   });
 
+  it('shows the Resource Role Types link to a SystemAdmin and links it to /admin/resource-role-types', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin' });
+    render(<Sidebar />);
+    expect(screen.getByRole('link', { name: 'Resource Role Types' })).toHaveAttribute(
+      'href',
+      '/admin/resource-role-types'
+    );
+  });
+
+  it('hides the Resource Role Types link from a non-SystemAdmin role', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'User' });
+    render(<Sidebar />);
+    expect(screen.queryByRole('link', { name: 'Resource Role Types' })).not.toBeInTheDocument();
+  });
+
   it('shows the Billing/Invoices item to a ProjectAdmin but hides it from a plain User', () => {
     mockPathname = '/dashboard';
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });

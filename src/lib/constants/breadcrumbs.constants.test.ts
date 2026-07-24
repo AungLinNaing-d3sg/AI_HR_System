@@ -77,6 +77,13 @@ describe('getBreadcrumbs', () => {
     ]);
   });
 
+  it('returns the Resource Role Types management trail', () => {
+    expect(getBreadcrumbs('/admin/resource-role-types')).toEqual([
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Resource Role Types' },
+    ]);
+  });
+
   it('falls back to just Dashboard for an unknown path', () => {
     expect(getBreadcrumbs('/unknown')).toEqual([{ label: 'Dashboard', href: '/dashboard' }]);
   });

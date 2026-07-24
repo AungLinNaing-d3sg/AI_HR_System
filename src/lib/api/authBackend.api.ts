@@ -15,6 +15,8 @@ import type {
   SearchUsersResponse,
   UpdateProfileRequest,
   UpdateProfileResponse,
+  UpdateUserRequest,
+  UpdateUserResponseDto,
 } from '@/types/api.types';
 
 /**
@@ -126,6 +128,25 @@ export async function searchUsers(
   const response = await backendClient.get<SearchUsersResponse>('/Auth/SearchUsers', {
     headers: authHeader(accessToken),
     params: query,
+  });
+  return response.data;
+}
+
+/**
+ * Updates an existing user account - backs the `SystemAdmin`-only
+ * `/admin/users` management table's row-level "Edit" action and its
+ * Activate/Deactivate toggle (both submit the same `UpdateUser` payload,
+ * the latter only flipping `IsActive`), since there is no dedicated
+ * deactivate/delete endpoint for a user account (see
+ * docs/HR_System_BE.postman_collection.json).
+ */
+export async function updateUser(
+  id: string,
+  payload: UpdateUserRequest,
+  accessToken: string
+): Promise<UpdateUserResponseDto> {
+  const response = await backendClient.put<UpdateUserResponseDto>(`/Auth/UpdateUser/${id}`, payload, {
+    headers: authHeader(accessToken),
   });
   return response.data;
 }

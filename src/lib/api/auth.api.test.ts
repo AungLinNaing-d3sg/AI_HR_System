@@ -11,7 +11,7 @@ const { axiosInstance } = jest.requireMock('./axios') as {
 };
 
 import * as authApi from './auth.api';
-import type { AuthenticatedUser, Role, UserListItem } from '@/types/domain.types';
+import type { AdminUserListItem, AuthenticatedUser, Role, UserListItem } from '@/types/domain.types';
 
 const user: AuthenticatedUser = {
   id: 'user-1',
@@ -119,16 +119,53 @@ describe('auth.api (client)', () => {
     expect(result).toEqual([candidate]);
   });
 
-  it('getUsers gets /auth/users and returns the full user list with a total count', async () => {
-    const candidate: UserListItem = {
+  it('getUsers gets /auth/users and returns the full admin user list with a total count', async () => {
+    const candidate: AdminUserListItem = {
       userId: 'user-2',
+      username: 'jane.doe',
       firstName: 'Jane',
       lastName: 'Doe',
       email: 'jane@example.com',
+      employeeId: null,
+      roleName: 'ProjectAdmin',
+      countryId: 'country-1',
+      countryCode: 'SG',
+      countryName: 'Singapore',
+      isActive: true,
     };
     axiosInstance.get.mockResolvedValue({ data: { users: [candidate], totalCount: 1 } });
     const result = await authApi.getUsers();
     expect(axiosInstance.get).toHaveBeenCalledWith('/auth/users');
     expect(result).toEqual({ users: [candidate], totalCount: 1 });
+  });
+
+  it('updateUser puts to /auth/users/:id and returns the updated admin user', async () => {
+    const updated: AdminUserListItem = {
+      userId: 'user-2',
+      username: 'testedited',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+      employeeId: 'EMP002',
+      roleName: 'SystemAdmin',
+      countryId: 'country-1',
+      countryCode: null,
+      countryName: null,
+      isActive: true,
+    };
+    axiosInstance.put.mockResolvedValue({ data: { user: updated } });
+    const values = {
+      username: 'testedited',
+      email: 'jane@example.com',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      employeeId: 'EMP002',
+      countryId: 'country-1',
+      isActive: true,
+      roleId: '',
+    };
+    const result = await authApi.updateUser('user-2', values);
+    expect(axiosInstance.put).toHaveBeenCalledWith('/auth/users/user-2', values);
+    expect(result).toEqual(updated);
   });
 });

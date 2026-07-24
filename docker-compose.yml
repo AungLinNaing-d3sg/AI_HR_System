@@ -1,17 +1,21 @@
 version: "3.8"
 
 services:
-  hrsystemfrontend:
-    image: ${DOCKERHUB_USERNAME}/hrsystemfrontend:${IMAGE_TAG}
-    container_name: hrsystemfrontend
+  frontend:
+    container_name: hrsystem-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hrsystem-frontend:latest
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      PORT: 3000
     restart: unless-stopped
     networks:
-      - hrfrontend
+      - hrsystem-network
 
 networks:
-  hrfrontend:
+  hrsystem-network:
     driver: bridge

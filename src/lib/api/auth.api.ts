@@ -4,15 +4,17 @@ import type {
   CreateUserResponsePayload,
   RoleListResponsePayload,
   SearchUsersResponsePayload,
+  UpdateUserResponsePayload,
   UserListResponsePayload,
   UsersListResponsePayload,
 } from '@/types/api.types';
-import type { AuthenticatedUser, CreatedUser, Role, UserListItem } from '@/types/domain.types';
+import type { AdminUserListItem, AuthenticatedUser, CreatedUser, Role, UserListItem } from '@/types/domain.types';
 import type {
   ChangePasswordFormValues,
   CreateUserFormValues,
   LoginFormValues,
   UpdateProfileFormValues,
+  UpdateUserFormValues,
 } from '@/lib/validators/auth.validators';
 
 /**
@@ -79,7 +81,7 @@ export async function searchUsers(query: string): Promise<UserListItem[]> {
 }
 
 export interface UsersPage {
-  users: UserListItem[];
+  users: AdminUserListItem[];
   totalCount: number;
 }
 
@@ -87,4 +89,14 @@ export interface UsersPage {
 export async function getUsers(): Promise<UsersPage> {
   const { data } = await axiosInstance.get<UsersListResponsePayload>('/auth/users');
   return { users: data.users, totalCount: data.totalCount };
+}
+
+/**
+ * Updates an existing user account - backs the `SystemAdmin`-only
+ * `/admin/users` management table's row-level "Edit" action and its
+ * Activate/Deactivate toggle (see `useUpdateUser`).
+ */
+export async function updateUser(id: string, values: UpdateUserFormValues): Promise<AdminUserListItem> {
+  const { data } = await axiosInstance.put<UpdateUserResponsePayload>(`/auth/users/${id}`, values);
+  return data.user;
 }

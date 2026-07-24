@@ -86,6 +86,40 @@ export const createUserSchema = z.object({
 export type CreateUserFormValues = z.infer<typeof createUserSchema>;
 
 /**
+ * Mirrors the backend's `UpdateUser` request DTO (`PUT
+ * /Auth/UpdateUser/{id}`, see docs/HR_System_BE.postman_collection.json).
+ * Unlike `createUserSchema`, there is no `password` field (password changes
+ * go through the dedicated Change Password flow) and `roleId` is optional -
+ * left blank, the account's current role is preserved (the backend accepts
+ * `RoleId: null` to mean "no change", per the documented example request).
+ * `isActive` backs both the edit form's Status dropdown and the
+ * `/admin/users` table's row-level Activate/Deactivate action, which
+ * resubmits this same schema's shape with every other field unchanged and
+ * only `isActive` flipped.
+ */
+export const updateUserSchema = z.object({
+  username: z.string().trim().min(3, 'Username must be at least 3 characters.').max(50, 'Username is too long.'),
+  email: z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.'),
+  firstName: z.string().trim().min(1, 'First name is required.').max(100, 'First name is too long.'),
+  lastName: z.string().trim().min(1, 'Last name is required.').max(100, 'Last name is too long.'),
+  employeeId: z.string().trim().max(50, 'Employee ID is too long.').optional().or(z.literal('')),
+  countryId: z
+    .string()
+    .trim()
+    .regex(GUID_REGEX, 'Enter a valid Country ID (GUID).')
+    .optional()
+    .or(z.literal('')),
+  isActive: z.boolean(),
+  roleId: z
+    .string()
+    .trim()
+    .regex(GUID_REGEX, 'Select a valid role.')
+    .optional()
+    .or(z.literal('')),
+});
+export type UpdateUserFormValues = z.infer<typeof updateUserSchema>;
+
+/**
  * Validates the `URLSearchParams` `GET /api/auth/search-users` reads off
  * `request.url` (see `lib/utils/searchParams.ts`'s `pickSearchParams`) before
  * forwarding to `GET /Auth/SearchUsers?email=&userName=`. Both params are

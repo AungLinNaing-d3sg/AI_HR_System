@@ -82,7 +82,18 @@ describe('GET /api/auth/users', () => {
       PageNo: 1,
       PageSize: 100,
       Items: [
-        { UserId: 'user-1', Username: 'admin', Email: 'admin@hrsystem.com', FirstName: 'System', LastName: 'Admin', EmployeeId: null },
+        {
+          UserId: 'user-1',
+          Username: 'admin',
+          Email: 'admin@hrsystem.com',
+          FirstName: 'System',
+          LastName: 'Admin',
+          EmployeeId: null,
+          RoleName: 'SystemAdmin',
+          CountryId: 'country-1',
+          CountryCode: 'SG',
+          CountryName: 'Singapore',
+        },
       ],
     });
 
@@ -93,7 +104,19 @@ describe('GET /api/auth/users', () => {
     expect(authBackend.getUserList).toHaveBeenCalledWith(token, { pageNo: 1, pageSize: 100 });
     expect(body.totalCount).toBe(1);
     expect(body.users).toEqual([
-      { userId: 'user-1', firstName: 'System', lastName: 'Admin', email: 'admin@hrsystem.com' },
+      {
+        userId: 'user-1',
+        username: 'admin',
+        firstName: 'System',
+        lastName: 'Admin',
+        email: 'admin@hrsystem.com',
+        employeeId: null,
+        roleName: 'SystemAdmin',
+        countryId: 'country-1',
+        countryCode: 'SG',
+        countryName: 'Singapore',
+        isActive: true,
+      },
     ]);
   });
 

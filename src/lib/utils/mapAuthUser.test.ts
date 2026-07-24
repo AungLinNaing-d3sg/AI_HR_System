@@ -1,14 +1,17 @@
 import {
+  mapAdminUserListItem,
+  mapAdminUserListItemList,
   mapAuthUser,
   mapRole,
   mapRoleList,
+  mapUpdateUserResponse,
   mapUserListItem,
   mapUserListItemList,
   mapUserSearchItem,
   mapUserSearchItemList,
 } from './mapAuthUser';
 import type { MapAuthUserDto } from './mapAuthUser';
-import type { RoleDto, UserListItemDto, UserSearchItemDto } from '@/types/api.types';
+import type { UpdateUserResponseDto, RoleDto, UserListItemDto, UserSearchItemDto } from '@/types/api.types';
 
 describe('mapAuthUser', () => {
   const dto: MapAuthUserDto = {
@@ -174,5 +177,117 @@ describe('mapUserSearchItemList', () => {
 
   it('returns an empty array for an empty list', () => {
     expect(mapUserSearchItemList([])).toEqual([]);
+  });
+});
+
+describe('mapAdminUserListItem', () => {
+  const dto: UserListItemDto = {
+    UserId: 'user-2',
+    Username: 'jane.doe',
+    Email: 'jane@example.com',
+    FirstName: 'Jane',
+    LastName: 'Doe',
+    EmployeeId: 'EMP-002',
+    RoleName: 'ProjectAdmin',
+    CountryId: 'country-1',
+    CountryCode: 'SG',
+    CountryName: 'Singapore',
+    IsActive: true,
+  };
+
+  it('maps every field the /admin/users table needs, unlike mapUserListItem', () => {
+    expect(mapAdminUserListItem(dto)).toEqual({
+      userId: 'user-2',
+      username: 'jane.doe',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+      employeeId: 'EMP-002',
+      roleName: 'ProjectAdmin',
+      countryId: 'country-1',
+      countryCode: 'SG',
+      countryName: 'Singapore',
+      isActive: true,
+    });
+  });
+
+  it('defaults role/country fields to null and isActive to true when the backend omits them', () => {
+    const minimalDto: UserListItemDto = {
+      UserId: 'user-3',
+      Username: 'admin',
+      Email: 'admin@hrsystem.com',
+      FirstName: 'System',
+      LastName: 'Admin',
+      EmployeeId: null,
+    };
+    expect(mapAdminUserListItem(minimalDto)).toEqual({
+      userId: 'user-3',
+      username: 'admin',
+      firstName: 'System',
+      lastName: 'Admin',
+      email: 'admin@hrsystem.com',
+      employeeId: null,
+      roleName: null,
+      countryId: null,
+      countryCode: null,
+      countryName: null,
+      isActive: true,
+    });
+  });
+});
+
+describe('mapAdminUserListItemList', () => {
+  it('maps an array of DTOs', () => {
+    const dto: UserListItemDto = {
+      UserId: 'user-2',
+      Username: 'jane.doe',
+      Email: 'jane@example.com',
+      FirstName: 'Jane',
+      LastName: 'Doe',
+      EmployeeId: null,
+    };
+    const result = mapAdminUserListItemList([dto, { ...dto, UserId: 'user-3' }]);
+    expect(result).toHaveLength(2);
+    expect(result[1].userId).toBe('user-3');
+  });
+
+  it('returns an empty array for an empty list', () => {
+    expect(mapAdminUserListItemList([])).toEqual([]);
+  });
+});
+
+describe('mapUpdateUserResponse', () => {
+  const dto: UpdateUserResponseDto = {
+    UserId: 'user-2',
+    Username: 'testedited',
+    Email: 'test@d3-sg.com',
+    FirstName: 'Lin Thit',
+    LastName: 'Htoo',
+    EmployeeId: 'EMP002',
+    CountryId: 'country-1',
+    IsActive: true,
+    RoleName: 'SystemAdmin',
+  };
+
+  it('maps the PUT /Auth/UpdateUser/{id} response to the admin user list domain model', () => {
+    expect(mapUpdateUserResponse(dto)).toEqual({
+      userId: 'user-2',
+      username: 'testedited',
+      firstName: 'Lin Thit',
+      lastName: 'Htoo',
+      email: 'test@d3-sg.com',
+      employeeId: 'EMP002',
+      roleName: 'SystemAdmin',
+      countryId: 'country-1',
+      countryCode: null,
+      countryName: null,
+      isActive: true,
+    });
+  });
+
+  it('preserves null employeeId/countryId instead of coercing them', () => {
+    const mapped = mapUpdateUserResponse({ ...dto, EmployeeId: null, CountryId: null });
+    expect(mapped.employeeId).toBeNull();
+    expect(mapped.countryId).toBeNull();
   });
 });

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useUsers } from './useUsers';
-import type { UserListItem } from '@/types/domain.types';
+import type { AdminUserListItem } from '@/types/domain.types';
 
 jest.mock('../lib/api/auth.api', () => ({
   getUsers: jest.fn(),
@@ -10,7 +10,21 @@ jest.mock('../lib/api/auth.api', () => ({
 
 const authApi = jest.requireMock('../lib/api/auth.api') as { getUsers: jest.Mock };
 
-const users: UserListItem[] = [{ userId: 'user-2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' }];
+const users: AdminUserListItem[] = [
+  {
+    userId: 'user-2',
+    username: 'jane.doe',
+    firstName: 'Jane',
+    lastName: 'Doe',
+    email: 'jane@example.com',
+    employeeId: null,
+    roleName: 'ProjectAdmin',
+    countryId: 'country-1',
+    countryCode: 'SG',
+    countryName: 'Singapore',
+    isActive: true,
+  },
+];
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

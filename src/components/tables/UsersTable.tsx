@@ -1,11 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { Ban, Pencil, UserCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUpdateUser } from '@/hooks/useUpdateUser';
 import { useUsers } from '@/hooks/useUsers';
 import { useKnownUserRolesStore } from '@/stores/knownUserRoles.store';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { UserEditFormModal } from '@/components/forms/UserEditFormModal';
 import { UserRoleBadge } from '@/components/common/UserRoleBadge';
 import {
   isKnownUserRoleName,
@@ -14,37 +18,44 @@ import {
   type KnownUserRoleName,
 } from '@/lib/constants/user.constants';
 import { getInitials } from '@/lib/utils/getInitials';
-import type { UserListItem } from '@/types/domain.types';
+import type { AdminUserListItem } from '@/types/domain.types';
 
 type RoleCounts = Record<KnownUserRoleName, number> & { unavailable: number };
 
 /**
  * The `/admin/users` management table (`docs/HR_System_FE_wireframe.pdf`):
- * role-count chips above a User/Email/Role/Status table.
+ * role-count chips above a User/Email/Role/Country/Status/Action table.
  *
- * `GET /Auth/GetUserList` - the only endpoint that lists every account -
- * does not return each account's role (see
- * docs/HR_System_BE.postman_collection.json), so this component only ever
- * shows a confirmed role badge for two cases: the signed-in admin's own row
- * (their role comes from their JWT via `useAuth`) and any user created
- * during the current browser session (recorded in
- * `stores/knownUserRoles.store.ts` by `CreateUserForm`). Every other row -
- * and its contribution to the count chips - is grouped under "Role
- * unavailable" instead of guessing, since misrepresenting an RBAC-sensitive
- * fact would be worse than admitting the data isn't available yet.
+ * `GET /Auth/GetUserList` now returns each account's `RoleName`/
+ * `CountryId`/`CountryCode`/`CountryName` inline (see
+ * docs/HR_System_BE.postman_collection.json and `AdminUserListItem`), so
+ * this table shows the API's own role/country for every row. A row whose
+ * `roleName` is still `null` (a defensive fallback, not the common case)
+ * falls back to the signed-in admin's own row (from their JWT via
+ * `useAuth`) or a role recorded this session by `CreateUserForm` (see
+ * `stores/knownUserRoles.store.ts`), and otherwise renders "Role
+ * unavailable" (see `UserRoleBadge`) instead of guessing.
  *
- * Likewise, there is no "deactivate a user" endpoint in the Auth domain
- * (unlike Project/Country/Currency/RateCard), so every listed account is, in
- * fact, active - the Status column is a static, accurate "Active" badge
- * rather than a toggle the API can't support.
+ * There is still no dedicated delete endpoint for a user account (unlike
+ * Project/Country/Currency/RateCard) - `PUT /Auth/UpdateUser/{id}` accepts
+ * an `IsActive` flag, so the row-level Action column offers Edit (opens
+ * `UserEditFormModal`) and an Activate/Deactivate toggle (via
+ * `useUpdateUser`, resubmitting the row's current values with only
+ * `isActive` flipped) as the closest equivalent to delete/restore. The
+ * signed-in admin can't deactivate their own account from here.
  */
 export function UsersTable() {
   const { user: currentUser } = useAuth();
   const roleNameByUserId = useKnownUserRolesStore((state) => state.roleNameByUserId);
   const { users, totalCount, isLoading, isError, error, refetch } = useUsers();
+  const { updateUser, isUpdating, error: statusError, reset: resetStatusError } = useUpdateUser();
+
+  const [editingUser, setEditingUser] = useState<AdminUserListItem | null>(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState<AdminUserListItem | null>(null);
 
   const resolveRoleName = useMemo(() => {
-    return (candidate: UserListItem): string | null => {
+    return (candidate: AdminUserListItem): string | null => {
+      if (candidate.roleName) return candidate.roleName;
       if (currentUser && currentUser.id === candidate.userId) {
         return currentUser.role;
       }
@@ -64,6 +75,28 @@ export function UsersTable() {
     }
     return counts;
   }, [users, resolveRoleName]);
+
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+    try {
+      await updateUser({
+        id: pendingStatusChange.userId,
+        values: {
+          username: pendingStatusChange.username,
+          email: pendingStatusChange.email,
+          firstName: pendingStatusChange.firstName,
+          lastName: pendingStatusChange.lastName,
+          employeeId: pendingStatusChange.employeeId ?? '',
+          countryId: pendingStatusChange.countryId ?? '',
+          isActive: !pendingStatusChange.isActive,
+          roleId: '',
+        },
+      });
+      setPendingStatusChange(null);
+    } catch {
+      // Surfaced via `statusError` below; keep the dialog open so the user can retry or cancel.
+    }
+  };
 
   if (isLoading) {
     return (
@@ -123,6 +156,8 @@ export function UsersTable() {
         )}
       </div>
 
+      {statusError && <Alert variant="error">{statusError}</Alert>}
+
       {totalCount > users.length && (
         <Alert variant="info">
           Showing the first {users.length} of {totalCount} users.
@@ -131,7 +166,9 @@ export function UsersTable() {
 
       <div className="overflow-x-auto rounded-md border border-zinc-200">
         <table className="w-full min-w-max text-left text-sm">
-          <caption className="sr-only">List of user accounts with their role and status.</caption>
+          <caption className="sr-only">
+            List of user accounts with their role, country, and status.
+          </caption>
           <thead className="bg-zinc-50 text-xs uppercase text-zinc-500">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">
@@ -144,40 +181,114 @@ export function UsersTable() {
                 Role(s)
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
+                Country
+              </th>
+              <th scope="col" className="px-4 py-3 font-medium">
                 Status
+              </th>
+              <th scope="col" className="px-4 py-3 font-medium">
+                <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {users.map((candidate) => (
-              <tr key={candidate.userId}>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
+            {users.map((candidate) => {
+              const isSelf = currentUser?.id === candidate.userId;
+              return (
+                <tr key={candidate.userId}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700"
+                      >
+                        {getInitials(candidate.firstName, candidate.lastName)}
+                      </span>
+                      <span className="font-medium text-zinc-900">
+                        {candidate.firstName} {candidate.lastName}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-zinc-600">{candidate.email}</td>
+                  <td className="px-4 py-3">
+                    <UserRoleBadge roleName={resolveRoleName(candidate)} />
+                  </td>
+                  <td className="px-4 py-3 text-zinc-600">
+                    {candidate.countryName ?? candidate.countryCode ?? (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     <span
-                      aria-hidden="true"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700"
+                      className={
+                        candidate.isActive
+                          ? 'inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800'
+                          : 'inline-flex rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700'
+                      }
                     >
-                      {getInitials(candidate.firstName, candidate.lastName)}
+                      {candidate.isActive ? 'Active' : 'Inactive'}
                     </span>
-                    <span className="font-medium text-zinc-900">
-                      {candidate.firstName} {candidate.lastName}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-zinc-600">{candidate.email}</td>
-                <td className="px-4 py-3">
-                  <UserRoleBadge roleName={resolveRoleName(candidate)} />
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                    Active
-                  </span>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingUser(candidate)}>
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isSelf}
+                        title={isSelf ? 'You cannot deactivate your own account.' : undefined}
+                        onClick={() => {
+                          resetStatusError();
+                          setPendingStatusChange(candidate);
+                        }}
+                      >
+                        {candidate.isActive ? (
+                          <>
+                            <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                            Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                            Activate
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      <UserEditFormModal
+        open={editingUser !== null}
+        user={editingUser ?? undefined}
+        onSuccess={() => setEditingUser(null)}
+        onClose={() => setEditingUser(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingStatusChange !== null}
+        title={pendingStatusChange?.isActive ? 'Deactivate user' : 'Activate user'}
+        description={
+          pendingStatusChange
+            ? pendingStatusChange.isActive
+              ? `Are you sure you want to deactivate "${pendingStatusChange.firstName} ${pendingStatusChange.lastName}"? They will no longer be able to sign in.`
+              : `Are you sure you want to reactivate "${pendingStatusChange.firstName} ${pendingStatusChange.lastName}"?`
+            : ''
+        }
+        confirmLabel={pendingStatusChange?.isActive ? 'Deactivate' : 'Activate'}
+        isConfirming={isUpdating}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setPendingStatusChange(null)}
+      />
     </div>
   );
 }

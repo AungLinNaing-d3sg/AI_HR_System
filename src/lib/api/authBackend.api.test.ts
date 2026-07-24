@@ -113,6 +113,36 @@ describe('authBackend.api (server)', () => {
     });
   });
 
+  it('updateUser puts to /Auth/UpdateUser/{id} with a Bearer header', async () => {
+    const responseData = {
+      UserId: 'user-2',
+      Username: 'testedited',
+      Email: 'test@d3-sg.com',
+      FirstName: 'Lin Thit',
+      LastName: 'Htoo',
+      EmployeeId: 'EMP002',
+      CountryId: 'country-1',
+      IsActive: true,
+      RoleName: 'SystemAdmin',
+    };
+    backendClient.put.mockResolvedValue({ data: responseData });
+    const payload = {
+      Username: 'testedited',
+      Email: 'test@d3-sg.com',
+      FirstName: 'Lin Thit',
+      LastName: 'Htoo',
+      EmployeeId: 'EMP002',
+      CountryId: 'country-1',
+      IsActive: true,
+      RoleId: null,
+    };
+    const result = await authBackend.updateUser('user-2', payload, 'access-token');
+    expect(backendClient.put).toHaveBeenCalledWith('/Auth/UpdateUser/user-2', payload, {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+    expect(result).toEqual(responseData);
+  });
+
   it('searchUsers gets /Auth/SearchUsers with a Bearer header and the given email/userName params', async () => {
     const results = [
       { UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null },

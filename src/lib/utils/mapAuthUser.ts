@@ -1,7 +1,7 @@
 import 'server-only';
 
-import type { RoleDto, UserListItemDto, UserSearchItemDto } from '@/types/api.types';
-import type { AuthenticatedUser, Role, UserListItem, UserRole } from '@/types/domain.types';
+import type { UpdateUserResponseDto, RoleDto, UserListItemDto, UserSearchItemDto } from '@/types/api.types';
+import type { AdminUserListItem, AuthenticatedUser, Role, UserListItem, UserRole } from '@/types/domain.types';
 
 /**
  * Fields shared by the backend's Login/UpdateProfile/CreateUser user
@@ -88,4 +88,63 @@ export function mapUserSearchItem(dto: UserSearchItemDto): UserListItem {
 
 export function mapUserSearchItemList(dtos: UserSearchItemDto[]): UserListItem[] {
   return dtos.map(mapUserSearchItem);
+}
+
+/**
+ * Maps a single `GET /Auth/GetUserList` item (PascalCase) to the app's
+ * camelCase `AdminUserListItem` domain model backing the `SystemAdmin`-only
+ * `/admin/users` management table - unlike `mapUserListItem`, this keeps the
+ * `username`/`employeeId`/role/country/active-status fields the table's
+ * Role/Country/Status columns and row-level actions need. `roleName`/
+ * `countryId`/`countryCode`/`countryName` are declared optional on the DTO
+ * (see `UserListItemDto`'s comment) since not every backend response is
+ * guaranteed to include them - each defaults to `null` rather than throwing
+ * when absent. `isActive` defaults to `true` when the backend omits it
+ * (`GET /Auth/GetUserList`'s documented example response doesn't include an
+ * `IsActive` field, unlike `SearchUsers`'s), matching this app's existing
+ * assumption that `GetUserList` only ever returns non-deleted accounts.
+ */
+export function mapAdminUserListItem(dto: UserListItemDto): AdminUserListItem {
+  return {
+    userId: dto.UserId,
+    username: dto.Username,
+    firstName: dto.FirstName,
+    lastName: dto.LastName,
+    email: dto.Email,
+    employeeId: dto.EmployeeId ?? null,
+    roleName: dto.RoleName ?? null,
+    countryId: dto.CountryId ?? null,
+    countryCode: dto.CountryCode ?? null,
+    countryName: dto.CountryName ?? null,
+    isActive: dto.IsActive ?? true,
+  };
+}
+
+export function mapAdminUserListItemList(dtos: UserListItemDto[]): AdminUserListItem[] {
+  return dtos.map(mapAdminUserListItem);
+}
+
+/**
+ * Maps `PUT /Auth/UpdateUser/{id}`'s response `Data` (PascalCase) to the
+ * app's camelCase `AdminUserListItem` domain model, so a successful edit can
+ * be reflected immediately without waiting on a full `['auth', 'users']`
+ * refetch. Unlike `UserListItemDto`, this DTO doesn't echo back
+ * `CountryCode`/`CountryName` (see `UpdateUserResponseDto`'s comment in
+ * `api.types.ts`) - callers needing the resolved country name continue to
+ * rely on the invalidated `['auth', 'users']` list.
+ */
+export function mapUpdateUserResponse(dto: UpdateUserResponseDto): AdminUserListItem {
+  return {
+    userId: dto.UserId,
+    username: dto.Username,
+    firstName: dto.FirstName,
+    lastName: dto.LastName,
+    email: dto.Email,
+    employeeId: dto.EmployeeId ?? null,
+    roleName: dto.RoleName ?? null,
+    countryId: dto.CountryId ?? null,
+    countryCode: null,
+    countryName: null,
+    isActive: dto.IsActive,
+  };
 }

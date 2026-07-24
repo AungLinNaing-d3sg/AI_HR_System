@@ -97,6 +97,32 @@ export interface UserListItem {
   email: string;
 }
 
+/**
+ * A row on the `SystemAdmin`-only `/admin/users` management table
+ * (`docs/HR_System_FE_wireframe.pdf`) - the same backend account as
+ * `UserListItem`, but additionally carrying the `username`/`employeeId`/
+ * `roleName`/country/active-status fields the latest `GET /Auth/GetUserList`
+ * contract now returns (see `UserListItemDto` in `api.types.ts`), used for
+ * this table's Role/Country/Status columns and its row-level Edit/
+ * Activate-Deactivate actions (`PUT /Auth/UpdateUser/{id}`). Kept distinct
+ * from `UserListItem` (the lighter "Add User to Project" combobox model)
+ * since that surface still only needs a name and email.
+ */
+export interface AdminUserListItem {
+  userId: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  employeeId: string | null;
+  /** `null` when the backend doesn't return a confirmed role for this row. */
+  roleName: string | null;
+  countryId: string | null;
+  countryCode: string | null;
+  countryName: string | null;
+  isActive: boolean;
+}
+
 export interface TimesheetPeriod {
   id: string;
   periodStart: string;

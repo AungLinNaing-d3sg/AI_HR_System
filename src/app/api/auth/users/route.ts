@@ -6,7 +6,7 @@ import { USERS_PAGE_SIZE } from '@/lib/constants/user.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
-import { mapUserListItemList } from '@/lib/utils/mapAuthUser';
+import { mapAdminUserListItemList } from '@/lib/utils/mapAuthUser';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createUserSchema } from '@/lib/validators/auth.validators';
 import type { CreateUserResponsePayload, UsersListResponsePayload } from '@/types/api.types';
@@ -21,11 +21,14 @@ import type { CreateUserResponsePayload, UsersListResponsePayload } from '@/type
  * page (`USERS_PAGE_SIZE`) since the wireframe's admin table has no
  * pagination UI.
  *
- * `GET /Auth/GetUserList` does not return each account's role, country, or
- * active/inactive status (see docs/HR_System_BE.postman_collection.json),
- * so those fields are not part of `UserListItem` - the table renders a
- * "Role unavailable" state for any user this app can't confirm a role for
- * (see `UserRoleBadge`) instead of fabricating one.
+ * `GET /Auth/GetUserList` now returns each account's `RoleName`/
+ * `CountryId`/`CountryCode`/`CountryName` inline (see
+ * docs/HR_System_BE.postman_collection.json), so this route maps through
+ * `mapAdminUserListItemList` (not the lighter `mapUserListItemList` the
+ * "Add User to Project" dropdown uses) to surface those fields for the
+ * table's Role/Country/Status columns and row-level Edit/Activate actions.
+ * A row missing a confirmed role still renders a "Role unavailable" state
+ * (see `UserRoleBadge`) rather than fabricating one.
  */
 export async function GET(): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -46,7 +49,7 @@ export async function GET(): Promise<NextResponse> {
       pageSize: USERS_PAGE_SIZE,
     });
     return NextResponse.json<UsersListResponsePayload>(
-      { users: mapUserListItemList(Items), totalCount: TotalCount },
+      { users: mapAdminUserListItemList(Items), totalCount: TotalCount },
       { status: 200 }
     );
   } catch (error) {

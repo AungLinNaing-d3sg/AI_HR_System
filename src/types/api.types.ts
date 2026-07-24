@@ -125,7 +125,17 @@ export type GetRolesResponse = RoleDto[];
  * the "Add User to Project" dropdown on `/projects/:id/assignments` (see
  * `app/api/auth/user-list/route.ts`), replacing the now-removed
  * `/Auth/GetUnassignedUsers` endpoint this app previously called for that
- * same dropdown.
+ * same dropdown, as well as the `SystemAdmin`-only `/admin/users`
+ * management table (see `app/api/auth/users/route.ts`).
+ *
+ * As of the latest backend contract (see
+ * docs/HR_System_BE.postman_collection.json), each item additionally
+ * carries `RoleName`/`CountryId`/`CountryCode`/`CountryName` (and, on
+ * `SearchUsers`, `IsActive`) - fields the "Add User to Project" dropdown
+ * still doesn't need (see `mapUserListItem`) but the `/admin/users` table's
+ * Role/Country columns and row-level actions do (see
+ * `mapAdminUserListItem`). Declared optional here (rather than required) so
+ * a row missing one of them degrades gracefully instead of failing to map.
  */
 export interface UserListItemDto {
   UserId: string;
@@ -134,6 +144,11 @@ export interface UserListItemDto {
   FirstName: string;
   LastName: string;
   EmployeeId: string | null;
+  RoleName?: string | null;
+  CountryId?: string | null;
+  CountryCode?: string | null;
+  CountryName?: string | null;
+  IsActive?: boolean;
 }
 
 /** Raw paginated payload for `GET /Auth/GetUserList`, verified against the documented example response. */
@@ -142,6 +157,43 @@ export interface GetUserListResponse {
   PageNo: number;
   PageSize: number;
   Items: UserListItemDto[];
+}
+
+/**
+ * Mirrors the backend's `UpdateUser` request DTO (`PUT
+ * /Auth/UpdateUser/{id}`, see docs/HR_System_BE.postman_collection.json).
+ * Unlike `CreateUserRequest`, there is no `Password` field (password changes
+ * go through the dedicated `ChangePassword` endpoint) and `RoleId` is
+ * optional/nullable - sending `null` leaves the account's current role
+ * unchanged, per the documented example request.
+ */
+export interface UpdateUserRequest {
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  EmployeeId?: string | null;
+  CountryId?: string | null;
+  IsActive: boolean;
+  RoleId?: string | null;
+}
+
+/**
+ * Raw response `Data` for `PUT /Auth/UpdateUser/{id}`, verified against the
+ * documented example response: the updated flat fields plus `RoleName`
+ * (unlike `CreateUserResponseDto`, which returns neither `CountryId`/
+ * `IsActive`/`RoleName`).
+ */
+export interface UpdateUserResponseDto {
+  UserId: string;
+  Username: string;
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  EmployeeId: string | null;
+  CountryId: string | null;
+  IsActive: boolean;
+  RoleName: string;
 }
 
 /**
@@ -301,10 +353,18 @@ export interface UserListResponsePayload {
  * is `SystemAdmin`-only and requests a much larger page, see
  * `USERS_PAGE_SIZE`). `totalCount` lets the UI note if more accounts exist
  * than were returned, since no pagination UI is built for this screen.
+ * Uses `AdminUserListItem` (not the lighter `UserListItem` the dropdown
+ * above uses) since this table also renders Role/Country columns and
+ * row-level Edit/Activate actions.
  */
 export interface UsersListResponsePayload {
-  users: import('./domain.types').UserListItem[];
+  users: import('./domain.types').AdminUserListItem[];
   totalCount: number;
+}
+
+/** Shape returned by `PUT /api/auth/users/:id` to the browser. */
+export interface UpdateUserResponsePayload {
+  user: import('./domain.types').AdminUserListItem;
 }
 
 /**

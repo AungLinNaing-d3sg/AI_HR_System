@@ -7,6 +7,7 @@ import {
   Coins,
   CreditCard,
   FolderKanban,
+  Globe,
   LayoutGrid,
   Receipt,
   Users,
@@ -20,11 +21,10 @@ import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
  * exist in the app router today - the wireframe
  * (`docs/HR_System_FE_wireframe.pdf`) explicitly calls out "all sidebar
  * links navigate without 404" as a bug it hit and fixed, so this list must
- * stay in lockstep with `src/app/**` rather than mirroring every domain the
- * wireframe's mock prototype showed (Countries is not built yet - see the
- * repo root CLAUDE.md; Reports, Invoices, Currencies, Exchange Rates, and
- * Rate Cards now are). Section title/order and per-item icons otherwise
- * follow the wireframe's sidebar exactly.
+ * stay in lockstep with `src/app/**` (Reports, Invoices, Currencies,
+ * Exchange Rates, Rate Cards, and Countries are all built - see the repo
+ * root CLAUDE.md). Section title/order and per-item icons otherwise follow
+ * the wireframe's sidebar exactly.
  */
 export interface NavItem {
   label: string;
@@ -73,6 +73,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { label: 'Currencies', href: '/admin/currencies', icon: Coins, roles: ['SystemAdmin'] },
       { label: 'Exchange Rates', href: '/admin/exchange-rates', icon: ArrowLeftRight, roles: ['SystemAdmin'] },
       { label: 'Rate Cards', href: '/admin/rate-cards', icon: CreditCard, roles: ['SystemAdmin'] },
+      { label: 'Countries', href: '/admin/countries', icon: Globe, roles: ['SystemAdmin'] },
     ],
   },
 ];

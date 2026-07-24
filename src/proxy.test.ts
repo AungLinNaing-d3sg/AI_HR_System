@@ -138,6 +138,31 @@ describe('proxy', () => {
     expect(response.status).toBe(200);
   });
 
+  it('redirects to /forbidden when a non-admin hits /admin/countries', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'User', exp: futureExp });
+    const request = new NextRequest('https://example.com/admin/countries', {
+      headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
+    });
+
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/forbidden');
+  });
+
+  it('allows a SystemAdmin to reach /admin/countries', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    const request = new NextRequest('https://example.com/admin/countries', {
+      headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
+    });
+
+    const response = await proxy(request);
+
+    expect(response.status).toBe(200);
+  });
+
   it('allows a plain User to reach /projects (Projects is open to every authenticated role)', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const token = makeToken({ role: 'User', exp: futureExp });

@@ -70,6 +70,13 @@ describe('getBreadcrumbs', () => {
     ]);
   });
 
+  it('returns the Countries management trail', () => {
+    expect(getBreadcrumbs('/admin/countries')).toEqual([
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Countries' },
+    ]);
+  });
+
   it('falls back to just Dashboard for an unknown path', () => {
     expect(getBreadcrumbs('/unknown')).toEqual([{ label: 'Dashboard', href: '/dashboard' }]);
   });

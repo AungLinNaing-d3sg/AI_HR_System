@@ -995,6 +995,33 @@ export interface CountryListResponsePayload {
   countries: import('./domain.types').Country[];
 }
 
+/** Request body for `POST /Country/CreateCountry`. */
+export interface CreateCountryRequest {
+  Code: string;
+  Name: string;
+}
+
+/**
+ * Request body for `PUT /Country/UpdateCountry/{id}` - deliberately
+ * narrower than `CreateCountryRequest`: per the backend contract (see
+ * docs/HR_System_BE.postman_collection.json) only the name can be changed
+ * after creation - `Code` is fixed at creation time.
+ */
+export interface UpdateCountryRequest {
+  Name: string;
+}
+
+/** Raw response `Data` for Create/Update Country - a single `CountryDto`. */
+export type CountryResponse = CountryDto;
+
+/** `DeleteCountry` returns `Data: null` on success, verified against the documented example response. */
+export type DeleteCountryResponse = null;
+
+/** Shape returned by the create/update Country Route Handlers. */
+export interface CountryResponsePayload {
+  country: import('./domain.types').Country;
+}
+
 /**
  * Raw payload for `GET /RateCard/GetAllRateCards`, verified against the
  * documented example response - paginated, like `CurrencyListResponseDto`.

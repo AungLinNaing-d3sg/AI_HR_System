@@ -13,13 +13,15 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../lib/api/countriesBackend.api', () => ({
   getAllCountries: jest.fn(),
+  createCountry: jest.fn(),
 }));
 
 const countriesBackend = jest.requireMock('../../../lib/api/countriesBackend.api') as {
   getAllCountries: jest.Mock;
+  createCountry: jest.Mock;
 };
 
-import { GET } from './route';
+import { GET, POST } from './route';
 
 function makeToken(payload: Record<string, unknown>): string {
   const base64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url');
@@ -29,6 +31,13 @@ function makeToken(payload: Record<string, unknown>): string {
 function tokenFor(role: string): string {
   const futureExp = Math.floor(Date.now() / 1000) + 3600;
   return makeToken({ role, exp: futureExp });
+}
+
+function makeRequest(body: unknown): Request {
+  return new Request('https://example.com/api/countries', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 const countryDto = {
@@ -72,6 +81,74 @@ describe('GET /api/countries', () => {
     countriesBackend.getAllCountries.mockRejectedValue(new Error('network down'));
 
     const response = await GET();
+    expect(response.status).toBe(500);
+  });
+});
+
+describe('POST /api/countries', () => {
+  beforeEach(() => {
+    mockCookieStore.get.mockReset();
+    countriesBackend.createCountry.mockReset();
+  });
+
+  it('returns 401 when there is no access token', async () => {
+    mockCookieStore.get.mockReturnValue(undefined);
+    const response = await POST(makeRequest({}));
+    expect(response.status).toBe(401);
+    expect(countriesBackend.createCountry).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when a non-SystemAdmin tries to create a country', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+    );
+
+    const response = await POST(makeRequest({ code: 'MM', name: 'Myanmar' }));
+
+    expect(response.status).toBe(403);
+    expect(countriesBackend.createCountry).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when the payload fails validation', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
+    );
+
+    const response = await POST(makeRequest({ code: '', name: '' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.errors).toBeDefined();
+    expect(countriesBackend.createCountry).not.toHaveBeenCalled();
+  });
+
+  it('creates the country and returns 201 with the normalized country', async () => {
+    const token = tokenFor('SystemAdmin');
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    countriesBackend.createCountry.mockResolvedValue({
+      Id: 'aa532dd2-1a51-4be0-b09b-be3d99ea15f3',
+      Code: 'MM',
+      Name: 'Myanmar',
+      CreatedAt: '2026-06-23T13:02:45Z',
+    });
+
+    const response = await POST(makeRequest({ code: 'mm', name: 'Myanmar' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.country.code).toBe('MM');
+    expect(countriesBackend.createCountry).toHaveBeenCalledWith({ Code: 'MM', Name: 'Myanmar' }, token);
+  });
+
+  it('returns a normalized error when the backend call fails', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
+    );
+    countriesBackend.createCountry.mockRejectedValue(new Error('network down'));
+
+    const response = await POST(makeRequest({ code: 'MM', name: 'Myanmar' }));
     expect(response.status).toBe(500);
   });
 });

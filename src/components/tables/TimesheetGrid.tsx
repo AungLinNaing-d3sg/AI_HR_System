@@ -13,7 +13,14 @@ import { useTimesheetGrid } from '@/hooks/useTimesheetGrid';
 import { useTimesheetPeriods } from '@/hooks/useTimesheetPeriods';
 import { WEEKLY_HOURS_TARGET } from '@/lib/constants/timesheet.constants';
 import { cn } from '@/lib/utils/cn';
-import { formatDayHeader, formatWeekRangeLabel, getMondayOfWeek, isValidDateString } from '@/lib/utils/week';
+import {
+  formatDayHeader,
+  formatDayLabel,
+  formatWeekRangeLabel,
+  getLocalDateString,
+  getMondayOfWeek,
+  isValidDateString,
+} from '@/lib/utils/week';
 
 /** "Feb 24 – Mar 2, 2025"-style label for a Timesheet Period option, independent of the grid's Mon-Sun week label. */
 function formatPeriodOptionLabel(periodStart: string, periodEnd: string): string {
@@ -57,6 +64,16 @@ function useInitialWeekFromSearchParams(): string | undefined {
  * timesheet period configured", locked-period, and empty (no active
  * projects) states, plus independent loading/error/empty states for the
  * period dropdown itself.
+ *
+ * Timesheet entry is restricted to the current calendar day: only the
+ * column matching `today` (the caller's own local date, via
+ * `getLocalDateString`) accepts input - every other day's hour/notes
+ * fields are rendered read-only via `TimesheetGridRow`'s `today` prop, and
+ * `handleHoursChange`/`handleNotesChange` below additionally guard against
+ * ever forwarding an edit for a non-today date to `setCell`, so the
+ * restriction holds even if a disabled control were somehow still
+ * triggered. The "Today" column is visually flagged in the header, and an
+ * info banner explains the rule whenever the grid is otherwise editable.
  */
 export function TimesheetGrid() {
   const initialWeekStart = useInitialWeekFromSearchParams();
@@ -96,6 +113,21 @@ export function TimesheetGrid() {
 
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
   const weekTotal = dailyTotals.reduce((sum, total) => sum + total, 0);
+
+  // Resolved once per render from the caller's own local clock - the single
+  // source of truth for "which day may be edited" throughout this component
+  // and `TimesheetGridRow`.
+  const today = getLocalDateString();
+
+  function handleHoursChange(projectId: string, date: string, value: string) {
+    if (date !== today) return;
+    setCell(projectId, date, { hoursInput: value });
+  }
+
+  function handleNotesChange(projectId: string, date: string, value: string) {
+    if (date !== today) return;
+    setCell(projectId, date, { taskDescription: value });
+  }
 
   function handlePeriodChange(event: ChangeEvent<HTMLSelectElement>) {
     const selected = periods.find((candidate) => candidate.id === event.target.value);
@@ -254,6 +286,12 @@ export function TimesheetGrid() {
       {hasPeriod && isLocked && (
         <Alert variant="info">This timesheet period is locked and can no longer be edited.</Alert>
       )}
+      {canEdit && rows.length > 0 && (
+        <Alert variant="info">
+          You can only log hours and notes for today, <strong>{formatDayLabel(today)}</strong>. Other days are
+          shown read-only for reference.
+        </Alert>
+      )}
 
       {rows.length === 0 ? (
         <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
@@ -276,10 +314,27 @@ export function TimesheetGrid() {
                 </th>
                 {weekDates.map((date) => {
                   const { weekday, monthDay } = formatDayHeader(date);
+                  const isToday = date === today;
                   return (
-                    <th key={date} scope="col" className="px-2 py-3 text-center font-medium">
+                    <th
+                      key={date}
+                      scope="col"
+                      className={cn('px-2 py-3 text-center font-medium', isToday && 'bg-blue-50 text-blue-800')}
+                    >
                       <span className="block">{weekday}</span>
-                      <span className="block font-normal normal-case text-zinc-400">{monthDay}</span>
+                      <span
+                        className={cn(
+                          'block font-normal normal-case text-zinc-400',
+                          isToday && 'text-blue-600'
+                        )}
+                      >
+                        {monthDay}
+                      </span>
+                      {isToday && (
+                        <span className="mt-0.5 inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold normal-case text-blue-700">
+                          Today
+                        </span>
+                      )}
                     </th>
                   );
                 })}
@@ -296,8 +351,9 @@ export function TimesheetGrid() {
                   isExpanded={expandedProjectIds.has(row.projectId)}
                   onToggleExpand={() => toggleExpanded(row.projectId)}
                   disabled={!canEdit}
-                  onHoursChange={(date, value) => setCell(row.projectId, date, { hoursInput: value })}
-                  onNotesChange={(date, value) => setCell(row.projectId, date, { taskDescription: value })}
+                  today={today}
+                  onHoursChange={(date, value) => handleHoursChange(row.projectId, date, value)}
+                  onNotesChange={(date, value) => handleNotesChange(row.projectId, date, value)}
                 />
               ))}
             </tbody>

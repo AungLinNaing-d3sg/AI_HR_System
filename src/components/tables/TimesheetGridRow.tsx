@@ -13,6 +13,8 @@ export interface TimesheetGridRowProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   disabled: boolean;
+  /** Today's `YYYY-MM-DD` (caller's local calendar day) - only this day's cells accept input, see `TimesheetGrid`'s "Create Timesheet" doc comment. */
+  today: string;
   onHoursChange: (date: string, value: string) => void;
   onNotesChange: (date: string, value: string) => void;
 }
@@ -23,16 +25,23 @@ export interface TimesheetGridRowProps {
  * per the wireframe's "click the info icon to add task notes" hint - see
  * `docs/HR_System_FE_wireframe.pdf`) to view/edit that day's task notes.
  *
- * A cell whose entry is already Approved stays editable (only `disabled`,
- * e.g. a locked period, blocks it) - editing it resets it to Pending
- * Approval and requires the Project Admin to re-approve it, so an
- * "Approved" cell shows a hint explaining that instead of being locked out.
+ * Only the cell whose `date` matches `today` accepts input - every other
+ * day is shown read-only (still visible for reference, e.g. an already
+ * logged entry) so timesheet entry can only ever be made for the current
+ * calendar day (see `TimesheetGrid`'s "Create Timesheet" doc comment).
+ *
+ * A cell whose entry is already Approved stays editable *when it is
+ * today's cell* (only `disabled`, e.g. a locked period, or it not being
+ * today, blocks it) - editing it resets it to Pending Approval and
+ * requires the Project Admin to re-approve it, so an "Approved" cell shows
+ * a hint explaining that instead of being locked out.
  */
 export function TimesheetGridRow({
   row,
   isExpanded,
   onToggleExpand,
   disabled,
+  today,
   onHoursChange,
   onNotesChange,
 }: TimesheetGridRowProps) {
@@ -60,41 +69,48 @@ export function TimesheetGridRow({
           </div>
         </th>
 
-        {row.cells.map((cell) => (
-          <td key={cell.date} className="px-2 py-3 align-top">
-            <Input
-              type="number"
-              inputMode="decimal"
-              min={0}
-              max={row.maxDailyHours ?? MAX_ENTRY_HOURS}
-              step={HOURS_STEP}
-              value={cell.hoursInput}
-              disabled={disabled}
-              hasError={Boolean(cell.error)}
-              placeholder="–"
-              className="h-9 w-16 text-center"
-              aria-label={`${formatDayLabel(cell.date)} hours for ${row.projectName}`}
-              aria-describedby={
-                cell.error
-                  ? `${notesRowId}-${cell.date}-error`
-                  : cell.isApproved
-                    ? `${notesRowId}-${cell.date}-approved`
-                    : undefined
-              }
-              onChange={(event) => onHoursChange(cell.date, event.target.value)}
-            />
-            {cell.error && (
-              <p id={`${notesRowId}-${cell.date}-error`} role="alert" className="mt-1 text-xs text-red-600">
-                {cell.error}
-              </p>
-            )}
-            {!cell.error && cell.isApproved && (
-              <p id={`${notesRowId}-${cell.date}-approved`} className="mt-1 text-xs text-zinc-400">
-                Approved · editing resets to Pending
-              </p>
-            )}
-          </td>
-        ))}
+        {row.cells.map((cell) => {
+          const isToday = cell.date === today;
+          const cellDisabled = disabled || !isToday;
+          const readOnlyHint = !isToday ? 'Read-only · entries can only be logged for today' : undefined;
+
+          return (
+            <td key={cell.date} className="px-2 py-3 align-top">
+              <Input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={row.maxDailyHours ?? MAX_ENTRY_HOURS}
+                step={HOURS_STEP}
+                value={cell.hoursInput}
+                disabled={cellDisabled}
+                hasError={Boolean(cell.error)}
+                placeholder="–"
+                title={readOnlyHint}
+                className="h-9 w-16 text-center"
+                aria-label={`${formatDayLabel(cell.date)} hours for ${row.projectName}`}
+                aria-describedby={
+                  cell.error
+                    ? `${notesRowId}-${cell.date}-error`
+                    : cell.isApproved
+                      ? `${notesRowId}-${cell.date}-approved`
+                      : undefined
+                }
+                onChange={(event) => onHoursChange(cell.date, event.target.value)}
+              />
+              {cell.error && (
+                <p id={`${notesRowId}-${cell.date}-error`} role="alert" className="mt-1 text-xs text-red-600">
+                  {cell.error}
+                </p>
+              )}
+              {!cell.error && cell.isApproved && (
+                <p id={`${notesRowId}-${cell.date}-approved`} className="mt-1 text-xs text-zinc-400">
+                  Approved · editing resets to Pending
+                </p>
+              )}
+            </td>
+          );
+        })}
 
         <td className={cn('px-4 py-3 text-right align-top text-sm font-semibold text-zinc-900')}>
           {row.totalHours}h
@@ -106,19 +122,25 @@ export function TimesheetGridRow({
           <th scope="row" className="px-4 py-3 text-left align-top text-xs font-medium text-zinc-500">
             Task notes
           </th>
-          {row.cells.map((cell) => (
-            <td key={cell.date} className="px-2 py-3 align-top">
-              <Textarea
-                value={cell.taskDescription}
-                disabled={disabled}
-                rows={2}
-                placeholder="Add a note…"
-                className="h-16 min-h-16 w-36 text-xs"
-                aria-label={`Task notes for ${row.projectName} on ${formatDayLabel(cell.date)}`}
-                onChange={(event) => onNotesChange(cell.date, event.target.value)}
-              />
-            </td>
-          ))}
+          {row.cells.map((cell) => {
+            const isToday = cell.date === today;
+            const cellDisabled = disabled || !isToday;
+
+            return (
+              <td key={cell.date} className="px-2 py-3 align-top">
+                <Textarea
+                  value={cell.taskDescription}
+                  disabled={cellDisabled}
+                  rows={2}
+                  placeholder="Add a note…"
+                  title={!isToday ? 'Read-only · entries can only be logged for today' : undefined}
+                  className="h-16 min-h-16 w-36 text-xs"
+                  aria-label={`Task notes for ${row.projectName} on ${formatDayLabel(cell.date)}`}
+                  onChange={(event) => onNotesChange(cell.date, event.target.value)}
+                />
+              </td>
+            );
+          })}
           <td />
         </tr>
       )}

@@ -243,4 +243,55 @@ describe('TimesheetHistoryTable', () => {
     expect(screen.getAllByText('Project Helix')).toHaveLength(3);
     expect(screen.getAllByRole('row')).toHaveLength(3); // 1 header row + 2 entry rows
   });
+
+  it('renders the filter section as labeled filter cards (Date range / Project / Actions)', async () => {
+    mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    const form = screen.getByRole('form', { name: /filter timesheet history/i });
+    expect(within(form).getByText('Date range')).toBeInTheDocument();
+    expect(within(form).getByText('Actions')).toBeInTheDocument();
+    expect(screen.getByLabelText('From')).toBeInTheDocument();
+    expect(screen.getByLabelText('To')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^filter$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^reset$/i })).toBeInTheDocument();
+  });
+
+  it('applies a date-range filter to only show matching entries', async () => {
+    const user = userEvent.setup();
+    mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    await user.type(screen.getByLabelText('From'), '2025-03-02');
+    await user.type(screen.getByLabelText('To'), '2025-03-02');
+    await user.click(screen.getByRole('button', { name: /^filter$/i }));
+
+    // Only the 03-02 (6h, approved) entry should remain.
+    await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(2)); // 1 header row + 1 matching entry row
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Edit' })).toHaveLength(1);
+  });
+
+  it('clears an applied filter and restores every entry when Reset is clicked', async () => {
+    const user = userEvent.setup();
+    mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    await user.type(screen.getByLabelText('From'), '2025-03-02');
+    await user.type(screen.getByLabelText('To'), '2025-03-02');
+    await user.click(screen.getByRole('button', { name: /^filter$/i }));
+    await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(2));
+
+    await user.click(screen.getByRole('button', { name: /^reset$/i }));
+
+    await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(3));
+    expect((screen.getByLabelText('From') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('To') as HTMLInputElement).value).toBe('');
+  });
 });

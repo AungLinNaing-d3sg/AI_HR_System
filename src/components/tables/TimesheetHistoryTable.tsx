@@ -58,8 +58,17 @@ function matchesFilters(
 
 /**
  * The `/timesheets/history` table (see `docs/HR_System_FE_wireframe.pdf`'s
- * `/timesheets/history` screen): stat cards, a date-range + project filter,
- * and a Date/Project/Hours/Task Description/Status/Actions table.
+ * `/timesheets/history` screen): stat cards, a filter section, and a
+ * Date/Project/Hours/Task Description/Status/Actions table.
+ *
+ * The filter section is presented as a row of "filter cards" at the top of
+ * the page (Date range / Project / Actions), matching the visual language
+ * of the stat cards above it rather than a single inline filter bar -
+ * "Filter" applies `fromInput`/`toInput`/`projectInput` (with the
+ * From-after-To cross-field validation below), "Reset" clears every filter
+ * back to its default (mirroring `TimesheetReportTable`'s Apply/Reset
+ * pair on `/reports/timesheet` for consistency). All matching/filtering is
+ * client-side over `useTimesheetHistory`'s already-fetched rows.
  * `useTimesheetHistory` already scopes rows by role server-side (own
  * entries only for a plain `User`, every entry for `ProjectAdmin`/
  * `SystemAdmin`), so this component only adds the User column for the
@@ -121,6 +130,14 @@ export function TimesheetHistoryTable() {
     setAppliedFilters({ from: fromInput, to: toInput, projectId: projectInput });
   };
 
+  const handleFilterReset = () => {
+    setFromInput('');
+    setToInput('');
+    setProjectInput(ALL_PROJECTS);
+    setFilterError(null);
+    setAppliedFilters({ from: '', to: '', projectId: ALL_PROJECTS });
+  };
+
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return;
     try {
@@ -166,60 +183,80 @@ export function TimesheetHistoryTable() {
         <HistoryStatCard label="Pending approval" value={`${pendingHours}h`} iconClassName="bg-amber-100 text-amber-700" />
       </div>
 
-      <div className="space-y-2">
-        <form
-          onSubmit={handleFilterSubmit}
-          className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 bg-white p-4"
-        >
-          <label htmlFor="history-from" className="sr-only">
-            From date
-          </label>
-          <input
-            id="history-from"
-            type="date"
-            value={fromInput}
-            onChange={(event) => setFromInput(event.target.value)}
-            aria-invalid={filterError ? true : undefined}
-            aria-describedby={filterError ? 'history-filter-error' : undefined}
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-          />
-          <span className="text-sm text-zinc-500">to</span>
-          <label htmlFor="history-to" className="sr-only">
-            To date
-          </label>
-          <input
-            id="history-to"
-            type="date"
-            value={toInput}
-            onChange={(event) => setToInput(event.target.value)}
-            aria-invalid={filterError ? true : undefined}
-            aria-describedby={filterError ? 'history-filter-error' : undefined}
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-          />
-          <label htmlFor="history-project" className="sr-only">
-            Project
-          </label>
-          <Select
-            id="history-project"
-            className="w-auto"
-            value={projectInput}
-            onChange={(event) => setProjectInput(event.target.value)}
-          >
-            <option value={ALL_PROJECTS}>All Projects</option>
-            {projectOptions.map((option) => (
-              <option key={option.projectId} value={option.projectId}>
-                {option.projectName}
-              </option>
-            ))}
-          </Select>
-          <Button type="submit">Filter</Button>
-        </form>
+      <form onSubmit={handleFilterSubmit} className="space-y-2" aria-label="Filter timesheet history">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-lg border border-zinc-200 bg-white p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Date range</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label htmlFor="history-from" className="mb-1 block text-xs font-medium text-zinc-500">
+                  From
+                </label>
+                <input
+                  id="history-from"
+                  type="date"
+                  value={fromInput}
+                  onChange={(event) => setFromInput(event.target.value)}
+                  aria-invalid={filterError ? true : undefined}
+                  aria-describedby={filterError ? 'history-filter-error' : undefined}
+                  className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="history-to" className="mb-1 block text-xs font-medium text-zinc-500">
+                  To
+                </label>
+                <input
+                  id="history-to"
+                  type="date"
+                  value={toInput}
+                  onChange={(event) => setToInput(event.target.value)}
+                  aria-invalid={filterError ? true : undefined}
+                  aria-describedby={filterError ? 'history-filter-error' : undefined}
+                  className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-zinc-200 bg-white p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Project</p>
+            <label htmlFor="history-project" className="sr-only">
+              Project
+            </label>
+            <Select
+              id="history-project"
+              className="w-full"
+              value={projectInput}
+              onChange={(event) => setProjectInput(event.target.value)}
+            >
+              <option value={ALL_PROJECTS}>All Projects</option>
+              {projectOptions.map((option) => (
+                <option key={option.projectId} value={option.projectId}>
+                  {option.projectName}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="flex flex-col justify-center gap-2 rounded-lg border border-zinc-200 bg-white p-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Actions</p>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1">
+                Filter
+              </Button>
+              <Button type="button" variant="outline" className="flex-1" onClick={handleFilterReset}>
+                Reset
+              </Button>
+            </div>
+          </div>
+        </div>
         {filterError && (
           <p id="history-filter-error" role="alert" className="text-sm text-red-600">
             {filterError}
           </p>
         )}
-      </div>
+      </form>
 
       {(approveError || deleteError) && <Alert variant="error">{approveError ?? deleteError}</Alert>}
 

@@ -86,11 +86,12 @@ export interface GetUserListQuery {
  * Paginated list of every user account in the system - backs the
  * `SystemAdmin`-only `/admin/users` management table (see
  * `app/api/auth/users/route.ts`, which requests a large single page via
- * `USERS_PAGE_SIZE`). Previously also powered the "Add User to Project"
- * dropdown on `/projects/:id/assignments` (defaulting to `pageNo=1&
- * pageSize=10` for that use case); that dropdown now searches instead, via
- * `searchUsers`/`GET /Auth/SearchUsers` below (see the removed
- * `app/api/auth/user-list/route.ts`).
+ * `USERS_PAGE_SIZE`), and the "Add User to Project" combobox's initial,
+ * pre-search option list (`app/api/auth/user-list/route.ts`, also
+ * `USERS_PAGE_SIZE`), so that combobox shows every candidate user up front
+ * instead of only once the caller starts typing - `searchUsers`/
+ * `GET /Auth/SearchUsers` below still backs that same combobox's as-you-type
+ * filtering once the query is long enough.
  */
 export async function getUserList(
   accessToken: string,
@@ -111,11 +112,12 @@ export interface SearchUsersQuery {
 
 /**
  * Free-text user search backing the searchable "Add User to Project"
- * combobox on `/projects/:id/assignments` - replaces the previously used,
- * non-search `GET /Auth/GetUserList` dropdown (see the removed
- * `app/api/auth/user-list/route.ts`). The Route Handler sends the browser's
- * as-you-type query as both `email` and `userName` (see `useUserSearch`), so
- * the backend matches a user by either field.
+ * combobox on `/projects/:id/assignments` once its query text reaches
+ * `MIN_USER_SEARCH_QUERY_LENGTH` - below that, the combobox instead filters
+ * its already-loaded `getUserList` result set client-side (see
+ * `UserSearchCombobox`). The Route Handler sends the browser's as-you-type
+ * query as both `email` and `userName` (see `useUserSearch`), so the backend
+ * matches a user by either field.
  */
 export async function searchUsers(
   query: SearchUsersQuery,

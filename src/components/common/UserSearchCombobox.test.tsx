@@ -7,10 +7,14 @@ import { UserSearchCombobox } from './UserSearchCombobox';
 import type { UserListItem } from '@/types/domain.types';
 
 jest.mock('../../lib/api/auth.api', () => ({
+  getUserList: jest.fn(),
   searchUsers: jest.fn(),
 }));
 
-const authApi = jest.requireMock('../../lib/api/auth.api') as { searchUsers: jest.Mock };
+const authApi = jest.requireMock('../../lib/api/auth.api') as {
+  getUserList: jest.Mock;
+  searchUsers: jest.Mock;
+};
 
 const users: UserListItem[] = [
   { userId: 'user-2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' },
@@ -45,16 +49,55 @@ function renderCombobox(initialValue = '') {
 
 describe('UserSearchCombobox', () => {
   beforeEach(() => {
+    authApi.getUserList.mockReset();
     authApi.searchUsers.mockReset();
+    authApi.getUserList.mockResolvedValue(users);
   });
 
-  it('does not search until the query reaches the minimum length', async () => {
+  it('shows every candidate user as soon as the input is focused, before anything is typed', async () => {
+    renderCombobox();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox'));
+
+    expect(await screen.findByRole('option', { name: /jane doe/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /john smith/i })).toBeInTheDocument();
+    expect(authApi.searchUsers).not.toHaveBeenCalled();
+  });
+
+  it('shows a loading state while the full user list is still loading', async () => {
+    authApi.getUserList.mockReturnValue(new Promise(() => {}));
+    renderCombobox();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox'));
+
+    expect(await screen.findByText(/loading users/i)).toBeInTheDocument();
+  });
+
+  it('shows an error message when the full user list fails to load', async () => {
+    authApi.getUserList.mockRejectedValue(new Error('network down'));
+    renderCombobox();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox'));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('filters the already-loaded user list client-side for a one-character query, without calling searchUsers', async () => {
     renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'j');
 
-    await waitFor(() => expect(screen.getByText(/type at least 2 characters/i)).toBeInTheDocument());
+    await screen.findByRole('option', { name: /jane doe/i });
+    expect(screen.getByRole('option', { name: /john smith/i })).toBeInTheDocument();
     expect(authApi.searchUsers).not.toHaveBeenCalled();
+  });
+
+  it('narrows the client-side filter as more of the query is typed', async () => {
+    renderCombobox();
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('combobox'), 'ja');
+
+    await waitFor(() => expect(authApi.searchUsers).toHaveBeenCalledWith('ja'));
   });
 
   it('searches and lists matching users once the debounced query is long enough', async () => {
@@ -97,6 +140,18 @@ describe('UserSearchCombobox', () => {
     expect(onChange).toHaveBeenCalledWith('user-2');
     expect(screen.getByRole('combobox')).toHaveValue('Jane Doe (jane@example.com)');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('selects a user straight from the initial full list on click, without ever calling searchUsers', async () => {
+    const { onChange } = renderCombobox();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox'));
+
+    const option = await screen.findByRole('option', { name: /jane doe/i });
+    await user.click(option);
+
+    expect(onChange).toHaveBeenCalledWith('user-2');
+    expect(authApi.searchUsers).not.toHaveBeenCalled();
   });
 
   it('clears the previously selected userId when the user resumes typing', async () => {

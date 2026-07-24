@@ -47,6 +47,14 @@ describe('timesheets.api (client)', () => {
     expect(result).toEqual(week);
   });
 
+  it('getTimesheetWeek includes periodId when the Timesheet Period dropdown selects a period explicitly', async () => {
+    axiosInstance.get.mockResolvedValue({ data: week });
+    await timesheetsApi.getTimesheetWeek('2025-02-24', 'period-1');
+    expect(axiosInstance.get).toHaveBeenCalledWith('/timesheets/week', {
+      params: { weekStart: '2025-02-24', periodId: 'period-1' },
+    });
+  });
+
   it('createTimesheetEntry posts to /timesheets/entries and returns the created entry', async () => {
     axiosInstance.post.mockResolvedValue({ data: { entry } });
     const values = {

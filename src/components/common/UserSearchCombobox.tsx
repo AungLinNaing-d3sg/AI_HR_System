@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useUserList } from '@/hooks/useUserList';
 import { useUserSearch } from '@/hooks/useUserSearch';
 import { MIN_USER_SEARCH_QUERY_LENGTH, USER_SEARCH_DEBOUNCE_MS } from '@/lib/constants/user.constants';
 import { cn } from '@/lib/utils/cn';
@@ -25,13 +26,29 @@ function userLabel(user: UserListItem): string {
   return `${user.firstName} ${user.lastName} (${user.email})`;
 }
 
+/** Case-insensitive match against a user's name or email, for the client-side filtering tier below. */
+function matchesLocalQuery(user: UserListItem, query: string): boolean {
+  const needle = query.toLowerCase();
+  return (
+    user.firstName.toLowerCase().includes(needle) ||
+    user.lastName.toLowerCase().includes(needle) ||
+    `${user.firstName} ${user.lastName}`.toLowerCase().includes(needle) ||
+    user.email.toLowerCase().includes(needle)
+  );
+}
+
 /**
  * Searchable "Add User to Project" combobox on `/projects/:id/assignments`
- * (`ProjectAssignmentsPanel`), replacing the plain `<Select>` populated from
- * `useUserList`/`GET /Auth/GetUserList`. As the user types, the query is
- * debounced (`useDebounce`, `USER_SEARCH_DEBOUNCE_MS`) and sent to
- * `GET /Auth/SearchUsers?email={q}&userName={q}` via `useUserSearch` once it
- * reaches `MIN_USER_SEARCH_QUERY_LENGTH`. Implements the WAI-ARIA
+ * (`ProjectAssignmentsPanel`). Shows every candidate user
+ * (`useUserList`/`GET /api/auth/user-list`) as soon as it's opened, filtered
+ * client-side by name/email as the caller types - so the dropdown never
+ * looks empty on first open, matching `docs/HR_System_FE_wireframe.pdf`'s
+ * "Select a user…" dropdown while staying a typeahead. Once the (debounced,
+ * `useDebounce`/`USER_SEARCH_DEBOUNCE_MS`) query reaches
+ * `MIN_USER_SEARCH_QUERY_LENGTH`, it switches over to the server-backed
+ * `GET /Auth/SearchUsers?email={q}&userName={q}` via `useUserSearch`
+ * instead, which can find any account rather than only the first
+ * `USERS_PAGE_SIZE` `useUserList` loaded. Implements the WAI-ARIA
  * "combobox with listbox popup" pattern using `aria-activedescendant` -
  * options are plain, non-focusable `li` elements, with `onMouseDown`
  * prevented so a mouse click never blurs (and thus never closes/unmounts)
@@ -64,9 +81,40 @@ export function UserSearchCombobox({
 
   const debouncedQuery = useDebounce(inputValue, USER_SEARCH_DEBOUNCE_MS);
   const trimmedQuery = debouncedQuery.trim();
-  const { users, isLoading, isFetching, isError, error } = useUserSearch(trimmedQuery);
+  const isServerSearchTier = trimmedQuery.length >= MIN_USER_SEARCH_QUERY_LENGTH;
 
-  const showListbox = isOpen && trimmedQuery.length >= MIN_USER_SEARCH_QUERY_LENGTH;
+  // Tier 1 (query empty or too short to search server-side): every candidate
+  // user, filtered client-side - see `useUserList`'s doc comment for why this
+  // exists (so the dropdown shows every user up front, not just once the
+  // caller has typed enough to search).
+  const {
+    users: allUsers,
+    isLoading: isLoadingAllUsers,
+    isError: isAllUsersError,
+    error: allUsersError,
+  } = useUserList();
+  const localMatches = useMemo(
+    () => (trimmedQuery.length === 0 ? allUsers : allUsers.filter((user) => matchesLocalQuery(user, trimmedQuery))),
+    [allUsers, trimmedQuery]
+  );
+
+  // Tier 2 (query long enough): the real, server-backed search, which can
+  // find any account rather than only the (bounded) `useUserList` page.
+  const {
+    users: searchMatches,
+    isLoading: isSearchLoading,
+    isFetching: isSearchFetching,
+    isError: isSearchError,
+    error: searchError,
+  } = useUserSearch(trimmedQuery);
+
+  const users = isServerSearchTier ? searchMatches : localMatches;
+  const isLoading = isServerSearchTier ? isSearchLoading : isLoadingAllUsers;
+  const isFetching = isServerSearchTier ? isSearchFetching : isLoadingAllUsers;
+  const isError = isServerSearchTier ? isSearchError : isAllUsersError;
+  const error = isServerSearchTier ? searchError : allUsersError;
+
+  const showListbox = isOpen;
   const listboxId = `${id}-listbox`;
 
   // Resync the visible text only when `value` changed externally (e.g. this
@@ -128,7 +176,11 @@ export function UserSearchCombobox({
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!showListbox || users.length === 0) {
-      if (event.key === 'ArrowDown' && trimmedQuery.length >= MIN_USER_SEARCH_QUERY_LENGTH) {
+      // Reopens the listbox (e.g. after it was dismissed via Escape while the
+      // input stayed focused) - it always has *something* to show once open,
+      // since the empty-query tier is the full candidate list rather than
+      // requiring a minimum query length first.
+      if (event.key === 'ArrowDown') {
         setIsOpen(true);
       }
       return;
@@ -202,12 +254,6 @@ export function UserSearchCombobox({
         />
       </div>
 
-      {trimmedQuery.length > 0 && trimmedQuery.length < MIN_USER_SEARCH_QUERY_LENGTH && (
-        <p className="mt-1 text-xs text-zinc-500">
-          Type at least {MIN_USER_SEARCH_QUERY_LENGTH} characters to search.
-        </p>
-      )}
-
       {showListbox && (
         <ul
           id={listboxId}
@@ -219,14 +265,16 @@ export function UserSearchCombobox({
           {isLoading || isFetching ? (
             <li className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-500" aria-live="polite">
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              Searching…
+              {isServerSearchTier ? 'Searching…' : 'Loading users…'}
             </li>
           ) : isError ? (
             <li className="px-3 py-2 text-sm text-red-600" role="alert">
-              {error ?? 'Could not search for users.'}
+              {error ?? (isServerSearchTier ? 'Could not search for users.' : 'Could not load users.')}
             </li>
           ) : users.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-zinc-500">No users found matching “{trimmedQuery}”.</li>
+            <li className="px-3 py-2 text-sm text-zinc-500">
+              {trimmedQuery.length > 0 ? `No users found matching “${trimmedQuery}”.` : 'No users found.'}
+            </li>
           ) : (
             users.map((user, index) => (
               <li

@@ -13,7 +13,7 @@ import { addDays, getMondayOfWeek, isValidDateString } from '@/lib/utils/week';
 import type { TimesheetWeekResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/timesheets/week?weekStart=YYYY-MM-DD
+ * GET /api/timesheets/week?weekStart=YYYY-MM-DD&periodId=<id>
  *
  * Combined read model for the `/timesheets` weekly grid: joins the active
  * Project list - narrowed down to only the projects the caller is
@@ -28,6 +28,20 @@ import type { TimesheetWeekResponsePayload } from '@/types/api.types';
  * `[Auth]` in docs/HR_System_BE.postman_collection.json, and every role
  * (including a plain `User`) needs to be able to log their own hours
  * against their own assigned projects.
+ *
+ * The optional `periodId` lets the "Timesheet Period" dropdown
+ * (`TimesheetGrid`'s `goToPeriod`) pin the *specific* period the caller
+ * picked, instead of only ever re-deriving "the" period from the resolved
+ * week's date range: two Timesheet Periods can both overlap the same
+ * calendar week (e.g. a period ending mid-week and the very next one
+ * starting right after), and without `periodId` the plain overlap lookup
+ * below always resolves to whichever of those candidates happens to come
+ * first in `periods`, regardless of which one the dropdown's option was
+ * actually for - making that later-starting option look unselectable (the
+ * grid would keep snapping back to the earlier period). When `periodId` is
+ * given but doesn't match any known period (stale/removed), this falls back
+ * to the same overlap lookup used when `periodId` is absent entirely (plain
+ * week navigation via Previous/Next/This week).
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -43,7 +57,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ message: 'Could not identify the current user.' }, { status: 401 });
   }
 
-  const requestedWeekStart = new URL(request.url).searchParams.get('weekStart');
+  const requestSearchParams = new URL(request.url).searchParams;
+  const requestedWeekStart = requestSearchParams.get('weekStart');
+  const requestedPeriodId = requestSearchParams.get('periodId');
   const weekStart =
     requestedWeekStart && isValidDateString(requestedWeekStart)
       ? getMondayOfWeek(new Date(`${requestedWeekStart}T00:00:00.000Z`))
@@ -66,8 +82,14 @@ export async function GET(request: Request): Promise<NextResponse> {
     // a period only needs to *overlap* the displayed week, not fully contain
     // it, to be considered "the" period for this view. Entries are still
     // date-filtered below regardless of the chosen period's own boundaries.
-    const period =
+    const overlappingPeriod =
       periods.find((candidate) => candidate.periodStart <= weekEnd && candidate.periodEnd >= weekStart) ?? null;
+    // Prefer the explicitly requested period (see the doc comment above for
+    // why the plain overlap lookup alone isn't enough) whenever it still
+    // exists; otherwise fall back to the overlap lookup exactly as before.
+    const period = requestedPeriodId
+      ? (periods.find((candidate) => candidate.id === requestedPeriodId) ?? overlappingPeriod)
+      : overlappingPeriod;
 
     const entries = mapTimesheetEntryList(entryDtos).filter(
       (entry) => entry.entryDate >= weekStart && entry.entryDate <= weekEnd

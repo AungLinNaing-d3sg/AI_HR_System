@@ -25,8 +25,9 @@ function formatDate(value: string): string {
 
 const ALL_PROJECTS = 'all';
 
-const OUTLINE_LINK_CLASSNAME =
-  'inline-flex h-8 items-center rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-brand hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
+/** Plain text-link styling for the per-row "Edit" action, matching the wireframe's undecorated (no button border) Edit label. */
+const EDIT_LINK_CLASSNAME =
+  'rounded-sm text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
 
 interface HistoryStatCardProps {
   label: string;
@@ -34,14 +35,19 @@ interface HistoryStatCardProps {
   iconClassName: string;
 }
 
+/** Icon-beside-value stat card (`docs/HR_System_FE_wireframe.pdf`'s `/timesheets/history` screen), with the label underneath the value. */
 function HistoryStatCard({ label, value, iconClassName }: HistoryStatCardProps) {
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-5">
-      <span className={cn('flex h-9 w-9 items-center justify-center rounded-md', iconClassName)}>
-        <Clock className="h-4 w-4" aria-hidden="true" />
-      </span>
-      <p className="mt-3 text-2xl font-semibold text-zinc-900">{value}</p>
-      <p className="text-sm text-zinc-500">{label}</p>
+      <div className="flex items-center gap-3">
+        <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-md', iconClassName)}>
+          <Clock className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <div>
+          <p className="text-2xl font-semibold text-zinc-900">{value}</p>
+          <p className="text-sm text-zinc-500">{label}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -58,25 +64,25 @@ function matchesFilters(
 
 /**
  * The `/timesheets/history` table (see `docs/HR_System_FE_wireframe.pdf`'s
- * `/timesheets/history` screen): stat cards, a filter section, and a
- * Date/Project/Hours/Task Description/Status/Actions table.
+ * `/timesheets/history` screen): three icon-beside-value stat cards, a
+ * single-line filter bar, and a Date/Project/Hours/Task Description/Status/
+ * Actions table.
  *
- * The filter section is presented as a row of "filter cards" at the top of
- * the page (Date range / Project / Actions), matching the visual language
- * of the stat cards above it rather than a single inline filter bar -
- * "Filter" applies `fromInput`/`toInput`/`projectInput` (with the
- * From-after-To cross-field validation below), "Reset" clears every filter
- * back to its default (mirroring `TimesheetReportTable`'s Apply/Reset
- * pair on `/reports/timesheet` for consistency). All matching/filtering is
- * client-side over `useTimesheetHistory`'s already-fetched rows.
- * `useTimesheetHistory` already scopes rows by role server-side (own
- * entries only for a plain `User`, every entry for `ProjectAdmin`/
- * `SystemAdmin`), so this component only adds the User column for the
- * roles that can see everyone's entries.
+ * The filter bar (Date From/To + Project + Filter/Reset, all inline in one
+ * bordered row) mirrors the wireframe's compact layout and
+ * `TimesheetReportTable`'s own filter bar on `/reports/timesheet` for
+ * consistency - "Filter" applies `fromInput`/`toInput`/`projectInput` (with
+ * the From-after-To cross-field validation below), "Reset" clears every
+ * filter back to its default. All matching/filtering is client-side over
+ * `useTimesheetHistory`'s already-fetched rows. `useTimesheetHistory`
+ * already scopes rows by role server-side (own entries only for a plain
+ * `User`, every entry for `ProjectAdmin`/`SystemAdmin`), so this component
+ * only adds the User column for the roles that can see everyone's entries.
  *
- * Actions column, per row: "Edit" (jumps to `/timesheets` pre-navigated to
- * that entry's week, reusing the grid's own create/update flow rather than
- * duplicating it here) for the signed-in user's own entry, *including* an
+ * Actions column, per row: "Edit" (a plain text link, not a bordered button -
+ * matching the wireframe) jumps to `/timesheets` pre-navigated to that
+ * entry's week, reusing the grid's own create/update flow rather than
+ * duplicating it here, for the signed-in user's own entry, *including* an
  * already-approved one - editing it resets it to Pending Approval and
  * requires the Project Admin to re-approve it, so it is never locked out for
  * its owner; plus "Delete" for the signed-in user's own *pending* entry (an
@@ -184,72 +190,56 @@ export function TimesheetHistoryTable() {
       </div>
 
       <form onSubmit={handleFilterSubmit} className="space-y-2" aria-label="Filter timesheet history">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-zinc-200 bg-white p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Date range</p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <label htmlFor="history-from" className="mb-1 block text-xs font-medium text-zinc-500">
-                  From
-                </label>
-                <input
-                  id="history-from"
-                  type="date"
-                  value={fromInput}
-                  onChange={(event) => setFromInput(event.target.value)}
-                  aria-invalid={filterError ? true : undefined}
-                  aria-describedby={filterError ? 'history-filter-error' : undefined}
-                  className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-                />
-              </div>
-              <div className="flex-1">
-                <label htmlFor="history-to" className="mb-1 block text-xs font-medium text-zinc-500">
-                  To
-                </label>
-                <input
-                  id="history-to"
-                  type="date"
-                  value={toInput}
-                  onChange={(event) => setToInput(event.target.value)}
-                  aria-invalid={filterError ? true : undefined}
-                  aria-describedby={filterError ? 'history-filter-error' : undefined}
-                  className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-                />
-              </div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-white p-4">
+          <label htmlFor="history-from" className="sr-only">
+            From
+          </label>
+          <input
+            id="history-from"
+            type="date"
+            value={fromInput}
+            onChange={(event) => setFromInput(event.target.value)}
+            aria-invalid={filterError ? true : undefined}
+            aria-describedby={filterError ? 'history-filter-error' : undefined}
+            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+          />
 
-          <div className="rounded-lg border border-zinc-200 bg-white p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Project</p>
-            <label htmlFor="history-project" className="sr-only">
-              Project
-            </label>
-            <Select
-              id="history-project"
-              className="w-full"
-              value={projectInput}
-              onChange={(event) => setProjectInput(event.target.value)}
-            >
-              <option value={ALL_PROJECTS}>All Projects</option>
-              {projectOptions.map((option) => (
-                <option key={option.projectId} value={option.projectId}>
-                  {option.projectName}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <span className="text-sm text-zinc-500">to</span>
 
-          <div className="flex flex-col justify-center gap-2 rounded-lg border border-zinc-200 bg-white p-4">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Actions</p>
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1">
-                Filter
-              </Button>
-              <Button type="button" variant="outline" className="flex-1" onClick={handleFilterReset}>
-                Reset
-              </Button>
-            </div>
-          </div>
+          <label htmlFor="history-to" className="sr-only">
+            To
+          </label>
+          <input
+            id="history-to"
+            type="date"
+            value={toInput}
+            onChange={(event) => setToInput(event.target.value)}
+            aria-invalid={filterError ? true : undefined}
+            aria-describedby={filterError ? 'history-filter-error' : undefined}
+            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+          />
+
+          <label htmlFor="history-project" className="sr-only">
+            Project
+          </label>
+          <Select
+            id="history-project"
+            className="w-auto"
+            value={projectInput}
+            onChange={(event) => setProjectInput(event.target.value)}
+          >
+            <option value={ALL_PROJECTS}>All Projects</option>
+            {projectOptions.map((option) => (
+              <option key={option.projectId} value={option.projectId}>
+                {option.projectName}
+              </option>
+            ))}
+          </Select>
+
+          <Button type="submit">Filter</Button>
+          <Button type="button" variant="outline" onClick={handleFilterReset}>
+            Reset
+          </Button>
         </div>
         {filterError && (
           <p id="history-filter-error" role="alert" className="text-sm text-red-600">
@@ -335,7 +325,7 @@ export function TimesheetHistoryTable() {
                             {canEdit && (
                               <Link
                                 href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
-                                className={OUTLINE_LINK_CLASSNAME}
+                                className={EDIT_LINK_CLASSNAME}
                                 title={
                                   entry.isApproved
                                     ? 'Editing this entry resets it to Pending Approval for re-review.'

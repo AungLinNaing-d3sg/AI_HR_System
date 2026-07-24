@@ -25,9 +25,16 @@ import type {
  * `/api/timesheets/*` Route Handlers.
  */
 
-export async function getTimesheetWeek(weekStart: string): Promise<TimesheetWeekResponsePayload> {
+/**
+ * `periodId` (the "Timesheet Period" dropdown's selection - see
+ * `useTimesheetGrid#goToPeriod`) pins the response to that specific period
+ * instead of leaving `/api/timesheets/week` to re-derive "the" period purely
+ * from the resolved week's date range, which is ambiguous whenever two
+ * periods overlap the same week (see that route's doc comment).
+ */
+export async function getTimesheetWeek(weekStart: string, periodId?: string): Promise<TimesheetWeekResponsePayload> {
   const { data } = await axiosInstance.get<TimesheetWeekResponsePayload>('/timesheets/week', {
-    params: { weekStart },
+    params: periodId ? { weekStart, periodId } : { weekStart },
   });
   return data;
 }

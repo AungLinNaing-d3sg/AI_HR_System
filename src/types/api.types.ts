@@ -286,6 +286,16 @@ export interface SearchUsersResponsePayload {
 }
 
 /**
+ * Shape returned by `GET /api/auth/user-list` to the browser - the "Add User
+ * to Project" combobox's initial, pre-search list (see
+ * `app/api/auth/user-list/route.ts` and `UserSearchCombobox`), open to any
+ * authenticated role.
+ */
+export interface UserListResponsePayload {
+  users: import('./domain.types').UserListItem[];
+}
+
+/**
  * Shape returned by `GET /api/auth/users` (the `/admin/users` management
  * table - distinct from the `/api/auth/user-list` dropdown above: this one
  * is `SystemAdmin`-only and requests a much larger page, see

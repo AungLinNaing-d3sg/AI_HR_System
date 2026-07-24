@@ -42,9 +42,10 @@ function tokenFor(overrides: Record<string, unknown> = {}): string {
   return makeToken({ sub: 'user-1', role: 'User', exp: futureExp, ...overrides });
 }
 
-function requestFor(weekStart?: string): Request {
+function requestFor(weekStart?: string, periodId?: string): Request {
   const url = new URL('https://example.com/api/timesheets/week');
   if (weekStart) url.searchParams.set('weekStart', weekStart);
+  if (periodId) url.searchParams.set('periodId', periodId);
   return new Request(url);
 }
 
@@ -213,6 +214,60 @@ describe('GET /api/timesheets/week', () => {
     const body = await response.json();
 
     expect(body.entries).toEqual([]);
+  });
+
+  it('prefers the requested periodId over the plain overlap lookup when two periods overlap the same week', async () => {
+    // Period A ends mid-week (Wed 2025-02-26); Period B starts right after
+    // (Thu 2025-02-27) - both overlap the Mon 2025-02-24..Sun 2025-03-02
+    // week, and Period A comes first in the list, so a plain
+    // find-first-overlap would always resolve to A even when the caller
+    // explicitly selected B via the Timesheet Period dropdown.
+    const token = tokenFor();
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    const periodA = { ...periodDto, Id: 'period-a', PeriodStart: '2025-02-01', PeriodEnd: '2025-02-26' };
+    const periodB = { ...periodDto, Id: 'period-b', PeriodStart: '2025-02-27', PeriodEnd: '2025-03-31' };
+    projectsBackend.getProjectList.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodA, periodB]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+
+    const response = await GET(requestFor('2025-02-24', 'period-b'));
+    const body = await response.json();
+
+    expect(body.period.id).toBe('period-b');
+  });
+
+  it('falls back to the plain overlap lookup when the requested periodId does not match any known period', async () => {
+    const token = tokenFor();
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    projectsBackend.getProjectList.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodDto]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+
+    const response = await GET(requestFor('2025-02-24', 'stale-period-id'));
+    const body = await response.json();
+
+    expect(body.period.id).toBe('period-1');
+  });
+
+  it('still resolves the covering period via overlap when no periodId is requested', async () => {
+    const token = tokenFor();
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    const periodA = { ...periodDto, Id: 'period-a', PeriodStart: '2025-02-01', PeriodEnd: '2025-02-26' };
+    const periodB = { ...periodDto, Id: 'period-b', PeriodStart: '2025-02-27', PeriodEnd: '2025-03-31' };
+    projectsBackend.getProjectList.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodA, periodB]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+
+    const response = await GET(requestFor('2025-02-24'));
+    const body = await response.json();
+
+    expect(body.period.id).toBe('period-a');
   });
 
   it('returns a normalized error when a backend call fails', async () => {

@@ -50,11 +50,18 @@ function countPendingEdits(edits: PendingEdits): number {
  */
 export function useTimesheetGrid(initialWeekStart?: string) {
   const [weekStart, setWeekStart] = useState<string>(() => initialWeekStart ?? getMondayOfWeek());
+  // The "Timesheet Period" dropdown's explicit selection (see `goToPeriod`),
+  // cleared on any plain week navigation (Previous/Next/This week) so those
+  // fall back to re-deriving the covering period from the new week's date
+  // range - see `useTimesheetWeek`/`app/api/timesheets/week/route.ts` for why
+  // this is required for every period option to be selectable, not just the
+  // one that a plain overlap lookup alone would resolve to.
+  const [periodId, setPeriodId] = useState<string | undefined>(undefined);
   const [edits, setEdits] = useState<PendingEdits>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const { week, isLoading, isError, error, refetch } = useTimesheetWeek(weekStart);
+  const { week, isLoading, isError, error, refetch } = useTimesheetWeek(weekStart, periodId);
   const { createEntry } = useCreateTimesheetEntry();
   const { updateEntry } = useUpdateTimesheetEntry();
 
@@ -148,28 +155,35 @@ export function useTimesheetGrid(initialWeekStart?: string) {
 
   const goToPreviousWeek = useCallback(() => {
     resetEdits();
+    setPeriodId(undefined);
     setWeekStart((current) => addDays(current, -7));
   }, [resetEdits]);
 
   const goToNextWeek = useCallback(() => {
     resetEdits();
+    setPeriodId(undefined);
     setWeekStart((current) => addDays(current, 7));
   }, [resetEdits]);
 
   const goToCurrentWeek = useCallback(() => {
     resetEdits();
+    setPeriodId(undefined);
     setWeekStart(getMondayOfWeek());
   }, [resetEdits]);
 
   /**
    * Jumps the grid to the week containing `period`'s start date - the
-   * "Timesheet Period" dropdown's selection handler. Entries then load for
-   * whichever week that resolves to, and `hasPeriod`/`canEdit` reflect the
-   * chosen period (or a locked one) as soon as the fetch settles.
+   * "Timesheet Period" dropdown's selection handler. Also pins `periodId` to
+   * this exact period (see `useTimesheetWeek`), so the resolved week's
+   * period always matches the option the caller picked even when another
+   * period also overlaps that same week. Entries then load for whichever
+   * week that resolves to, and `hasPeriod`/`canEdit` reflect the chosen
+   * period (or a locked one) as soon as the fetch settles.
    */
   const goToPeriod = useCallback(
     (period: TimesheetPeriod) => {
       resetEdits();
+      setPeriodId(period.id);
       setWeekStart(getMondayOfWeek(new Date(`${period.periodStart}T00:00:00.000Z`)));
     },
     [resetEdits]

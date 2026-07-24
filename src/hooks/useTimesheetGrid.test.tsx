@@ -262,4 +262,37 @@ describe('useTimesheetGrid', () => {
     expect(result.current.weekStart).toBe('2025-03-17');
     expect(result.current.isDirty).toBe(false);
   });
+
+  it('pins periodId when a Timesheet Period is explicitly selected, so every option (including one that overlaps another period\'s week) resolves to what was picked', async () => {
+    timesheetsApi.getTimesheetWeek.mockResolvedValue(weekWith());
+    const { result } = renderHook(() => useTimesheetGrid('2025-02-24'), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.goToPeriod({ id: 'period-2', periodStart: '2025-03-19', periodEnd: '2025-04-15', isLocked: false });
+    });
+
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-17', 'period-2')
+    );
+  });
+
+  it('clears the pinned periodId on plain week navigation (Previous/Next/This week), falling back to auto-resolving the new week\'s period', async () => {
+    timesheetsApi.getTimesheetWeek.mockResolvedValue(weekWith());
+    const { result } = renderHook(() => useTimesheetGrid('2025-02-24'), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.goToPeriod({ id: 'period-2', periodStart: '2025-03-19', periodEnd: '2025-04-15', isLocked: false });
+    });
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-17', 'period-2')
+    );
+
+    act(() => {
+      result.current.goToNextWeek();
+    });
+
+    await waitFor(() => expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-24'));
+  });
 });

@@ -58,4 +58,12 @@ describe('useTimesheetWeek', () => {
     renderHook(() => useTimesheetWeek(''), { wrapper });
     expect(timesheetsApi.getTimesheetWeek).not.toHaveBeenCalled();
   });
+
+  it('passes periodId through to getTimesheetWeek when given (e.g. an explicit Timesheet Period selection)', async () => {
+    timesheetsApi.getTimesheetWeek.mockResolvedValue(week);
+    const { result } = renderHook(() => useTimesheetWeek('2025-02-24', 'period-1'), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(timesheetsApi.getTimesheetWeek).toHaveBeenCalledWith('2025-02-24', 'period-1');
+  });
 });

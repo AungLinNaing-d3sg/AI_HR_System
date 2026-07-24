@@ -244,19 +244,18 @@ describe('TimesheetHistoryTable', () => {
     expect(screen.getAllByRole('row')).toHaveLength(3); // 1 header row + 2 entry rows
   });
 
-  it('renders the filter section as labeled filter cards (Date range / Project / Actions)', async () => {
+  it('renders the filter section as a single inline filter bar (Date From/To, Project, Filter/Reset)', async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
     timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
     const form = screen.getByRole('form', { name: /filter timesheet history/i });
-    expect(within(form).getByText('Date range')).toBeInTheDocument();
-    expect(within(form).getByText('Actions')).toBeInTheDocument();
-    expect(screen.getByLabelText('From')).toBeInTheDocument();
-    expect(screen.getByLabelText('To')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^filter$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^reset$/i })).toBeInTheDocument();
+    expect(within(form).getByLabelText('From')).toBeInTheDocument();
+    expect(within(form).getByLabelText('To')).toBeInTheDocument();
+    expect(within(form).getByLabelText('Project')).toBeInTheDocument();
+    expect(within(form).getByRole('button', { name: /^filter$/i })).toBeInTheDocument();
+    expect(within(form).getByRole('button', { name: /^reset$/i })).toBeInTheDocument();
   });
 
   it('applies a date-range filter to only show matching entries', async () => {

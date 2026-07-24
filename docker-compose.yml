@@ -1,17 +1,17 @@
 version: "3.8"
- 
+
 services:
   hrsystemfrontend:
-    image: ${DOCKERHUB_USERNAME}/hrsystembackend:${IMAGE_TAG}
+    image: ${DOCKERHUB_USERNAME}/hrsystemfrontend:${IMAGE_TAG}
     container_name: hrsystemfrontend
     ports:
-      - "3000:80"
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
     networks:
       - hrfrontend
-    environment:
-      NODE_ENV: UAT
-    restart: unless-stopped
- 
+
 networks:
   hrfrontend:
     driver: bridge

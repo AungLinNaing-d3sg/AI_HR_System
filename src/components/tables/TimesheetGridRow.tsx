@@ -13,7 +13,7 @@ export interface TimesheetGridRowProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   disabled: boolean;
-  /** Today's `YYYY-MM-DD` (caller's local calendar day) - only this day's cells accept input, see `TimesheetGrid`'s "Create Timesheet" doc comment. */
+  /** Today's `YYYY-MM-DD` (caller's local calendar day) - today and any earlier day's cells accept input, see `TimesheetGrid`'s "Create Timesheet" doc comment. */
   today: string;
   onHoursChange: (date: string, value: string) => void;
   onNotesChange: (date: string, value: string) => void;
@@ -25,14 +25,15 @@ export interface TimesheetGridRowProps {
  * per the wireframe's "click the info icon to add task notes" hint - see
  * `docs/HR_System_FE_wireframe.pdf`) to view/edit that day's task notes.
  *
- * Only the cell whose `date` matches `today` accepts input - every other
- * day is shown read-only (still visible for reference, e.g. an already
- * logged entry) so timesheet entry can only ever be made for the current
- * calendar day (see `TimesheetGrid`'s "Create Timesheet" doc comment).
+ * Every cell whose `date` is on or before `today` accepts input - only a
+ * future date is shown read-only (still visible for reference, e.g. a
+ * placeholder for an upcoming day) so timesheet entry can be made for
+ * today or any earlier date in the period, never ahead of the calendar
+ * (see `TimesheetGrid`'s "Create Timesheet" doc comment).
  *
- * A cell whose entry is already Approved stays editable *when it is
- * today's cell* (only `disabled`, e.g. a locked period, or it not being
- * today, blocks it) - editing it resets it to Pending Approval and
+ * A cell whose entry is already Approved stays editable *when it is not a
+ * future date* (only `disabled`, e.g. a locked period, or the date being
+ * in the future, blocks it) - editing it resets it to Pending Approval and
  * requires the Project Admin to re-approve it, so an "Approved" cell shows
  * a hint explaining that instead of being locked out.
  */
@@ -70,9 +71,9 @@ export function TimesheetGridRow({
         </th>
 
         {row.cells.map((cell) => {
-          const isToday = cell.date === today;
-          const cellDisabled = disabled || !isToday;
-          const readOnlyHint = !isToday ? 'Read-only · entries can only be logged for today' : undefined;
+          const isFuture = cell.date > today;
+          const cellDisabled = disabled || isFuture;
+          const readOnlyHint = isFuture ? 'Read-only · entries cannot be logged for a future date' : undefined;
 
           return (
             <td key={cell.date} className="px-2 py-3 align-top">
@@ -123,8 +124,8 @@ export function TimesheetGridRow({
             Task notes
           </th>
           {row.cells.map((cell) => {
-            const isToday = cell.date === today;
-            const cellDisabled = disabled || !isToday;
+            const isFuture = cell.date > today;
+            const cellDisabled = disabled || isFuture;
 
             return (
               <td key={cell.date} className="px-2 py-3 align-top">
@@ -133,7 +134,7 @@ export function TimesheetGridRow({
                   disabled={cellDisabled}
                   rows={2}
                   placeholder="Add a note…"
-                  title={!isToday ? 'Read-only · entries can only be logged for today' : undefined}
+                  title={isFuture ? 'Read-only · entries cannot be logged for a future date' : undefined}
                   className="h-16 min-h-16 w-36 text-xs"
                   aria-label={`Task notes for ${row.projectName} on ${formatDayLabel(cell.date)}`}
                   onChange={(event) => onNotesChange(cell.date, event.target.value)}

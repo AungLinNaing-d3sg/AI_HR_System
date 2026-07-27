@@ -8,8 +8,8 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Pin "today" to a fixed date within the mocked week so entry-restriction
-// behavior (only today's column is editable) is deterministic regardless of
-// when the test suite actually runs.
+// behavior (today and earlier columns editable, future columns disabled) is
+// deterministic regardless of when the test suite actually runs.
 const TODAY = '2025-02-27';
 jest.mock('../../lib/utils/week', () => ({
   ...jest.requireActual('../../lib/utils/week'),
@@ -290,17 +290,20 @@ describe('TimesheetGrid', () => {
     expect(screen.getByLabelText('Timesheet Period')).toBeDisabled();
   });
 
-  it('only allows entry for today - all other day columns are disabled', () => {
+  it('allows entry for today and earlier days - only future day columns are disabled', () => {
     useTimesheetGrid.mockReturnValue(baseHookValue());
     render(<TimesheetGrid />);
 
     // Today (mocked to 2025-02-27, Thursday) stays enabled...
     expect(screen.getByLabelText('Thu, Feb 27 hours for Project Alpha - Web Platform')).toBeEnabled();
-    // ...every other day of the week is rendered read-only.
-    expect(screen.getByLabelText(/Mon, Feb 24 hours for Project Alpha - Web Platform/)).toBeDisabled();
-    expect(screen.getByLabelText(/Tue, Feb 25 hours for Project Alpha - Web Platform/)).toBeDisabled();
-    expect(screen.getByLabelText(/Wed, Feb 26 hours for Project Alpha - Web Platform/)).toBeDisabled();
+    // ...as does every earlier day of the week...
+    expect(screen.getByLabelText(/Mon, Feb 24 hours for Project Alpha - Web Platform/)).toBeEnabled();
+    expect(screen.getByLabelText(/Tue, Feb 25 hours for Project Alpha - Web Platform/)).toBeEnabled();
+    expect(screen.getByLabelText(/Wed, Feb 26 hours for Project Alpha - Web Platform/)).toBeEnabled();
+    // ...while any future day is rendered read-only.
     expect(screen.getByLabelText(/Fri, Feb 28 hours for Project Alpha - Web Platform/)).toBeDisabled();
+    expect(screen.getByLabelText(/Sat, Mar 1 hours for Project Alpha - Web Platform/)).toBeDisabled();
+    expect(screen.getByLabelText(/Sun, Mar 2 hours for Project Alpha - Web Platform/)).toBeDisabled();
   });
 
   it("flags today's column header and shows an info banner explaining the entry restriction", () => {
@@ -308,26 +311,38 @@ describe('TimesheetGrid', () => {
     render(<TimesheetGrid />);
 
     expect(screen.getByText('Today')).toBeInTheDocument();
-    const banner = screen.getByText(/you can only log hours and notes for today/i);
+    const banner = screen.getByText(/you can log hours and notes for today/i);
     expect(banner.closest('[role="alert"]')).toBeInTheDocument();
   });
 
-  it('does not forward a setCell call for a disabled, non-today day even if triggered programmatically', async () => {
+  it('does not forward a setCell call for a disabled, future day even if triggered programmatically', async () => {
     const setCell = jest.fn();
     useTimesheetGrid.mockReturnValue(baseHookValue({ setCell }));
     render(<TimesheetGrid />);
 
-    const mondayInput = screen.getByLabelText(/Mon, Feb 24 hours for Project Alpha - Web Platform/);
-    expect(mondayInput).toBeDisabled();
+    const fridayInput = screen.getByLabelText(/Fri, Feb 28 hours for Project Alpha - Web Platform/);
+    expect(fridayInput).toBeDisabled();
 
     // A disabled input never fires a change event via user interaction; this
     // asserts the defense-in-depth guard in `TimesheetGrid` itself rejects a
-    // non-today date even if it were ever invoked.
-    fireEvent.change(mondayInput, { target: { value: '5' } });
+    // future date even if it were ever invoked.
+    fireEvent.change(fridayInput, { target: { value: '5' } });
     expect(setCell).not.toHaveBeenCalled();
   });
 
-  it('disables the task notes textarea for non-today days but keeps it enabled for today', async () => {
+  it('calls setCell when an hours input changes on an earlier (past) day', async () => {
+    const user = userEvent.setup();
+    const setCell = jest.fn();
+    useTimesheetGrid.mockReturnValue(baseHookValue({ setCell }));
+    render(<TimesheetGrid />);
+
+    const mondayInput = screen.getByLabelText('Mon, Feb 24 hours for Project Alpha - Web Platform');
+    await user.type(mondayInput, '5');
+
+    expect(setCell).toHaveBeenCalledWith('project-1', '2025-02-24', { hoursInput: expect.any(String) });
+  });
+
+  it('disables the task notes textarea for future days but keeps it enabled for today and earlier days', async () => {
     const user = userEvent.setup();
     useTimesheetGrid.mockReturnValue(baseHookValue());
     render(<TimesheetGrid />);
@@ -335,6 +350,7 @@ describe('TimesheetGrid', () => {
     await user.click(screen.getByRole('button', { name: /show task notes for project alpha/i }));
 
     expect(screen.getByLabelText(/Task notes for Project Alpha - Web Platform on Thu, Feb 27/)).toBeEnabled();
-    expect(screen.getByLabelText(/Task notes for Project Alpha - Web Platform on Mon, Feb 24/)).toBeDisabled();
+    expect(screen.getByLabelText(/Task notes for Project Alpha - Web Platform on Mon, Feb 24/)).toBeEnabled();
+    expect(screen.getByLabelText(/Task notes for Project Alpha - Web Platform on Fri, Feb 28/)).toBeDisabled();
   });
 });

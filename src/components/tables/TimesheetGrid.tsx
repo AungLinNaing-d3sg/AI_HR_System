@@ -65,12 +65,13 @@ function useInitialWeekFromSearchParams(): string | undefined {
  * projects) states, plus independent loading/error/empty states for the
  * period dropdown itself.
  *
- * Timesheet entry is restricted to the current calendar day: only the
- * column matching `today` (the caller's own local date, via
- * `getLocalDateString`) accepts input - every other day's hour/notes
- * fields are rendered read-only via `TimesheetGridRow`'s `today` prop, and
+ * Timesheet entry is allowed for today and any earlier date within the
+ * loaded week, but never for a future date: every column up to and
+ * including the one matching `today` (the caller's own local date, via
+ * `getLocalDateString`) accepts input, while later columns are rendered
+ * read-only via `TimesheetGridRow`'s `today` prop, and
  * `handleHoursChange`/`handleNotesChange` below additionally guard against
- * ever forwarding an edit for a non-today date to `setCell`, so the
+ * ever forwarding an edit for a future date to `setCell`, so the
  * restriction holds even if a disabled control were somehow still
  * triggered. The "Today" column is visually flagged in the header, and an
  * info banner explains the rule whenever the grid is otherwise editable.
@@ -120,12 +121,12 @@ export function TimesheetGrid() {
   const today = getLocalDateString();
 
   function handleHoursChange(projectId: string, date: string, value: string) {
-    if (date !== today) return;
+    if (date > today) return;
     setCell(projectId, date, { hoursInput: value });
   }
 
   function handleNotesChange(projectId: string, date: string, value: string) {
-    if (date !== today) return;
+    if (date > today) return;
     setCell(projectId, date, { taskDescription: value });
   }
 
@@ -288,8 +289,8 @@ export function TimesheetGrid() {
       )}
       {canEdit && rows.length > 0 && (
         <Alert variant="info">
-          You can only log hours and notes for today, <strong>{formatDayLabel(today)}</strong>. Other days are
-          shown read-only for reference.
+          You can log hours and notes for today, <strong>{formatDayLabel(today)}</strong>, and any earlier date.
+          Future dates are shown read-only.
         </Alert>
       )}
 

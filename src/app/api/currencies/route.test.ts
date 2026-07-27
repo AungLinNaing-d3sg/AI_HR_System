@@ -30,6 +30,10 @@ function makeRequest(body: unknown): Request {
   });
 }
 
+function makeGetRequest(query = ''): Request {
+  return new Request(`https://example.com/api/currencies${query}`);
+}
+
 function makeToken(payload: Record<string, unknown>): string {
   const base64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url');
   return `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url(payload)}.sig`;
@@ -58,7 +62,7 @@ describe('GET /api/currencies', () => {
 
   it('returns 401 when there is no access token', async () => {
     mockCookieStore.get.mockReturnValue(undefined);
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(401);
     expect(currenciesBackend.getAllCurrencies).not.toHaveBeenCalled();
   });
@@ -69,12 +73,24 @@ describe('GET /api/currencies', () => {
     );
     currenciesBackend.getAllCurrencies.mockResolvedValue({ Items: [currencyDto], TotalCount: 1, Page: 1, PageSize: 100 });
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.currencies).toHaveLength(1);
     expect(body.currencies[0].code).toBe('SGD');
+    expect(body.totalCount).toBe(1);
+  });
+
+  it('forwards pageNo/pageSize query params to the backend', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+    );
+    currenciesBackend.getAllCurrencies.mockResolvedValue({ Items: [currencyDto], TotalCount: 1, Page: 2, PageSize: 5 });
+
+    await GET(makeGetRequest('?pageNo=2&pageSize=5'));
+
+    expect(currenciesBackend.getAllCurrencies).toHaveBeenCalledWith(expect.any(String), { page: 2, pageSize: 5 });
   });
 
   it('returns a normalized error when the backend call fails', async () => {
@@ -83,7 +99,7 @@ describe('GET /api/currencies', () => {
     );
     currenciesBackend.getAllCurrencies.mockRejectedValue(new Error('network down'));
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(500);
   });
 });

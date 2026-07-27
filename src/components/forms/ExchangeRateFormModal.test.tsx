@@ -6,7 +6,7 @@ import { ExchangeRateFormModal } from './ExchangeRateFormModal';
 import type { ExchangeRate } from '@/types/domain.types';
 
 jest.mock('../../lib/api/currencies.api', () => ({
-  getCurrencies: jest.fn().mockResolvedValue([]),
+  getCurrencies: jest.fn().mockResolvedValue({ currencies: [], totalCount: 0 }),
 }));
 
 jest.mock('../../lib/api/exchangeRates.api', () => ({

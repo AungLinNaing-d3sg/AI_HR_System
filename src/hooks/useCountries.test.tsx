@@ -27,11 +27,12 @@ describe('useCountries', () => {
   });
 
   it('returns countries once loaded', async () => {
-    countriesApi.getCountries.mockResolvedValue([country]);
+    countriesApi.getCountries.mockResolvedValue({ countries: [country], totalCount: 1 });
     const { result } = renderHook(() => useCountries(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.countries).toEqual([country]);
+    expect(result.current.totalCount).toBe(1);
   });
 
   it('surfaces an error message on failure', async () => {

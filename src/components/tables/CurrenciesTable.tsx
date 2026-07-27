@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { Pencil, Plus, Star, Trash2 } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
 import { useCurrencies } from '@/hooks/useCurrencies';
 import { useDeleteCurrency } from '@/hooks/useDeleteCurrency';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Pagination } from '@/components/common/Pagination';
 import { CurrencyFormModal } from '@/components/forms/CurrencyFormModal';
 import { cn } from '@/lib/utils/cn';
 import type { Currency } from '@/types/domain.types';
@@ -27,7 +29,8 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; currency: Currency } | nu
  * Server Component boundary for no benefit.
  */
 export function CurrenciesTable() {
-  const { currencies, isLoading, isError, error, refetch } = useCurrencies();
+  const { pageNo, pageSize, goToPage } = usePagination();
+  const { currencies, totalCount, isLoading, isError, error, refetch } = useCurrencies({ pageNo, pageSize });
   const { deleteCurrency, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteCurrency();
   const [modalState, setModalState] = useState<ModalState>(null);
   const [pendingDelete, setPendingDelete] = useState<Currency | null>(null);
@@ -178,6 +181,17 @@ export function CurrenciesTable() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {!isLoading && !isError && (
+        <Pagination
+          pageNo={pageNo}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={goToPage}
+          isLoading={isLoading}
+          itemLabel="currencies"
+        />
       )}
 
       {!isLoading && !isError && (

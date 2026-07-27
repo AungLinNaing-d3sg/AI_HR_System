@@ -87,7 +87,7 @@ describe('GenerateInvoiceForm', () => {
     currenciesApi.getCurrencies.mockReset();
     invoicesApi.generateInvoice.mockReset();
     projectsApi.getProjects.mockResolvedValue([project]);
-    currenciesApi.getCurrencies.mockResolvedValue([currency]);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [currency], totalCount: 1 });
   });
 
   it('renders the parameters form with a disabled, informational tax rate field', async () => {

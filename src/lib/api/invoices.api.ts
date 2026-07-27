@@ -21,6 +21,8 @@ import type { GenerateInvoiceFormValues, UpdateInvoiceFormValues } from '@/lib/v
 export interface InvoiceListFilters {
   projectId?: string;
   status?: InvoiceStatus;
+  pageNo?: number;
+  pageSize?: number;
 }
 
 export interface InvoiceListResult {

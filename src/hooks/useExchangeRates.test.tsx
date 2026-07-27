@@ -30,11 +30,12 @@ describe('useExchangeRates', () => {
   });
 
   it('returns exchange rates once loaded', async () => {
-    exchangeRatesApi.getExchangeRates.mockResolvedValue([exchangeRate]);
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates: [exchangeRate], totalCount: 1 });
     const { result } = renderHook(() => useExchangeRates(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.exchangeRates).toEqual([exchangeRate]);
+    expect(result.current.totalCount).toBe(1);
   });
 
   it('surfaces an error message on failure', async () => {

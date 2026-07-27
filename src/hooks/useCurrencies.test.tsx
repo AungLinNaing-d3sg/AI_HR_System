@@ -30,11 +30,12 @@ describe('useCurrencies', () => {
   });
 
   it('returns currencies once loaded', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue([currency]);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [currency], totalCount: 1 });
     const { result } = renderHook(() => useCurrencies(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.currencies).toEqual([currency]);
+    expect(result.current.totalCount).toBe(1);
   });
 
   it('surfaces an error message on failure', async () => {

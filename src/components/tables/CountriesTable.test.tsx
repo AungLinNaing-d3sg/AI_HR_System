@@ -64,7 +64,7 @@ describe('CountriesTable', () => {
     countriesApi.updateCountry.mockReset();
     countriesApi.deleteCountry.mockReset();
     rateCardsApi.getRateCards.mockReset();
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    rateCardsApi.getRateCards.mockResolvedValue({ rateCards, totalCount: rateCards.length });
   });
 
   it('renders the page header and shows a loading state initially', () => {
@@ -76,7 +76,7 @@ describe('CountriesTable', () => {
   });
 
   it('shows an empty state when there are no countries', async () => {
-    countriesApi.getCountries.mockResolvedValue([]);
+    countriesApi.getCountries.mockResolvedValue({ countries: [], totalCount: 0 });
     renderWithProviders(<CountriesTable />);
 
     expect(await screen.findByText(/no countries yet/i)).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe('CountriesTable', () => {
   });
 
   it('renders a row per country with its code and rate card count', async () => {
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     renderWithProviders(<CountriesTable />);
 
     expect(await screen.findByText('Singapore')).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('CountriesTable', () => {
   });
 
   it('shows an Active status badge for every country', async () => {
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     renderWithProviders(<CountriesTable />);
 
     await screen.findByText('Singapore');
@@ -110,7 +110,7 @@ describe('CountriesTable', () => {
   });
 
   it('disables the Delete action for a country that has rate cards', async () => {
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     renderWithProviders(<CountriesTable />);
 
     await screen.findByText('Singapore');
@@ -121,7 +121,7 @@ describe('CountriesTable', () => {
 
   it('opens the Add Country modal when the header button is clicked', async () => {
     const user = userEvent.setup();
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     renderWithProviders(<CountriesTable />);
 
     await screen.findByText('Singapore');
@@ -132,7 +132,7 @@ describe('CountriesTable', () => {
 
   it('opens the Edit modal pre-filled for the clicked row', async () => {
     const user = userEvent.setup();
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     renderWithProviders(<CountriesTable />);
 
     await screen.findByText('Singapore');
@@ -145,7 +145,7 @@ describe('CountriesTable', () => {
 
   it('opens a confirm dialog before deleting and calls deleteCountry on confirm', async () => {
     const user = userEvent.setup();
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     countriesApi.deleteCountry.mockResolvedValue(undefined);
     renderWithProviders(<CountriesTable />);
 
@@ -163,7 +163,7 @@ describe('CountriesTable', () => {
 
   it('closes the confirm dialog without deleting when cancelled', async () => {
     const user = userEvent.setup();
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     renderWithProviders(<CountriesTable />);
 
     await screen.findByText('Singapore');

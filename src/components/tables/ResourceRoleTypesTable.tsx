@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { Briefcase, Pencil, Plus, Trash2 } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
 import { useResourceRoleTypes } from '@/hooks/useResourceRoleTypes';
 import { useDeleteResourceRoleType } from '@/hooks/useDeleteResourceRoleType';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Pagination } from '@/components/common/Pagination';
 import { ResourceRoleTypeFormModal } from '@/components/forms/ResourceRoleTypeFormModal';
 import type { ResourceRoleType } from '@/types/domain.types';
 
@@ -35,7 +37,8 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; roleType: ResourceRoleTyp
  * message via `deleteError` instead of being pre-emptively disabled.
  */
 export function ResourceRoleTypesTable() {
-  const { roleTypes, isLoading, isError, error, refetch } = useResourceRoleTypes();
+  const { pageNo, pageSize, goToPage } = usePagination();
+  const { roleTypes, totalCount, isLoading, isError, error, refetch } = useResourceRoleTypes({ pageNo, pageSize });
   const {
     deleteResourceRoleType,
     isDeleting,
@@ -163,6 +166,17 @@ export function ResourceRoleTypesTable() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {!isLoading && !isError && (
+        <Pagination
+          pageNo={pageNo}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={goToPage}
+          isLoading={isLoading}
+          itemLabel="resource role types"
+        />
       )}
 
       <ResourceRoleTypeFormModal

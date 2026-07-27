@@ -6,19 +6,24 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapCountry, mapCountryList } from '@/lib/utils/mapCountry';
+import { resolvePagination } from '@/lib/utils/pagination';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createCountrySchema } from '@/lib/validators/country.validators';
 import type { CountryListResponsePayload, CountryResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/countries
+ * GET /api/countries?pageNo=&pageSize=
  *
  * Reference data backing the optional Country dropdown on the Create User
- * form (`POST /Auth/CreateUser` accepts an optional `CountryId`). Open to
- * any authenticated user, matching `/api/currencies`/`/api/resource-role-types`
- * (country code/name reference data carries no sensitive information).
+ * form (`POST /Auth/CreateUser` accepts an optional `CountryId`) as well as
+ * the `/admin/countries` management table's own server-side pagination.
+ * Open to any authenticated user, matching `/api/currencies`/
+ * `/api/resource-role-types` (country code/name reference data carries no
+ * sensitive information). `pageNo`/`pageSize` are optional - the dropdown
+ * omits them (falling back to one large page below), while the management
+ * table always sends both to drive its pagination UI.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const claims = accessToken ? decodeAccessToken(accessToken) : null;
@@ -27,9 +32,17 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
 
+  const { pageNo, pageSize } = resolvePagination(new URL(request.url).searchParams, { pageNo: 1, pageSize: 100 });
+
   try {
-    const { Items } = await countriesBackend.getAllCountries(accessToken);
-    return NextResponse.json<CountryListResponsePayload>({ countries: mapCountryList(Items) }, { status: 200 });
+    const { Items, TotalCount, Page, PageSize } = await countriesBackend.getAllCountries(accessToken, {
+      page: pageNo,
+      pageSize,
+    });
+    return NextResponse.json<CountryListResponsePayload>(
+      { countries: mapCountryList(Items), totalCount: TotalCount, pageNo: Page, pageSize: PageSize },
+      { status: 200 }
+    );
   } catch (error) {
     logger.error('Get countries failed', error);
     const details = getBackendErrorDetails(error, 'Could not load countries.');

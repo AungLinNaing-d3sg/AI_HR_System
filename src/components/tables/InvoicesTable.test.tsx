@@ -89,13 +89,22 @@ describe('InvoicesTable', () => {
 
   it('filters rows by status when a status tab is selected', async () => {
     const user = userEvent.setup();
-    invoicesApi.getInvoices.mockResolvedValue({ invoices: [draftInvoice, sentInvoice], totalCount: 2 });
+    const allInvoices = [draftInvoice, sentInvoice];
+    // Mimics the real `/api/invoices?status=` server-side filter (see
+    // `InvoicesTable`'s dual unpaged/paged `useInvoices` calls): returns
+    // every invoice when no `status` is passed (the unpaged status-count
+    // call, or the paged call with "All" selected), and only the matching
+    // ones otherwise.
+    invoicesApi.getInvoices.mockImplementation(async (filters: { status?: string } = {}) => {
+      const filtered = filters.status ? allInvoices.filter((invoice) => invoice.status === filters.status) : allInvoices;
+      return { invoices: filtered, totalCount: filtered.length };
+    });
     renderWithProviders(<InvoicesTable />);
 
     await screen.findByText('INV-2025-0001');
     await user.click(screen.getByRole('tab', { name: /^draft/i }));
 
-    expect(screen.getByText('INV-2025-0001')).toBeInTheDocument();
+    expect(await screen.findByText('INV-2025-0001')).toBeInTheDocument();
     expect(screen.queryByText('INV-2025-0002')).not.toBeInTheDocument();
   });
 

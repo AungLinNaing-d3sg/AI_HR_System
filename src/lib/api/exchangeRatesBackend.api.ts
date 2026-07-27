@@ -30,11 +30,13 @@ function authHeader(accessToken: string): { Authorization: string } {
 }
 
 /**
- * `[Auth]` - Mirrors `currenciesBackend.getAllCurrencies`'s defaults: the
- * `/admin/exchange-rates` table has no pagination UI, so a large `pageSize`
- * is requested up front rather than only the backend's own default page of
- * 20 (see docs/HR_System_BE.postman_collection.json's `GetAllExchangeRates`
- * example).
+ * `[Auth]` - Mirrors `currenciesBackend.getAllCurrencies`'s defaults. Callers
+ * that omit `page`/`pageSize` (e.g. the `/admin/exchange-rates` summary
+ * cards' unpaginated fetch) get one large page up front rather than only the
+ * backend's own default page of 20 (see
+ * docs/HR_System_BE.postman_collection.json's `GetAllExchangeRates`
+ * example); the table's own row list always passes explicit `page`/`pageSize`
+ * to drive its real server-side pagination (see `app/api/exchange-rates/route.ts`).
  */
 export async function getAllExchangeRates(
   accessToken: string,

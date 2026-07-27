@@ -60,7 +60,7 @@ describe('CreateUserForm', () => {
     authApi.getRoles.mockReset();
     authApi.getRoles.mockResolvedValue(roles);
     countriesApi.getCountries.mockReset();
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
     useKnownUserRolesStore.setState({ roleNameByUserId: {} });
     window.sessionStorage.clear();
   });

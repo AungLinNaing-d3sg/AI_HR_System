@@ -144,6 +144,20 @@ describe('GET /api/invoices', () => {
     expect(body.invoices[0].invoiceNumber).toBe('INV-2025-0001');
   });
 
+  it('forwards pageNo/pageSize query params to the backend', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
+    );
+    invoicesBackend.getAllInvoices.mockResolvedValue(listDto);
+
+    await GET(getRequest('?pageNo=2&pageSize=10'));
+
+    expect(invoicesBackend.getAllInvoices).toHaveBeenCalledWith(
+      { projectId: undefined, status: undefined, page: 2, pageSize: 10 },
+      expect.any(String)
+    );
+  });
+
   it('returns a normalized error when the backend call fails', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined

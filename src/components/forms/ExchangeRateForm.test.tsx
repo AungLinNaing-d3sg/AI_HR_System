@@ -51,7 +51,7 @@ describe('ExchangeRateForm', () => {
     currenciesApi.getCurrencies.mockReset();
     exchangeRatesApi.createExchangeRate.mockReset();
     exchangeRatesApi.updateExchangeRate.mockReset();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
   });
 
   it('shows the base currency and a target currency dropdown (excluding the base) in create mode', async () => {
@@ -179,9 +179,8 @@ describe('ExchangeRateForm', () => {
 
   it('disables the submit button in create mode when no base currency is configured', async () => {
     currenciesApi.getCurrencies.mockReset();
-    currenciesApi.getCurrencies.mockResolvedValue(
-      currencies.map((currency) => ({ ...currency, isBaseCurrency: false }))
-    );
+    const noBaseCurrencies = currencies.map((currency) => ({ ...currency, isBaseCurrency: false }));
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: noBaseCurrencies, totalCount: noBaseCurrencies.length });
     renderWithProviders(<ExchangeRateForm mode="create" onSuccess={onSuccess} onCancel={onCancel} />);
 
     expect(await screen.findByText(/no base currency configured/i)).toBeInTheDocument();

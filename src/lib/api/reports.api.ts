@@ -20,6 +20,8 @@ export interface TimesheetReportFilters {
   endDate: string;
   projectId?: string;
   userId?: string;
+  pageNo?: number;
+  pageSize?: number;
 }
 
 export async function getTimesheetReport(filters: TimesheetReportFilters): Promise<TimesheetReport> {

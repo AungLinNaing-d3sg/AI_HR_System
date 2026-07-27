@@ -9,9 +9,26 @@ import type { CreateCurrencyFormValues, UpdateCurrencyFormValues } from '@/lib/v
  * Axios directly; every call here is same-origin, against this app's own
  * `/api/currencies/*` Route Handlers.
  */
-export async function getCurrencies(): Promise<Currency[]> {
-  const { data } = await axiosInstance.get<CurrencyListResponsePayload>('/currencies');
-  return data.currencies;
+
+export interface CurrencyListParams {
+  pageNo?: number;
+  pageSize?: number;
+}
+
+export interface CurrencyListResult {
+  currencies: Currency[];
+  totalCount: number;
+}
+
+/**
+ * Lists currencies. `params` is omitted by reference-data dropdown callers
+ * (e.g. `GenerateInvoiceForm`/`ExchangeRateForm`/`RateCardForm`), which get
+ * one large page back; the `/admin/currencies` management table always
+ * passes `pageNo`/`pageSize` to drive its own pagination UI.
+ */
+export async function getCurrencies(params: CurrencyListParams = {}): Promise<CurrencyListResult> {
+  const { data } = await axiosInstance.get<CurrencyListResponsePayload>('/currencies', { params });
+  return { currencies: data.currencies, totalCount: data.totalCount };
 }
 
 export async function createCurrency(values: CreateCurrencyFormValues): Promise<Currency> {

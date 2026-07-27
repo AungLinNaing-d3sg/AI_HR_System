@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Pencil, Plus, Star, Trash2 } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
 import { useCurrencies } from '@/hooks/useCurrencies';
 import { useDeleteExchangeRate } from '@/hooks/useDeleteExchangeRate';
 import { useExchangeRates } from '@/hooks/useExchangeRates';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Pagination } from '@/components/common/Pagination';
 import { ExchangeRateFormModal } from '@/components/forms/ExchangeRateFormModal';
 import { cn } from '@/lib/utils/cn';
 import type { Currency, ExchangeRate } from '@/types/domain.types';
@@ -93,7 +95,28 @@ export function ExchangeRatesTable() {
     isError: isCurrenciesError,
     error: currenciesError,
   } = useCurrencies();
+  // Unpaginated - the summary cards above the table need every rate to
+  // compute the base currency's latest rate to each other currency, not just
+  // whichever ones happen to be on the table's current page.
   const { exchangeRates, isLoading, isError, error, refetch } = useExchangeRates();
+
+  const baseCurrency = currencies.find((currency) => currency.isBaseCurrency) ?? null;
+
+  const { pageNo, pageSize, goToPage } = usePagination();
+  // Only rates FROM the base currency are surfaced on this screen - matches
+  // the wireframe's "/admin/exchange-rates" table (From/To/Rate/Effective
+  // date, e.g. SGD -> USD, SGD -> INR); cross-rates between two non-base
+  // currencies aren't part of this feature. Scoped server-side via
+  // `fromCurrencyId` (rather than filtering the unpaginated `exchangeRates`
+  // above) so this table's own pagination is correct.
+  const {
+    exchangeRates: pagedExchangeRates,
+    totalCount: pagedTotalCount,
+    isLoading: isLoadingPaged,
+    isError: isPagedError,
+    error: pagedError,
+    refetch: refetchPaged,
+  } = useExchangeRates({ pageNo, pageSize, fromCurrencyId: baseCurrency?.id });
   const {
     deleteExchangeRate,
     isDeleting,
@@ -103,22 +126,19 @@ export function ExchangeRatesTable() {
   const [modalState, setModalState] = useState<ModalState>(null);
   const [pendingDelete, setPendingDelete] = useState<ExchangeRate | null>(null);
 
-  const baseCurrency = currencies.find((currency) => currency.isBaseCurrency) ?? null;
-
-  // Only rates FROM the base currency are surfaced on this screen - matches
-  // the wireframe's "/admin/exchange-rates" table (From/To/Rate/Effective
-  // date, e.g. SGD -> USD, SGD -> INR); cross-rates between two non-base
-  // currencies aren't part of this feature.
   const baseCurrencyRates = baseCurrency
-    ? exchangeRates
-        .filter((rate) => rate.fromCurrency.id === baseCurrency.id)
-        .sort(
-          (a, b) => a.toCurrency.code.localeCompare(b.toCurrency.code) || b.effectiveDate.localeCompare(a.effectiveDate)
-        )
+    ? [...pagedExchangeRates].sort(
+        (a, b) => a.toCurrency.code.localeCompare(b.toCurrency.code) || b.effectiveDate.localeCompare(a.effectiveDate)
+      )
     : [];
 
-  const isPageLoading = isLoading || isLoadingCurrencies;
-  const isPageError = isError || isCurrenciesError;
+  const isPageLoading = isLoading || isLoadingCurrencies || isLoadingPaged;
+  const isPageError = isError || isCurrenciesError || isPagedError;
+
+  const handleRetry = () => {
+    refetch();
+    refetchPaged();
+  };
 
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return;
@@ -164,8 +184,8 @@ export function ExchangeRatesTable() {
 
       {isPageError && (
         <div className="space-y-3">
-          <Alert variant="error">{error ?? currenciesError ?? 'Could not load exchange rates.'}</Alert>
-          <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+          <Alert variant="error">{error ?? pagedError ?? currenciesError ?? 'Could not load exchange rates.'}</Alert>
+          <Button type="button" variant="outline" size="sm" onClick={handleRetry}>
             Try again
           </Button>
         </div>
@@ -294,6 +314,17 @@ export function ExchangeRatesTable() {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {baseCurrency && (
+            <Pagination
+              pageNo={pageNo}
+              pageSize={pageSize}
+              totalCount={pagedTotalCount}
+              onPageChange={goToPage}
+              isLoading={isLoadingPaged}
+              itemLabel="exchange rates"
+            />
           )}
         </>
       )}

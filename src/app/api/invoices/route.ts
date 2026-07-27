@@ -8,6 +8,7 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapGeneratedInvoice, mapInvoiceSummaryList } from '@/lib/utils/mapInvoice';
+import { resolvePagination } from '@/lib/utils/pagination';
 import { pickSearchParams } from '@/lib/utils/searchParams';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { generateInvoiceSchema, invoiceListQuerySchema } from '@/lib/validators/invoice.validators';
@@ -31,11 +32,11 @@ function forbidden(action: string): NextResponse {
  */
 
 /**
- * GET /api/invoices?projectId=&status=
+ * GET /api/invoices?projectId=&status=&pageNo=&pageSize=
  *
- * Lists invoices, backing the `/invoices` table
- * (`docs/HR_System_FE_wireframe.pdf`). Requests one large page from the
- * backend's paginated `GetAllInvoices` - see `INVOICE_LIST_PAGE_SIZE`.
+ * Lists invoices, backing the `/invoices` table's status-count chips (an
+ * unfiltered, unpaginated call - see `INVOICE_LIST_PAGE_SIZE`) and its own
+ * paginated, status-filtered row table (see `InvoicesTable`).
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -56,18 +57,25 @@ export async function GET(request: Request): Promise<NextResponse> {
     );
   }
 
+  const { pageNo, pageSize } = resolvePagination(searchParams, { pageNo: 1, pageSize: INVOICE_LIST_PAGE_SIZE });
+
   try {
     const dto = await invoicesBackend.getAllInvoices(
       {
         projectId: parsed.data.projectId,
         status: parsed.data.status,
-        page: 1,
-        pageSize: INVOICE_LIST_PAGE_SIZE,
+        page: pageNo,
+        pageSize,
       },
       accessToken
     );
     return NextResponse.json<InvoiceListResponsePayload>(
-      { invoices: mapInvoiceSummaryList(dto.Items), totalCount: dto.TotalCount },
+      {
+        invoices: mapInvoiceSummaryList(dto.Items),
+        totalCount: dto.TotalCount,
+        pageNo: dto.Page,
+        pageSize: dto.PageSize,
+      },
       { status: 200 }
     );
   } catch (error) {

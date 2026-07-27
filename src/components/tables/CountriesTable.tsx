@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { Globe, Pencil, Plus, Trash2 } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
 import { useCountries } from '@/hooks/useCountries';
 import { useDeleteCountry } from '@/hooks/useDeleteCountry';
 import { useRateCards } from '@/hooks/useRateCards';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Pagination } from '@/components/common/Pagination';
 import { CountryFormModal } from '@/components/forms/CountryFormModal';
 import type { Country } from '@/types/domain.types';
 
@@ -49,7 +51,11 @@ function buildRateCardCountsByCountryId(rateCards: { country: { id: string } }[]
  * backend doesn't provide.
  */
 export function CountriesTable() {
-  const { countries, isLoading, isError, error, refetch } = useCountries();
+  const { pageNo, pageSize, goToPage } = usePagination();
+  const { countries, totalCount, isLoading, isError, error, refetch } = useCountries({ pageNo, pageSize });
+  // Unpaginated, separate from the table's own paginated `countries` above -
+  // needed to compute an accurate rate-card count for every country, not
+  // just whichever ones happen to be on the current page.
   const { rateCards } = useRateCards();
   const { deleteCountry, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteCountry();
   const [modalState, setModalState] = useState<ModalState>(null);
@@ -204,6 +210,17 @@ export function CountriesTable() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {!isLoading && !isError && (
+        <Pagination
+          pageNo={pageNo}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={goToPage}
+          isLoading={isLoading}
+          itemLabel="countries"
+        />
       )}
 
       <CountryFormModal

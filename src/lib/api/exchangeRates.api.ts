@@ -9,9 +9,28 @@ import type { CreateExchangeRateFormValues, UpdateExchangeRateFormValues } from 
  * these instead of touching Axios directly; every call here is same-origin,
  * against this app's own `/api/exchange-rates/*` Route Handlers.
  */
-export async function getExchangeRates(): Promise<ExchangeRate[]> {
-  const { data } = await axiosInstance.get<ExchangeRateListResponsePayload>('/exchange-rates');
-  return data.exchangeRates;
+
+export interface ExchangeRateListParams {
+  pageNo?: number;
+  pageSize?: number;
+  fromCurrencyId?: string;
+}
+
+export interface ExchangeRateListResult {
+  exchangeRates: ExchangeRate[];
+  totalCount: number;
+}
+
+/**
+ * Lists exchange rates. `params` is omitted by `ExchangeRatesTable`'s summary
+ * cards (which need every rate to compute the base currency's latest rate to
+ * each other currency), while its own From/To/Rate table always passes
+ * `pageNo`/`pageSize` (and `fromCurrencyId`, to only page through rates FROM
+ * the base currency) to drive its pagination UI.
+ */
+export async function getExchangeRates(params: ExchangeRateListParams = {}): Promise<ExchangeRateListResult> {
+  const { data } = await axiosInstance.get<ExchangeRateListResponsePayload>('/exchange-rates', { params });
+  return { exchangeRates: data.exchangeRates, totalCount: data.totalCount };
 }
 
 /** Returns only `{ id, fromCurrencyId, toCurrencyId, rate, effectiveDate, isActive }` - see `ExchangeRateMutationResponsePayload`. */

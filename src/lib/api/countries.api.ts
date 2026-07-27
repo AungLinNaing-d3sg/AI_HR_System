@@ -9,9 +9,26 @@ import type { CreateCountryFormValues, UpdateCountryFormValues } from '@/lib/val
  * directly; every call here is same-origin, against this app's own
  * `/api/countries/*` Route Handlers.
  */
-export async function getCountries(): Promise<Country[]> {
-  const { data } = await axiosInstance.get<CountryListResponsePayload>('/countries');
-  return data.countries;
+
+export interface CountryListParams {
+  pageNo?: number;
+  pageSize?: number;
+}
+
+export interface CountryListResult {
+  countries: Country[];
+  totalCount: number;
+}
+
+/**
+ * Lists countries. `params` is omitted by reference-data dropdown callers
+ * (e.g. `CreateUserForm`/`RateCardForm`), which get one large page back; the
+ * `/admin/countries` management table always passes `pageNo`/`pageSize` to
+ * drive its own pagination UI.
+ */
+export async function getCountries(params: CountryListParams = {}): Promise<CountryListResult> {
+  const { data } = await axiosInstance.get<CountryListResponsePayload>('/countries', { params });
+  return { countries: data.countries, totalCount: data.totalCount };
 }
 
 export async function createCountry(values: CreateCountryFormValues): Promise<Country> {

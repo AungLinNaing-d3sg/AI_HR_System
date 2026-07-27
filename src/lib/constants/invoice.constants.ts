@@ -24,12 +24,13 @@ export const INVOICE_STATUS_BADGE_CLASSNAMES: Record<InvoiceStatus, string> = {
 };
 
 /**
- * `GetAllInvoices` is paginated (`Page`/`PageSize`), but the wireframe's
- * `/invoices` screen (`docs/HR_System_FE_wireframe.pdf`) shows a plain,
- * unpaginated table - so, matching the same choice already made for the
- * Report domain (see `REPORT_PAGE_SIZE` in `report.constants.ts`), this app
- * always requests one large page and derives the status-count chips/filter
- * client-side instead of building pagination UI the design doesn't call for.
+ * `GetAllInvoices` is paginated (`Page`/`PageSize`). The `/invoices` table
+ * itself now drives real server-side pagination (`pageNo`/`pageSize` - see
+ * `InvoicesTable`/`usePagination`); this large default page size is only
+ * used for the separate, unpaginated status-count-chip fetch (which still
+ * needs a rough view of every status across the whole list), matching the
+ * same choice made for the Report domain (see `REPORT_PAGE_SIZE` in
+ * `report.constants.ts`).
  */
 export const INVOICE_LIST_PAGE_SIZE = 200;
 

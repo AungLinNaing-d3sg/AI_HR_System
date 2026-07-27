@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Filter, Pencil, Plus, Trash2 } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
 import { useDeleteRateCard } from '@/hooks/useDeleteRateCard';
 import { useRateCards } from '@/hooks/useRateCards';
 import { Alert } from '@/components/ui/Alert';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Pagination } from '@/components/common/Pagination';
 import { RateCardFormModal } from '@/components/forms/RateCardFormModal';
 import { cn } from '@/lib/utils/cn';
 import type { RateCard, RateCardCountryRef } from '@/types/domain.types';
@@ -121,6 +123,9 @@ function CountrySummaryCard({ summary, isSelected, onSelect }: CountrySummaryCar
  * Component boundary for no benefit.
  */
 export function RateCardsTable() {
+  // Unpaginated - the country summary cards need every rate card to compute
+  // an accurate role count and rate range per country, not just whichever
+  // ones happen to be on the table's current page.
   const { rateCards, isLoading, isError, error, refetch } = useRateCards();
   const { deleteRateCard, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteRateCard();
   const [modalState, setModalState] = useState<ModalState>(null);
@@ -129,20 +134,41 @@ export function RateCardsTable() {
 
   const countrySummaries = useMemo(() => buildCountrySummaries(rateCards), [rateCards]);
 
-  const filteredRateCards = useMemo(() => {
-    const filtered = selectedCountryId
-      ? rateCards.filter((rateCard) => rateCard.country.id === selectedCountryId)
-      : rateCards;
-    return [...filtered].sort(
-      (a, b) =>
-        a.country.name.localeCompare(b.country.name) ||
-        a.resourceRoleType.name.localeCompare(b.resourceRoleType.name) ||
-        b.effectiveDate.localeCompare(a.effectiveDate)
-    );
-  }, [rateCards, selectedCountryId]);
+  const { pageNo, pageSize, goToPage } = usePagination();
+  // The Country/Role/Daily Rate table below is scoped server-side to the
+  // "Filter by country" selection (rather than filtering the unpaginated
+  // `rateCards` above) so this table's own pagination stays correct.
+  const {
+    rateCards: pagedRateCards,
+    totalCount: pagedTotalCount,
+    isLoading: isLoadingPaged,
+    isError: isPagedError,
+    error: pagedError,
+    refetch: refetchPaged,
+  } = useRateCards({ pageNo, pageSize, countryId: selectedCountryId ?? undefined });
+
+  const filteredRateCards = useMemo(
+    () =>
+      [...pagedRateCards].sort(
+        (a, b) =>
+          a.country.name.localeCompare(b.country.name) ||
+          a.resourceRoleType.name.localeCompare(b.resourceRoleType.name) ||
+          b.effectiveDate.localeCompare(a.effectiveDate)
+      ),
+    [pagedRateCards]
+  );
+
+  const isPageLoading = isLoading || isLoadingPaged;
+  const isPageError = isError || isPagedError;
 
   const handleToggleCountry = (countryId: string) => {
     setSelectedCountryId((current) => (current === countryId ? null : countryId));
+    goToPage(1);
+  };
+
+  const handleRetry = () => {
+    refetch();
+    refetchPaged();
   };
 
   const handleConfirmDelete = async () => {
@@ -178,28 +204,28 @@ export function RateCardsTable() {
 
       {deleteError && <Alert variant="error">{deleteError}</Alert>}
 
-      {isLoading && (
+      {isPageLoading && (
         <p aria-live="polite" className="text-sm text-zinc-500">
           Loading rate cards…
         </p>
       )}
 
-      {isError && (
+      {isPageError && (
         <div className="space-y-3">
-          <Alert variant="error">{error ?? 'Could not load rate cards.'}</Alert>
-          <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+          <Alert variant="error">{error ?? pagedError ?? 'Could not load rate cards.'}</Alert>
+          <Button type="button" variant="outline" size="sm" onClick={handleRetry}>
             Try again
           </Button>
         </div>
       )}
 
-      {!isLoading && !isError && rateCards.length === 0 && (
+      {!isPageLoading && !isPageError && rateCards.length === 0 && (
         <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
           <p className="text-sm text-zinc-600">No rate cards yet.</p>
         </div>
       )}
 
-      {!isLoading && !isError && rateCards.length > 0 && (
+      {!isPageLoading && !isPageError && rateCards.length > 0 && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {countrySummaries.map((summary) => (
@@ -222,7 +248,10 @@ export function RateCardsTable() {
                 id="countryFilter"
                 className="h-9 w-auto min-w-[10rem]"
                 value={selectedCountryId ?? ''}
-                onChange={(event) => setSelectedCountryId(event.target.value || null)}
+                onChange={(event) => {
+                  setSelectedCountryId(event.target.value || null);
+                  goToPage(1);
+                }}
               >
                 <option value="">All Countries</option>
                 {countrySummaries.map((summary) => (
@@ -233,7 +262,7 @@ export function RateCardsTable() {
               </Select>
             </div>
             <p className="text-xs text-zinc-500" aria-live="polite">
-              Showing {filteredRateCards.length} of {rateCards.length} rate cards
+              {pagedTotalCount} rate card{pagedTotalCount === 1 ? '' : 's'} match this filter
             </p>
           </div>
 
@@ -330,6 +359,15 @@ export function RateCardsTable() {
               </table>
             </div>
           )}
+
+          <Pagination
+            pageNo={pageNo}
+            pageSize={pageSize}
+            totalCount={pagedTotalCount}
+            onPageChange={goToPage}
+            isLoading={isLoadingPaged}
+            itemLabel="rate cards"
+          />
         </>
       )}
 

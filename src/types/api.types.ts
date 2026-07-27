@@ -360,6 +360,8 @@ export interface UserListResponsePayload {
 export interface UsersListResponsePayload {
   users: import('./domain.types').AdminUserListItem[];
   totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /** Shape returned by `PUT /api/auth/users/:id` to the browser. */
@@ -387,6 +389,9 @@ export interface ResourceRoleTypeListResponse {
 
 export interface ResourceRoleTypeListResponsePayload {
   roleTypes: import('./domain.types').ResourceRoleType[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /**
@@ -878,6 +883,8 @@ export type DeleteInvoiceResponse = null;
 export interface InvoiceListResponsePayload {
   invoices: import('./domain.types').InvoiceSummary[];
   totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /** Shape returned by `POST /api/invoices` and `GET /api/invoices/:id`. */
@@ -938,6 +945,9 @@ export interface CurrencyListResponseDto {
 /** Shape returned by `GET /api/currencies`. */
 export interface CurrencyListResponsePayload {
   currencies: import('./domain.types').Currency[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /** Request body for `POST /Currency/CreateCurrency`. */
@@ -1043,6 +1053,9 @@ export type DeleteExchangeRateResponse = null;
 /** Shape returned by `GET /api/exchange-rates`. */
 export interface ExchangeRateListResponsePayload {
   exchangeRates: import('./domain.types').ExchangeRate[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /**
@@ -1088,6 +1101,9 @@ export interface CountryListResponseDto {
 /** Shape returned by `GET /api/countries`. */
 export interface CountryListResponsePayload {
   countries: import('./domain.types').Country[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /** Request body for `POST /Country/CreateCountry`. */
@@ -1161,6 +1177,9 @@ export interface RateCardListResponseDto {
 /** Shape returned by `GET /api/rate-cards`. */
 export interface RateCardListResponsePayload {
   rateCards: import('./domain.types').RateCard[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /** Request body for `POST /RateCard/CreateRateCard`. */

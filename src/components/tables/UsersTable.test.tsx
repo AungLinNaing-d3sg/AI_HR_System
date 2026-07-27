@@ -92,7 +92,7 @@ describe('UsersTable', () => {
     authApi.getRoles.mockReset();
     authApi.getRoles.mockResolvedValue([]);
     countriesApi.getCountries.mockReset();
-    countriesApi.getCountries.mockResolvedValue([]);
+    countriesApi.getCountries.mockResolvedValue({ countries: [], totalCount: 0 });
     useAuthStore.setState({ user: null, hasHydrated: true });
     useKnownUserRolesStore.setState({ roleNameByUserId: {} });
     window.sessionStorage.clear();
@@ -175,11 +175,12 @@ describe('UsersTable', () => {
     expect(await screen.findByText('3 users across all roles.')).toBeInTheDocument();
   });
 
-  it('notes when more users exist than the page returned', async () => {
+  it('shows pagination controls when more users exist than fit on one page', async () => {
     authApi.getUsers.mockResolvedValue({ users, totalCount: 150 });
     renderWithProviders(<UsersTable />);
 
-    expect(await screen.findByText(/showing the first 3 of 150 users/i)).toBeInTheDocument();
+    const nav = await screen.findByRole('navigation', { name: 'Pagination' });
+    expect(nav).toHaveTextContent(/of 150 users/i);
   });
 
   it('renders a Status badge reflecting each row\'s isActive flag', async () => {

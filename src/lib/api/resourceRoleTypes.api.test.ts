@@ -28,11 +28,17 @@ describe('resourceRoleTypes.api (client)', () => {
     axiosInstance.delete.mockReset();
   });
 
-  it('getResourceRoleTypes gets /resource-role-types and returns the role type list', async () => {
-    axiosInstance.get.mockResolvedValue({ data: { roleTypes: [roleType] } });
+  it('getResourceRoleTypes gets /resource-role-types and returns the role type list with a total count', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { roleTypes: [roleType], totalCount: 1 } });
     const result = await resourceRoleTypesApi.getResourceRoleTypes();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/resource-role-types');
-    expect(result).toEqual([roleType]);
+    expect(axiosInstance.get).toHaveBeenCalledWith('/resource-role-types', { params: {} });
+    expect(result).toEqual({ roleTypes: [roleType], totalCount: 1 });
+  });
+
+  it('getResourceRoleTypes forwards pageNo/pageSize params', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { roleTypes: [roleType], totalCount: 1 } });
+    await resourceRoleTypesApi.getResourceRoleTypes({ pageNo: 2, pageSize: 10 });
+    expect(axiosInstance.get).toHaveBeenCalledWith('/resource-role-types', { params: { pageNo: 2, pageSize: 10 } });
   });
 
   it('createResourceRoleType posts /resource-role-types with the form values and returns the new role type', async () => {

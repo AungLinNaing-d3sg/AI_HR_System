@@ -5,7 +5,12 @@ import * as invoicesApi from '@/lib/api/invoices.api';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import type { InvoiceListFilters } from '@/lib/api/invoices.api';
 
-/** Lists invoices. Query key: `['invoices', 'list', filters]` (per the hierarchical tuple convention). */
+/**
+ * Lists invoices. `filters` may include `pageNo`/`pageSize` to drive the
+ * `/invoices` table's own server-side pagination (see `InvoicesTable`), in
+ * addition to the existing `projectId`/`status` filters. Query key:
+ * `['invoices', 'list', filters]` (per the hierarchical tuple convention).
+ */
 export function useInvoices(filters: InvoiceListFilters = {}) {
   const query = useQuery({
     queryKey: ['invoices', 'list', filters],

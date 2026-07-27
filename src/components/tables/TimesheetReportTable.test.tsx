@@ -98,7 +98,7 @@ describe('TimesheetReportTable', () => {
     expect(within(table).getByText('Project Alpha')).toBeInTheDocument();
     expect(within(table).getByText('Frontend component development')).toBeInTheDocument();
     expect(within(table).getByText('Approved')).toBeInTheDocument();
-    expect(screen.getByText(/total hours:/i)).toBeInTheDocument();
+    expect(screen.getByText(/total hours/i)).toBeInTheDocument();
   });
 
   it('shows a validation error when Date From is after Date To', async () => {
@@ -126,5 +126,40 @@ describe('TimesheetReportTable', () => {
     await user.click(screen.getByRole('button', { name: /export csv/i }));
 
     await waitFor(() => expect(reportsApi.exportTimesheetReport).toHaveBeenCalledWith(expect.any(Object), 'csv'));
+  });
+
+  // Regression check for the interaction between this table's new server-side
+  // pagination and its pre-existing client-side "User" filter: the backend
+  // now only ever returns one page of `items` (`DEFAULT_PAGE_SIZE` = 20), but
+  // `getUserOptions`/`filteredItems` still only look at that one page instead
+  // of the full, multi-page report - so a user whose entries fall on another
+  // page never appears in the "User" dropdown, and the report's headline
+  // "Total hours" figure (report-wide) is shown alongside a page that cannot
+  // filter down to the user it's supposedly reporting on.
+  it('only offers users present on the currently loaded report page in the User filter, even when the full report spans multiple pages', async () => {
+    const multiPageReport: TimesheetReport = {
+      ...report,
+      totalCount: 25,
+      pageSize: 20,
+      items: Array.from({ length: 20 }, (_, index) => ({
+        user: { id: 'user-1', fullName: 'Alex Kumar', employeeId: 'EMP001' },
+        project: { id: 'project-1', code: 'PRJ-ALPHA', name: 'Project Alpha' },
+        entryDate: '2025-02-24',
+        hours: 1,
+        taskDescription: `Entry ${index}`,
+        isApproved: true,
+      })),
+    };
+    reportsApi.getTimesheetReport.mockResolvedValue(multiPageReport);
+    renderWithProviders(<TimesheetReportTable />);
+
+    await screen.findAllByText('Alex Kumar');
+
+    // Page 2 (not fetched by this component at all up front) has a second
+    // user, "Jamie Lee", who has no way of showing up in the dropdown below.
+    const userSelect = screen.getByLabelText('User') as HTMLSelectElement;
+    const optionLabels = Array.from(userSelect.options).map((option) => option.text);
+    expect(optionLabels).toEqual(['All Users', 'Alex Kumar']);
+    expect(optionLabels).not.toContain('Jamie Lee');
   });
 });

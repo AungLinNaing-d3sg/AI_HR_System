@@ -32,11 +32,12 @@ describe('useRateCards', () => {
   });
 
   it('returns rate cards once loaded', async () => {
-    rateCardsApi.getRateCards.mockResolvedValue([rateCard]);
+    rateCardsApi.getRateCards.mockResolvedValue({ rateCards: [rateCard], totalCount: 1 });
     const { result } = renderHook(() => useRateCards(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.rateCards).toEqual([rateCard]);
+    expect(result.current.totalCount).toBe(1);
   });
 
   it('surfaces an error message on failure', async () => {

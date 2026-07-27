@@ -40,6 +40,10 @@ function makeRequest(body: unknown): Request {
   });
 }
 
+function makeGetRequest(query = ''): Request {
+  return new Request(`https://example.com/api/countries${query}`);
+}
+
 const countryDto = {
   Id: '22222222-2222-2222-2222-222222222201',
   Code: 'SG',
@@ -55,7 +59,7 @@ describe('GET /api/countries', () => {
 
   it('returns 401 when there is no access token', async () => {
     mockCookieStore.get.mockReturnValue(undefined);
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(401);
     expect(countriesBackend.getAllCountries).not.toHaveBeenCalled();
   });
@@ -66,12 +70,24 @@ describe('GET /api/countries', () => {
     );
     countriesBackend.getAllCountries.mockResolvedValue({ Items: [countryDto], TotalCount: 1, Page: 1, PageSize: 100 });
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.countries).toHaveLength(1);
     expect(body.countries[0].code).toBe('SG');
+    expect(body.totalCount).toBe(1);
+  });
+
+  it('forwards pageNo/pageSize query params to the backend', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+    );
+    countriesBackend.getAllCountries.mockResolvedValue({ Items: [countryDto], TotalCount: 1, Page: 2, PageSize: 5 });
+
+    await GET(makeGetRequest('?pageNo=2&pageSize=5'));
+
+    expect(countriesBackend.getAllCountries).toHaveBeenCalledWith(expect.any(String), { page: 2, pageSize: 5 });
   });
 
   it('returns a normalized error when the backend call fails', async () => {
@@ -80,7 +96,7 @@ describe('GET /api/countries', () => {
     );
     countriesBackend.getAllCountries.mockRejectedValue(new Error('network down'));
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(500);
   });
 });

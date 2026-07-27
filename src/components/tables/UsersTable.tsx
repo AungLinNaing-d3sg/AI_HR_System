@@ -3,12 +3,14 @@
 import { useMemo, useState } from 'react';
 import { Ban, Pencil, UserCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePagination } from '@/hooks/usePagination';
 import { useUpdateUser } from '@/hooks/useUpdateUser';
 import { useUsers } from '@/hooks/useUsers';
 import { useKnownUserRolesStore } from '@/stores/knownUserRoles.store';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Pagination } from '@/components/common/Pagination';
 import { UserEditFormModal } from '@/components/forms/UserEditFormModal';
 import { UserRoleBadge } from '@/components/common/UserRoleBadge';
 import {
@@ -47,11 +49,24 @@ type RoleCounts = Record<KnownUserRoleName, number> & { unavailable: number };
 export function UsersTable() {
   const { user: currentUser } = useAuth();
   const roleNameByUserId = useKnownUserRolesStore((state) => state.roleNameByUserId);
-  const { users, totalCount, isLoading, isError, error, refetch } = useUsers();
+  // Unpaginated - the role-count chips and the total below need every user
+  // account, not just whichever ones happen to be on the table's current page.
+  const { users: allUsers, totalCount, isLoading: isLoadingCounts } = useUsers();
+
+  const { pageNo, pageSize, goToPage } = usePagination();
+  const {
+    users,
+    isLoading: isLoadingPage,
+    isError,
+    error,
+    refetch,
+  } = useUsers({ pageNo, pageSize });
   const { updateUser, isUpdating, error: statusError, reset: resetStatusError } = useUpdateUser();
 
   const [editingUser, setEditingUser] = useState<AdminUserListItem | null>(null);
   const [pendingStatusChange, setPendingStatusChange] = useState<AdminUserListItem | null>(null);
+
+  const isLoading = isLoadingCounts || isLoadingPage;
 
   const resolveRoleName = useMemo(() => {
     return (candidate: AdminUserListItem): string | null => {
@@ -65,7 +80,7 @@ export function UsersTable() {
 
   const roleCounts = useMemo<RoleCounts>(() => {
     const counts: RoleCounts = { SystemAdmin: 0, ProjectAdmin: 0, Employee: 0, unavailable: 0 };
-    for (const candidate of users) {
+    for (const candidate of allUsers) {
       const roleName = resolveRoleName(candidate);
       if (isKnownUserRoleName(roleName)) {
         counts[roleName] += 1;
@@ -74,7 +89,7 @@ export function UsersTable() {
       }
     }
     return counts;
-  }, [users, resolveRoleName]);
+  }, [allUsers, resolveRoleName]);
 
   const handleConfirmStatusChange = async () => {
     if (!pendingStatusChange) return;
@@ -117,7 +132,7 @@ export function UsersTable() {
     );
   }
 
-  if (users.length === 0) {
+  if (allUsers.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
         <p className="text-sm text-zinc-600">No users yet.</p>
@@ -157,12 +172,6 @@ export function UsersTable() {
       </div>
 
       {statusError && <Alert variant="error">{statusError}</Alert>}
-
-      {totalCount > users.length && (
-        <Alert variant="info">
-          Showing the first {users.length} of {totalCount} users.
-        </Alert>
-      )}
 
       <div className="overflow-x-auto rounded-md border border-zinc-200">
         <table className="w-full min-w-max text-left text-sm">
@@ -266,6 +275,15 @@ export function UsersTable() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        pageNo={pageNo}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={goToPage}
+        isLoading={isLoadingPage}
+        itemLabel="users"
+      />
 
       <UserEditFormModal
         open={editingUser !== null}

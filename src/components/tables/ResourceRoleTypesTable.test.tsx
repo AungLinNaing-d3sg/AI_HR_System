@@ -46,7 +46,7 @@ describe('ResourceRoleTypesTable', () => {
   });
 
   it('shows an empty state when there are no role types', async () => {
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue([]);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes: [], totalCount: 0 });
     renderWithProviders(<ResourceRoleTypesTable />);
 
     expect(await screen.findByText(/no resource role types yet/i)).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('ResourceRoleTypesTable', () => {
   });
 
   it('renders a row per role type sorted alphabetically, with a placeholder for a missing description', async () => {
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     renderWithProviders(<ResourceRoleTypesTable />);
 
     expect(await screen.findByText('Junior Developer')).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe('ResourceRoleTypesTable', () => {
 
   it('opens the Add Role Type modal when the header button is clicked', async () => {
     const user = userEvent.setup();
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     renderWithProviders(<ResourceRoleTypesTable />);
 
     await screen.findByText('Senior Developer');
@@ -87,7 +87,7 @@ describe('ResourceRoleTypesTable', () => {
 
   it('opens the Edit modal pre-filled for the clicked row', async () => {
     const user = userEvent.setup();
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     renderWithProviders(<ResourceRoleTypesTable />);
 
     await screen.findByText('Senior Developer');
@@ -100,7 +100,7 @@ describe('ResourceRoleTypesTable', () => {
 
   it('opens a confirm dialog before deleting and calls deleteResourceRoleType on confirm', async () => {
     const user = userEvent.setup();
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     resourceRoleTypesApi.deleteResourceRoleType.mockResolvedValue(undefined);
     renderWithProviders(<ResourceRoleTypesTable />);
 
@@ -118,7 +118,7 @@ describe('ResourceRoleTypesTable', () => {
 
   it('closes the confirm dialog without deleting when cancelled', async () => {
     const user = userEvent.setup();
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     renderWithProviders(<ResourceRoleTypesTable />);
 
     await screen.findByText('Senior Developer');
@@ -133,7 +133,7 @@ describe('ResourceRoleTypesTable', () => {
 
   it('surfaces a delete error returned by the backend', async () => {
     const user = userEvent.setup();
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     resourceRoleTypesApi.deleteResourceRoleType.mockRejectedValue(
       new Error('This role type is assigned to a project and cannot be deleted.')
     );

@@ -38,6 +38,10 @@ function makeRequest(body: unknown): Request {
   });
 }
 
+function makeGetRequest(query = ''): Request {
+  return new Request(`https://example.com/api/exchange-rates${query}`);
+}
+
 function makeToken(payload: Record<string, unknown>): string {
   const base64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url');
   return `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url(payload)}.sig`;
@@ -71,7 +75,7 @@ describe('GET /api/exchange-rates', () => {
 
   it('returns 401 when there is no access token', async () => {
     mockCookieStore.get.mockReturnValue(undefined);
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(401);
     expect(exchangeRatesBackend.getAllExchangeRates).not.toHaveBeenCalled();
   });
@@ -87,12 +91,33 @@ describe('GET /api/exchange-rates', () => {
       PageSize: 100,
     });
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.exchangeRates).toHaveLength(1);
     expect(body.exchangeRates[0].toCurrency.code).toBe('USD');
+    expect(body.totalCount).toBe(1);
+  });
+
+  it('forwards pageNo/pageSize/fromCurrencyId query params to the backend', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+    );
+    exchangeRatesBackend.getAllExchangeRates.mockResolvedValue({
+      Items: [exchangeRateDto],
+      TotalCount: 1,
+      Page: 2,
+      PageSize: 5,
+    });
+
+    await GET(makeGetRequest('?pageNo=2&pageSize=5&fromCurrencyId=currency-1'));
+
+    expect(exchangeRatesBackend.getAllExchangeRates).toHaveBeenCalledWith(expect.any(String), {
+      page: 2,
+      pageSize: 5,
+      fromCurrencyId: 'currency-1',
+    });
   });
 
   it('returns a normalized error when the backend call fails', async () => {
@@ -101,7 +126,7 @@ describe('GET /api/exchange-rates', () => {
     );
     exchangeRatesBackend.getAllExchangeRates.mockRejectedValue(new Error('network down'));
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(500);
   });
 });

@@ -6,11 +6,13 @@
  */
 
 /**
- * `GET /Auth/GetUserList` is paginated (`PageNo`/`PageSize`), but the
- * wireframe's `/admin/users` screen (`docs/HR_System_FE_wireframe.pdf`) shows
- * a plain, unpaginated table - matching the same choice already made for the
- * Invoice domain (see `INVOICE_LIST_PAGE_SIZE`), this app requests one large
- * page instead of building pagination UI the design doesn't call for.
+ * `GET /Auth/GetUserList` is paginated (`PageNo`/`PageSize`). The
+ * `/admin/users` table now drives real server-side pagination
+ * (`pageNo`/`pageSize` - see `UsersTable`/`usePagination`); this large
+ * default page size is only used for the separate, unpaginated fetch that
+ * backs the role-count chips and "N users across all roles" total (which
+ * still need a rough view of every user across the whole list), matching
+ * the same choice made for the Invoice domain (see `INVOICE_LIST_PAGE_SIZE`).
  */
 export const USERS_PAGE_SIZE = 100;
 

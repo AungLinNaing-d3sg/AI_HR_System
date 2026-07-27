@@ -40,11 +40,19 @@ describe('exchangeRates.api (client)', () => {
     axiosInstance.delete.mockReset();
   });
 
-  it('getExchangeRates gets /exchange-rates and returns the exchange rate list', async () => {
-    axiosInstance.get.mockResolvedValue({ data: { exchangeRates: [exchangeRate] } });
+  it('getExchangeRates gets /exchange-rates and returns the exchange rate list with a total count', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { exchangeRates: [exchangeRate], totalCount: 1 } });
     const result = await exchangeRatesApi.getExchangeRates();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/exchange-rates');
-    expect(result).toEqual([exchangeRate]);
+    expect(axiosInstance.get).toHaveBeenCalledWith('/exchange-rates', { params: {} });
+    expect(result).toEqual({ exchangeRates: [exchangeRate], totalCount: 1 });
+  });
+
+  it('getExchangeRates forwards pageNo/pageSize/fromCurrencyId params', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { exchangeRates: [exchangeRate], totalCount: 1 } });
+    await exchangeRatesApi.getExchangeRates({ pageNo: 2, pageSize: 10, fromCurrencyId: 'currency-1' });
+    expect(axiosInstance.get).toHaveBeenCalledWith('/exchange-rates', {
+      params: { pageNo: 2, pageSize: 10, fromCurrencyId: 'currency-1' },
+    });
   });
 
   it('createExchangeRate posts /exchange-rates with the form values and returns the new exchange rate', async () => {

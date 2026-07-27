@@ -85,9 +85,17 @@ export interface UsersPage {
   totalCount: number;
 }
 
-/** Every user account, for the `SystemAdmin`-only `/admin/users` management table. */
-export async function getUsers(): Promise<UsersPage> {
-  const { data } = await axiosInstance.get<UsersListResponsePayload>('/auth/users');
+export interface UsersListParams {
+  pageNo?: number;
+  pageSize?: number;
+}
+
+/**
+ * Every user account, for the `SystemAdmin`-only `/admin/users` management
+ * table's own server-side pagination.
+ */
+export async function getUsers(params: UsersListParams = {}): Promise<UsersPage> {
+  const { data } = await axiosInstance.get<UsersListResponsePayload>('/auth/users', { params });
   return { users: data.users, totalCount: data.totalCount };
 }
 

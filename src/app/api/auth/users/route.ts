@@ -7,19 +7,20 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapAdminUserListItemList } from '@/lib/utils/mapAuthUser';
+import { resolvePagination } from '@/lib/utils/pagination';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createUserSchema } from '@/lib/validators/auth.validators';
 import type { CreateUserResponsePayload, UsersListResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/auth/users
+ * GET /api/auth/users?pageNo=&pageSize=
  *
- * Every user account in the system, for the `/admin/users` management table
- * (`docs/HR_System_FE_wireframe.pdf`). `[SystemAdmin]`-only, unlike
- * `/api/auth/user-list` (open to any authenticated role, capped at 10 rows,
- * for the "Add User to Project" dropdown) - this requests a much larger
- * page (`USERS_PAGE_SIZE`) since the wireframe's admin table has no
- * pagination UI.
+ * Every user account in the system, for the `/admin/users` management
+ * table's own server-side pagination (`docs/HR_System_FE_wireframe.pdf`).
+ * `[SystemAdmin]`-only, unlike `/api/auth/user-list` (open to any
+ * authenticated role, capped at 10 rows, for the "Add User to Project"
+ * dropdown). `pageNo`/`pageSize` are optional, falling back to one large
+ * page (`USERS_PAGE_SIZE`) if omitted.
  *
  * `GET /Auth/GetUserList` now returns each account's `RoleName`/
  * `CountryId`/`CountryCode`/`CountryName` inline (see
@@ -30,7 +31,7 @@ import type { CreateUserResponsePayload, UsersListResponsePayload } from '@/type
  * A row missing a confirmed role still renders a "Role unavailable" state
  * (see `UserRoleBadge`) rather than fabricating one.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const claims = accessToken ? decodeAccessToken(accessToken) : null;
@@ -43,13 +44,18 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ message: 'Only a System Admin can view the user list.' }, { status: 403 });
   }
 
+  const { pageNo, pageSize } = resolvePagination(new URL(request.url).searchParams, {
+    pageNo: 1,
+    pageSize: USERS_PAGE_SIZE,
+  });
+
   try {
-    const { Items, TotalCount } = await authBackend.getUserList(accessToken, {
-      pageNo: 1,
-      pageSize: USERS_PAGE_SIZE,
+    const { Items, TotalCount, PageNo, PageSize } = await authBackend.getUserList(accessToken, {
+      pageNo,
+      pageSize,
     });
     return NextResponse.json<UsersListResponsePayload>(
-      { users: mapAdminUserListItemList(Items), totalCount: TotalCount },
+      { users: mapAdminUserListItemList(Items), totalCount: TotalCount, pageNo: PageNo, pageSize: PageSize },
       { status: 200 }
     );
   } catch (error) {

@@ -44,11 +44,19 @@ describe('rateCards.api (client)', () => {
     axiosInstance.delete.mockReset();
   });
 
-  it('getRateCards gets /rate-cards and returns the rate card list', async () => {
-    axiosInstance.get.mockResolvedValue({ data: { rateCards: [rateCard] } });
+  it('getRateCards gets /rate-cards and returns the rate card list with a total count', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { rateCards: [rateCard], totalCount: 1 } });
     const result = await rateCardsApi.getRateCards();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/rate-cards');
-    expect(result).toEqual([rateCard]);
+    expect(axiosInstance.get).toHaveBeenCalledWith('/rate-cards', { params: {} });
+    expect(result).toEqual({ rateCards: [rateCard], totalCount: 1 });
+  });
+
+  it('getRateCards forwards pageNo/pageSize/countryId params', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { rateCards: [rateCard], totalCount: 1 } });
+    await rateCardsApi.getRateCards({ pageNo: 2, pageSize: 10, countryId: 'country-1' });
+    expect(axiosInstance.get).toHaveBeenCalledWith('/rate-cards', {
+      params: { pageNo: 2, pageSize: 10, countryId: 'country-1' },
+    });
   });
 
   it('createRateCard posts /rate-cards with the form values and returns the new rate card', async () => {

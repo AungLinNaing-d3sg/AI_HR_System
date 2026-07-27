@@ -28,11 +28,17 @@ describe('countries.api (client)', () => {
     axiosInstance.delete.mockReset();
   });
 
-  it('getCountries gets /countries and returns the country list', async () => {
-    axiosInstance.get.mockResolvedValue({ data: { countries: [country] } });
+  it('getCountries gets /countries and returns the country list with a total count', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { countries: [country], totalCount: 1 } });
     const result = await countriesApi.getCountries();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/countries');
-    expect(result).toEqual([country]);
+    expect(axiosInstance.get).toHaveBeenCalledWith('/countries', { params: {} });
+    expect(result).toEqual({ countries: [country], totalCount: 1 });
+  });
+
+  it('getCountries forwards pageNo/pageSize params', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { countries: [country], totalCount: 1 } });
+    await countriesApi.getCountries({ pageNo: 2, pageSize: 10 });
+    expect(axiosInstance.get).toHaveBeenCalledWith('/countries', { params: { pageNo: 2, pageSize: 10 } });
   });
 
   it('createCountry posts /countries with the form values and returns the new country', async () => {

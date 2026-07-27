@@ -7,19 +7,25 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapExchangeRateList } from '@/lib/utils/mapExchangeRate';
+import { resolvePagination } from '@/lib/utils/pagination';
+import { pickSearchParams } from '@/lib/utils/searchParams';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createExchangeRateSchema } from '@/lib/validators/exchangeRate.validators';
 import type { ExchangeRateListResponsePayload, ExchangeRateMutationResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/exchange-rates
+ * GET /api/exchange-rates?pageNo=&pageSize=&fromCurrencyId=
  *
- * Lists every exchange rate. Open to any authenticated user, matching
- * `GET /api/currencies` (reference data used to convert invoice totals - no
- * sensitive information). `POST` below is `SystemAdmin`-only, since adding a
- * rate affects invoicing system-wide - see that handler's comment.
+ * Lists exchange rates, backing both the `/admin/exchange-rates` summary
+ * cards (an unpaginated call) and its own paginated From/To/Rate table (a
+ * paginated call additionally scoped to `fromCurrencyId` - see
+ * `ExchangeRatesTable`, which only ever lists rates FROM the base currency).
+ * Open to any authenticated user, matching `GET /api/currencies` (reference
+ * data used to convert invoice totals - no sensitive information). `POST`
+ * below is `SystemAdmin`-only, since adding a rate affects invoicing
+ * system-wide - see that handler's comment.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const claims = accessToken ? decodeAccessToken(accessToken) : null;
@@ -28,10 +34,18 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
 
+  const searchParams = new URL(request.url).searchParams;
+  const { pageNo, pageSize } = resolvePagination(searchParams, { pageNo: 1, pageSize: 100 });
+  const { fromCurrencyId } = pickSearchParams(searchParams, ['fromCurrencyId']);
+
   try {
-    const { Items } = await exchangeRatesBackend.getAllExchangeRates(accessToken);
+    const { Items, TotalCount, Page, PageSize } = await exchangeRatesBackend.getAllExchangeRates(accessToken, {
+      page: pageNo,
+      pageSize,
+      fromCurrencyId,
+    });
     return NextResponse.json<ExchangeRateListResponsePayload>(
-      { exchangeRates: mapExchangeRateList(Items) },
+      { exchangeRates: mapExchangeRateList(Items), totalCount: TotalCount, pageNo: Page, pageSize: PageSize },
       { status: 200 }
     );
   } catch (error) {

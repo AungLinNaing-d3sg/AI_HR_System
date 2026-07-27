@@ -73,7 +73,7 @@ describe('ExchangeRatesTable', () => {
   });
 
   it('shows an error state with a retry action when the exchange rate list fails to load', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     exchangeRatesApi.getExchangeRates.mockRejectedValue(new Error('network down'));
     renderWithProviders(<ExchangeRatesTable />);
 
@@ -82,8 +82,8 @@ describe('ExchangeRatesTable', () => {
   });
 
   it('shows a message pointing to Currencies when no currencies are configured', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue([]);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue([]);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [], totalCount: 0 });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates: [], totalCount: 0 });
     renderWithProviders(<ExchangeRatesTable />);
 
     expect(await screen.findByText(/no currencies configured yet/i)).toBeInTheDocument();
@@ -91,8 +91,8 @@ describe('ExchangeRatesTable', () => {
   });
 
   it('shows an empty state when there are no exchange rates yet', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue([]);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates: [], totalCount: 0 });
     renderWithProviders(<ExchangeRatesTable />);
 
     expect(await screen.findByText(/no exchange rates yet/i)).toBeInTheDocument();
@@ -100,8 +100,8 @@ describe('ExchangeRatesTable', () => {
   });
 
   it('renders a summary card per currency, highlighting the base currency and showing conversion rates for the rest', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue(exchangeRates);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
     expect(await screen.findByText('Base currency')).toBeInTheDocument();
@@ -112,8 +112,8 @@ describe('ExchangeRatesTable', () => {
   });
 
   it('renders a table row per exchange rate with formatted dates and status', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue(exchangeRates);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
     await screen.findByText('Base currency');
@@ -127,8 +127,8 @@ describe('ExchangeRatesTable', () => {
 
   it('opens the Add Rate modal when the header button is clicked', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue(exchangeRates);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
     await screen.findByText('Base currency');
@@ -138,8 +138,9 @@ describe('ExchangeRatesTable', () => {
   });
 
   it('disables the Add Rate button when no base currency is configured', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies.map((currency) => ({ ...currency, isBaseCurrency: false })));
-    exchangeRatesApi.getExchangeRates.mockResolvedValue([]);
+    const noBaseCurrencies = currencies.map((currency) => ({ ...currency, isBaseCurrency: false }));
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: noBaseCurrencies, totalCount: noBaseCurrencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates: [], totalCount: 0 });
     renderWithProviders(<ExchangeRatesTable />);
 
     await screen.findAllByText(/no active rate/i);
@@ -148,8 +149,8 @@ describe('ExchangeRatesTable', () => {
 
   it('opens the Edit modal pre-filled for the clicked row', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue(exchangeRates);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
     await screen.findByText('Base currency');
@@ -163,8 +164,8 @@ describe('ExchangeRatesTable', () => {
 
   it('opens a confirm dialog before deleting and calls deleteExchangeRate on confirm', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue(exchangeRates);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     exchangeRatesApi.deleteExchangeRate.mockResolvedValue(undefined);
     renderWithProviders(<ExchangeRatesTable />);
 
@@ -183,8 +184,8 @@ describe('ExchangeRatesTable', () => {
 
   it('closes the confirm dialog without deleting when cancelled', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue(exchangeRates);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
     await screen.findByText('Base currency');
@@ -198,8 +199,8 @@ describe('ExchangeRatesTable', () => {
   });
 
   it('shows the informational note about how exchange rates are applied', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
-    exchangeRatesApi.getExchangeRates.mockResolvedValue(exchangeRates);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
+    exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
     await screen.findByText('Base currency');

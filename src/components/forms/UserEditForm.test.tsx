@@ -60,7 +60,7 @@ describe('UserEditForm', () => {
     authApi.getRoles.mockReset();
     authApi.getRoles.mockResolvedValue(roles);
     countriesApi.getCountries.mockReset();
-    countriesApi.getCountries.mockResolvedValue(countries);
+    countriesApi.getCountries.mockResolvedValue({ countries, totalCount: countries.length });
   });
 
   it('pre-fills every editable field from the given user', async () => {

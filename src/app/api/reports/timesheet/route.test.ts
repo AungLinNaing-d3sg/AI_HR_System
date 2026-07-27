@@ -120,6 +120,20 @@ describe('GET /api/reports/timesheet', () => {
     expect(body.report.items[0].user.fullName).toBe('Lin Thit Htoo');
   });
 
+  it('forwards pageNo/pageSize query params to the backend', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
+    );
+    reportsBackend.getTimesheetReport.mockResolvedValue(reportDto);
+
+    await GET(requestWithQuery('?startDate=2025-01-01&endDate=2025-01-31&pageNo=2&pageSize=20'));
+
+    expect(reportsBackend.getTimesheetReport).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 20 }),
+      expect.any(String)
+    );
+  });
+
   it('translates isApproved=true into a boolean before calling the backend', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined

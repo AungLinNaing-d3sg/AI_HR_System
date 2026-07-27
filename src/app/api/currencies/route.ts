@@ -6,20 +6,24 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapCurrency, mapCurrencyList } from '@/lib/utils/mapCurrency';
+import { resolvePagination } from '@/lib/utils/pagination';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createCurrencySchema } from '@/lib/validators/currency.validators';
 import type { CurrencyListResponsePayload, CurrencyResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/currencies
+ * GET /api/currencies?pageNo=&pageSize=
  *
  * Reference data backing the currency dropdown on `/invoices/generate` and
  * the `/invoices/[id]` edit form (`GenerateInvoice`/`UpdateInvoice` both
- * require a `CurrencyId`). Open to any authenticated user, matching
- * `/api/resource-role-types` (currency code/symbol reference data carries no
- * sensitive information).
+ * require a `CurrencyId`) as well as the `/admin/currencies` management
+ * table's own server-side pagination. Open to any authenticated user,
+ * matching `/api/resource-role-types` (currency code/symbol reference data
+ * carries no sensitive information). `pageNo`/`pageSize` are optional - the
+ * dropdowns omit them (falling back to one large page below), while the
+ * management table always sends both to drive its pagination UI.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const claims = accessToken ? decodeAccessToken(accessToken) : null;
@@ -28,10 +32,15 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
 
+  const { pageNo, pageSize } = resolvePagination(new URL(request.url).searchParams, { pageNo: 1, pageSize: 100 });
+
   try {
-    const { Items } = await currenciesBackend.getAllCurrencies(accessToken);
+    const { Items, TotalCount, Page, PageSize } = await currenciesBackend.getAllCurrencies(accessToken, {
+      page: pageNo,
+      pageSize,
+    });
     return NextResponse.json<CurrencyListResponsePayload>(
-      { currencies: mapCurrencyList(Items) },
+      { currencies: mapCurrencyList(Items), totalCount: TotalCount, pageNo: Page, pageSize: PageSize },
       { status: 200 }
     );
   } catch (error) {

@@ -31,11 +31,17 @@ describe('currencies.api (client)', () => {
     axiosInstance.delete.mockReset();
   });
 
-  it('getCurrencies gets /currencies and returns the currency list', async () => {
-    axiosInstance.get.mockResolvedValue({ data: { currencies: [currency] } });
+  it('getCurrencies gets /currencies and returns the currency list with a total count', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { currencies: [currency], totalCount: 1 } });
     const result = await currenciesApi.getCurrencies();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/currencies');
-    expect(result).toEqual([currency]);
+    expect(axiosInstance.get).toHaveBeenCalledWith('/currencies', { params: {} });
+    expect(result).toEqual({ currencies: [currency], totalCount: 1 });
+  });
+
+  it('getCurrencies forwards pageNo/pageSize params', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { currencies: [currency], totalCount: 1 } });
+    await currenciesApi.getCurrencies({ pageNo: 2, pageSize: 10 });
+    expect(axiosInstance.get).toHaveBeenCalledWith('/currencies', { params: { pageNo: 2, pageSize: 10 } });
   });
 
   it('createCurrency posts /currencies with the form values and returns the new currency', async () => {

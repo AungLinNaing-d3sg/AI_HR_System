@@ -6,18 +6,23 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapResourceRoleType, mapResourceRoleTypeList } from '@/lib/utils/mapProjectAssignment';
+import { resolvePagination } from '@/lib/utils/pagination';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createResourceRoleTypeSchema } from '@/lib/validators/resourceRoleType.validators';
 import type { ResourceRoleTypeListResponsePayload, ResourceRoleTypeResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/resource-role-types
+ * GET /api/resource-role-types?pageNo=&pageSize=
  *
  * Reference data backing the role dropdown on `/projects/:id/assignments`
- * (`AssignResource` requires a `ResourceRoleTypeId`). Open to any
- * authenticated user, matching the rest of the Projects surface.
+ * (`AssignResource` requires a `ResourceRoleTypeId`) as well as the
+ * `/admin/resource-role-types` management table's own server-side
+ * pagination. Open to any authenticated user, matching the rest of the
+ * Projects surface. `pageNo`/`pageSize` are optional - the dropdown omits
+ * them (falling back to one large page below), while the management table
+ * always sends both to drive its pagination UI.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const claims = accessToken ? decodeAccessToken(accessToken) : null;
@@ -26,10 +31,15 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
 
+  const { pageNo, pageSize } = resolvePagination(new URL(request.url).searchParams, { pageNo: 1, pageSize: 100 });
+
   try {
-    const { Items } = await resourceRoleTypesBackend.getAllResourceRoleTypes(accessToken);
+    const { Items, TotalCount, Page, PageSize } = await resourceRoleTypesBackend.getAllResourceRoleTypes(
+      accessToken,
+      { page: pageNo, pageSize }
+    );
     return NextResponse.json<ResourceRoleTypeListResponsePayload>(
-      { roleTypes: mapResourceRoleTypeList(Items) },
+      { roleTypes: mapResourceRoleTypeList(Items), totalCount: TotalCount, pageNo: Page, pageSize: PageSize },
       { status: 200 }
     );
   } catch (error) {

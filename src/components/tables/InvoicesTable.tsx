@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Eye } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
 import { useInvoices } from '@/hooks/useInvoices';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { InvoiceStatusBadge } from '@/components/common/InvoiceStatusBadge';
+import { Pagination } from '@/components/common/Pagination';
 import { INVOICE_STATUS_LABELS } from '@/lib/constants/invoice.constants';
 import { cn } from '@/lib/utils/cn';
 import { INVOICE_STATUSES } from '@/types/domain.types';
@@ -29,28 +31,41 @@ function formatAmount(amount: number): string {
  * screen): a row of status-count chips (doubling as status filter tabs) and
  * an Invoice #/Project/Client/Billing Period/Amount/Currency/Status/
  * Generated/Actions table with a "View" link per row. The wireframe has no
- * project filter/dropdown on this screen, so this component requests one
- * unfiltered page of invoices from the backend and derives status counts/
- * filtering client-side instead - matching the `INVOICE_LIST_PAGE_SIZE`
- * comment in `invoice.constants.ts`.
+ * project filter/dropdown on this screen. Status counts are computed from a
+ * separate, unfiltered, unpaginated fetch (matching the `INVOICE_LIST_PAGE_SIZE`
+ * comment in `invoice.constants.ts`), so the chips stay accurate regardless
+ * of which status tab or page is selected; the row table itself is filtered
+ * by the selected status and paginated server-side (`pageNo`/`pageSize`).
  */
 export function InvoicesTable() {
   const [statusFilter, setStatusFilter] = useState<typeof ALL_STATUSES | InvoiceStatus>(ALL_STATUSES);
 
-  const { invoices, isLoading, isError, error, refetch } = useInvoices();
+  const { invoices: allInvoices, isLoading: isLoadingCounts } = useInvoices();
+
+  const { pageNo, pageSize, goToPage } = usePagination();
+  const {
+    invoices,
+    totalCount,
+    isLoading: isLoadingPage,
+    isError,
+    error,
+    refetch,
+  } = useInvoices({ status: statusFilter === ALL_STATUSES ? undefined : statusFilter, pageNo, pageSize });
 
   const statusCounts = useMemo(() => {
     const counts: Record<InvoiceStatus, number> = { Draft: 0, Sent: 0, Paid: 0, Void: 0, Cancelled: 0 };
-    for (const invoice of invoices) {
+    for (const invoice of allInvoices) {
       counts[invoice.status] += 1;
     }
     return counts;
-  }, [invoices]);
+  }, [allInvoices]);
 
-  const filteredInvoices = useMemo(
-    () => (statusFilter === ALL_STATUSES ? invoices : invoices.filter((invoice) => invoice.status === statusFilter)),
-    [invoices, statusFilter]
-  );
+  const isLoading = isLoadingCounts || isLoadingPage;
+
+  const handleSelectStatus = (status: typeof ALL_STATUSES | InvoiceStatus) => {
+    setStatusFilter(status);
+    goToPage(1);
+  };
 
   if (isLoading) {
     return (
@@ -78,7 +93,7 @@ export function InvoicesTable() {
           type="button"
           role="tab"
           aria-selected={statusFilter === ALL_STATUSES}
-          onClick={() => setStatusFilter(ALL_STATUSES)}
+          onClick={() => handleSelectStatus(ALL_STATUSES)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900',
             statusFilter === ALL_STATUSES
@@ -87,7 +102,7 @@ export function InvoicesTable() {
           )}
         >
           All
-          <span className="rounded-full bg-white/20 px-1.5 py-px text-[10px]">{invoices.length}</span>
+          <span className="rounded-full bg-white/20 px-1.5 py-px text-[10px]">{allInvoices.length}</span>
         </button>
         {INVOICE_STATUSES.map((status) => (
           <button
@@ -95,7 +110,7 @@ export function InvoicesTable() {
             type="button"
             role="tab"
             aria-selected={statusFilter === status}
-            onClick={() => setStatusFilter(status)}
+            onClick={() => handleSelectStatus(status)}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900',
               statusFilter === status
@@ -111,7 +126,7 @@ export function InvoicesTable() {
         ))}
       </div>
 
-      {invoices.length === 0 ? (
+      {allInvoices.length === 0 ? (
         <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
           <p className="text-sm text-zinc-600">No invoices yet.</p>
           <Link
@@ -121,7 +136,7 @@ export function InvoicesTable() {
             Generate your first invoice
           </Link>
         </div>
-      ) : filteredInvoices.length === 0 ? (
+      ) : invoices.length === 0 ? (
         <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
           <p className="text-sm text-zinc-600">No invoices match this filter.</p>
         </div>
@@ -161,7 +176,7 @@ export function InvoicesTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredInvoices.map((invoice) => (
+              {invoices.map((invoice) => (
                 <tr key={invoice.id}>
                   <td className="px-4 py-3 font-mono text-xs text-zinc-700">{invoice.invoiceNumber}</td>
                   <td className="px-4 py-3 text-zinc-700">
@@ -194,6 +209,15 @@ export function InvoicesTable() {
           </table>
         </div>
       )}
+
+      <Pagination
+        pageNo={pageNo}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={goToPage}
+        isLoading={isLoadingPage}
+        itemLabel="invoices"
+      />
     </div>
   );
 }

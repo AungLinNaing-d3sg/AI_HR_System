@@ -40,6 +40,10 @@ function makeRequest(body: unknown): Request {
   });
 }
 
+function makeGetRequest(query = ''): Request {
+  return new Request(`https://example.com/api/resource-role-types${query}`);
+}
+
 describe('GET /api/resource-role-types', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
@@ -48,7 +52,7 @@ describe('GET /api/resource-role-types', () => {
 
   it('returns 401 when there is no access token', async () => {
     mockCookieStore.get.mockReturnValue(undefined);
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(401);
   });
 
@@ -57,7 +61,7 @@ describe('GET /api/resource-role-types', () => {
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
     );
     resourceRoleTypesBackend.getAllResourceRoleTypes.mockResolvedValue({ Items: [] });
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(200);
     expect(resourceRoleTypesBackend.getAllResourceRoleTypes).toHaveBeenCalled();
   });
@@ -73,11 +77,31 @@ describe('GET /api/resource-role-types', () => {
       PageSize: 100,
     });
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.roleTypes).toEqual([{ id: 'role-1', name: 'Senior Developer', description: 'Senior engineer' }]);
+    expect(body.totalCount).toBe(1);
+  });
+
+  it('forwards pageNo/pageSize query params to the backend', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+    );
+    resourceRoleTypesBackend.getAllResourceRoleTypes.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      Page: 2,
+      PageSize: 5,
+    });
+
+    await GET(makeGetRequest('?pageNo=2&pageSize=5'));
+
+    expect(resourceRoleTypesBackend.getAllResourceRoleTypes).toHaveBeenCalledWith(expect.any(String), {
+      page: 2,
+      pageSize: 5,
+    });
   });
 
   it('returns a normalized error when the backend call fails', async () => {
@@ -86,7 +110,7 @@ describe('GET /api/resource-role-types', () => {
     );
     resourceRoleTypesBackend.getAllResourceRoleTypes.mockRejectedValue(new Error('network down'));
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(500);
   });
 });

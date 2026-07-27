@@ -60,7 +60,7 @@ describe('InvoiceEditForm', () => {
     onSaved.mockReset();
     currenciesApi.getCurrencies.mockReset();
     invoicesApi.updateInvoice.mockReset();
-    currenciesApi.getCurrencies.mockResolvedValue([currency]);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [currency], totalCount: 1 });
   });
 
   it('pre-fills the form with the invoice values', async () => {

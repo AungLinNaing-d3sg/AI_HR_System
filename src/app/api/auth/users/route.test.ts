@@ -37,6 +37,10 @@ function jsonRequest(body: unknown): Request {
   });
 }
 
+function makeGetRequest(query = ''): Request {
+  return new Request(`https://example.com/api/auth/users${query}`);
+}
+
 const validPayload = {
   username: 'jdoe',
   email: 'jdoe@example.com',
@@ -54,7 +58,7 @@ describe('GET /api/auth/users', () => {
 
   it('returns 401 when there is no access token', async () => {
     mockCookieStore.get.mockReturnValue(undefined);
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(401);
     expect(authBackend.getUserList).not.toHaveBeenCalled();
   });
@@ -66,7 +70,7 @@ describe('GET /api/auth/users', () => {
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(403);
     expect(authBackend.getUserList).not.toHaveBeenCalled();
   });
@@ -97,7 +101,7 @@ describe('GET /api/auth/users', () => {
       ],
     });
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -128,11 +132,24 @@ describe('GET /api/auth/users', () => {
     );
     authBackend.getUserList.mockResolvedValue({ TotalCount: 0, PageNo: 1, PageSize: 100, Items: [] });
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     const body = await response.json();
 
     expect(body.users).toEqual([]);
     expect(body.totalCount).toBe(0);
+  });
+
+  it('forwards pageNo/pageSize query params to the backend', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    authBackend.getUserList.mockResolvedValue({ TotalCount: 0, PageNo: 2, PageSize: 5, Items: [] });
+
+    await GET(makeGetRequest('?pageNo=2&pageSize=5'));
+
+    expect(authBackend.getUserList).toHaveBeenCalledWith(token, { pageNo: 2, pageSize: 5 });
   });
 
   it('returns a normalized error when the backend call fails', async () => {
@@ -143,7 +160,7 @@ describe('GET /api/auth/users', () => {
     );
     authBackend.getUserList.mockRejectedValue(new Error('network down'));
 
-    const response = await GET();
+    const response = await GET(makeGetRequest());
     expect(response.status).toBe(500);
   });
 });

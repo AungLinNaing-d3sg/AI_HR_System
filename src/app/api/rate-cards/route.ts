@@ -6,20 +6,25 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapRateCardList } from '@/lib/utils/mapRateCard';
+import { resolvePagination } from '@/lib/utils/pagination';
+import { pickSearchParams } from '@/lib/utils/searchParams';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { createRateCardSchema } from '@/lib/validators/rateCard.validators';
 import type { RateCardListResponsePayload, RateCardMutationResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/rate-cards
+ * GET /api/rate-cards?pageNo=&pageSize=&countryId=
  *
- * Lists every rate card. Open to any authenticated user, matching
+ * Lists rate cards, backing both the `/admin/rate-cards` country summary
+ * cards (an unpaginated call) and its own paginated Country/Role/Daily Rate
+ * table (a paginated call additionally scoped to the selected `countryId`
+ * filter - see `RateCardsTable`). Open to any authenticated user, matching
  * `GET /api/currencies`/`GET /api/exchange-rates` (reference data used for
  * cost and invoice billing calculations - no sensitive information). `POST`
  * below is `SystemAdmin`-only, since adding a rate card affects cost/billing
  * calculations system-wide - see that handler's comment.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const claims = accessToken ? decodeAccessToken(accessToken) : null;
@@ -28,9 +33,20 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
 
+  const searchParams = new URL(request.url).searchParams;
+  const { pageNo, pageSize } = resolvePagination(searchParams, { pageNo: 1, pageSize: 100 });
+  const { countryId } = pickSearchParams(searchParams, ['countryId']);
+
   try {
-    const { Items } = await rateCardsBackend.getAllRateCards(accessToken);
-    return NextResponse.json<RateCardListResponsePayload>({ rateCards: mapRateCardList(Items) }, { status: 200 });
+    const { Items, TotalCount, Page, PageSize } = await rateCardsBackend.getAllRateCards(accessToken, {
+      page: pageNo,
+      pageSize,
+      countryId,
+    });
+    return NextResponse.json<RateCardListResponsePayload>(
+      { rateCards: mapRateCardList(Items), totalCount: TotalCount, pageNo: Page, pageSize: PageSize },
+      { status: 200 }
+    );
   } catch (error) {
     logger.error('Get rate cards failed', error);
     const details = getBackendErrorDetails(error, 'Could not load rate cards.');

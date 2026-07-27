@@ -3,12 +3,14 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Download } from 'lucide-react';
+import { usePagination } from '@/hooks/usePagination';
 import { useProjects } from '@/hooks/useProjects';
 import { useTimesheetReport } from '@/hooks/useTimesheetReport';
 import { useExportTimesheetReport } from '@/hooks/useExportTimesheetReport';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { Pagination } from '@/components/common/Pagination';
 import { REPORT_EXPORT_FORMAT_LABELS, REPORT_EXPORT_FORMATS } from '@/lib/constants/report.constants';
 import { getCurrentMonthDateRange } from '@/lib/utils/dateRange';
 import { cn } from '@/lib/utils/cn';
@@ -65,7 +67,10 @@ export function TimesheetReportTable() {
   const [filterError, setFilterError] = useState<string | null>(null);
 
   const { projects } = useProjects();
-  const { report, isLoading, isError, error, refetch } = useTimesheetReport(appliedFilters);
+  const { pageNo, pageSize, goToPage } = usePagination();
+  const { report, isLoading, isError, error, refetch } = useTimesheetReport(
+    appliedFilters ? { ...appliedFilters, pageNo, pageSize } : null
+  );
   const { exportReport, isExporting, error: exportError, reset: resetExportError } = useExportTimesheetReport();
 
   const items = useMemo(() => report?.items ?? [], [report]);
@@ -74,7 +79,9 @@ export function TimesheetReportTable() {
     () => (userInput === ALL_USERS ? items : items.filter((item) => item.user.id === userInput)),
     [items, userInput]
   );
-  const totalHours = filteredItems.reduce((sum, item) => sum + item.hours, 0);
+  // Report-wide total (unaffected by which page is currently shown) - see
+  // `TimesheetReportResponseDto.TotalHours` in `types/api.types.ts`.
+  const totalHours = report?.totalHours ?? 0;
 
   const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -93,6 +100,7 @@ export function TimesheetReportTable() {
       endDate: toInput,
       projectId: projectInput === ALL_PROJECTS ? undefined : projectInput,
     });
+    goToPage(1);
   };
 
   const handleReset = () => {
@@ -102,6 +110,7 @@ export function TimesheetReportTable() {
     setUserInput(ALL_USERS);
     setFilterError(null);
     setAppliedFilters({ startDate: defaultRange.from, endDate: defaultRange.to });
+    goToPage(1);
   };
 
   const handleExport = async (format: (typeof REPORT_EXPORT_FORMATS)[number]) => {
@@ -239,7 +248,7 @@ export function TimesheetReportTable() {
         <>
           <p className="text-sm text-zinc-500">
             Showing <span className="font-medium text-zinc-900">{filteredItems.length}</span>{' '}
-            {filteredItems.length === 1 ? 'entry' : 'entries'} &middot; Total hours:{' '}
+            {filteredItems.length === 1 ? 'entry' : 'entries'} on this page &middot; Total hours (all pages):{' '}
             <span className="font-medium text-zinc-900">{totalHours}h</span>
           </p>
 
@@ -303,6 +312,15 @@ export function TimesheetReportTable() {
               </table>
             </div>
           )}
+
+          <Pagination
+            pageNo={pageNo}
+            pageSize={pageSize}
+            totalCount={report?.totalCount ?? 0}
+            onPageChange={goToPage}
+            isLoading={isLoading}
+            itemLabel="entries"
+          />
         </>
       )}
     </div>

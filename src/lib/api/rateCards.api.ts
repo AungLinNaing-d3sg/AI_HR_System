@@ -9,9 +9,28 @@ import type { CreateRateCardFormValues, UpdateRateCardFormValues } from '@/lib/v
  * Axios directly; every call here is same-origin, against this app's own
  * `/api/rate-cards/*` Route Handlers.
  */
-export async function getRateCards(): Promise<RateCard[]> {
-  const { data } = await axiosInstance.get<RateCardListResponsePayload>('/rate-cards');
-  return data.rateCards;
+
+export interface RateCardListParams {
+  pageNo?: number;
+  pageSize?: number;
+  countryId?: string;
+}
+
+export interface RateCardListResult {
+  rateCards: RateCard[];
+  totalCount: number;
+}
+
+/**
+ * Lists rate cards. `params` is omitted by `CountriesTable`'s rate-card
+ * counts and `RateCardsTable`'s own country summary cards (which need every
+ * rate card), while `RateCardsTable`'s Country/Role/Daily Rate table always
+ * passes `pageNo`/`pageSize` (and `countryId`, for its "Filter by country"
+ * control) to drive its own server-side pagination.
+ */
+export async function getRateCards(params: RateCardListParams = {}): Promise<RateCardListResult> {
+  const { data } = await axiosInstance.get<RateCardListResponsePayload>('/rate-cards', { params });
+  return { rateCards: data.rateCards, totalCount: data.totalCount };
 }
 
 /** Returns only `{ id, countryId, resourceRoleTypeId, currencyId, hourlyRate, billingRate, effectiveDate, isActive }` - see `RateCardMutationResponsePayload`. */

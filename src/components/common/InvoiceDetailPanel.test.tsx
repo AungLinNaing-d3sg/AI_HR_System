@@ -86,7 +86,7 @@ describe('InvoiceDetailPanel', () => {
     invoicesApi.deleteInvoice.mockReset();
     invoicesApi.downloadInvoicePdf.mockReset();
     currenciesApi.getCurrencies.mockReset();
-    currenciesApi.getCurrencies.mockResolvedValue([]);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [], totalCount: 0 });
     window.print = jest.fn();
   });
 

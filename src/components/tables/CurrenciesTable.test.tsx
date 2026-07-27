@@ -46,7 +46,7 @@ describe('CurrenciesTable', () => {
   });
 
   it('shows an empty state when there are no currencies', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue([]);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [], totalCount: 0 });
     renderWithProviders(<CurrenciesTable />);
 
     expect(await screen.findByText(/no currencies yet/i)).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('CurrenciesTable', () => {
   });
 
   it('renders a row per currency, highlighting the base currency with a star badge', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     renderWithProviders(<CurrenciesTable />);
 
     expect(await screen.findByText('Singapore Dollar')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('CurrenciesTable', () => {
   });
 
   it('shows the informational note about the base currency', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     renderWithProviders(<CurrenciesTable />);
 
     await screen.findByText('Singapore Dollar');
@@ -79,7 +79,7 @@ describe('CurrenciesTable', () => {
   });
 
   it('disables the Delete action for the base currency', async () => {
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     renderWithProviders(<CurrenciesTable />);
 
     await screen.findByText('Singapore Dollar');
@@ -90,7 +90,7 @@ describe('CurrenciesTable', () => {
 
   it('opens the Add Currency modal when the header button is clicked', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     renderWithProviders(<CurrenciesTable />);
 
     await screen.findByText('Singapore Dollar');
@@ -101,7 +101,7 @@ describe('CurrenciesTable', () => {
 
   it('opens the Edit modal pre-filled for the clicked row', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     renderWithProviders(<CurrenciesTable />);
 
     await screen.findByText('Singapore Dollar');
@@ -114,7 +114,7 @@ describe('CurrenciesTable', () => {
 
   it('opens a confirm dialog before deleting and calls deleteCurrency on confirm', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     currenciesApi.deleteCurrency.mockResolvedValue(undefined);
     renderWithProviders(<CurrenciesTable />);
 
@@ -132,7 +132,7 @@ describe('CurrenciesTable', () => {
 
   it('closes the confirm dialog without deleting when cancelled', async () => {
     const user = userEvent.setup();
-    currenciesApi.getCurrencies.mockResolvedValue(currencies);
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     renderWithProviders(<CurrenciesTable />);
 
     await screen.findByText('Singapore Dollar');

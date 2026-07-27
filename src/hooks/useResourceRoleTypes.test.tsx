@@ -25,15 +25,16 @@ describe('useResourceRoleTypes', () => {
   });
 
   it('returns the role type list once loaded', async () => {
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     const { result } = renderHook(() => useResourceRoleTypes(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.roleTypes).toEqual(roleTypes);
+    expect(result.current.totalCount).toBe(roleTypes.length);
   });
 
   it('defaults to an empty array before data loads', () => {
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
     const { result } = renderHook(() => useResourceRoleTypes(), { wrapper });
     expect(result.current.roleTypes).toEqual([]);
   });

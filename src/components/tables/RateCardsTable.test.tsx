@@ -84,6 +84,20 @@ function renderWithProviders(ui: ReactNode) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
+/**
+ * Mimics the real `/api/rate-cards?countryId=` server-side filter (see
+ * `RateCardsTable`'s own dual unpaged/paged `useRateCards` calls): returns
+ * every rate card when no `countryId` is passed (the unpaged summary-card
+ * call, or the paged call with "All Countries" selected), and only the
+ * matching ones otherwise (the paged call with a country filter selected).
+ */
+function mockGetRateCards(all: RateCard[]) {
+  rateCardsApi.getRateCards.mockImplementation(async (params: { countryId?: string } = {}) => {
+    const filtered = params.countryId ? all.filter((rateCard) => rateCard.country.id === params.countryId) : all;
+    return { rateCards: filtered, totalCount: filtered.length };
+  });
+}
+
 describe('RateCardsTable', () => {
   beforeEach(() => {
     rateCardsApi.getRateCards.mockReset();
@@ -112,14 +126,14 @@ describe('RateCardsTable', () => {
   });
 
   it('shows an empty state when there are no rate cards yet', async () => {
-    rateCardsApi.getRateCards.mockResolvedValue([]);
+    mockGetRateCards([]);
     renderWithProviders(<RateCardsTable />);
 
     expect(await screen.findByText(/no rate cards yet/i)).toBeInTheDocument();
   });
 
   it('renders a summary card per country with role count and daily rate range', async () => {
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    mockGetRateCards(rateCards);
     renderWithProviders(<RateCardsTable />);
 
     expect(await screen.findByText('2 roles · SGD 400-700/day')).toBeInTheDocument();
@@ -129,7 +143,7 @@ describe('RateCardsTable', () => {
   });
 
   it('renders a table row per rate card', async () => {
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    mockGetRateCards(rateCards);
     renderWithProviders(<RateCardsTable />);
 
     await screen.findByText('2 roles · SGD 400-700/day');
@@ -140,49 +154,49 @@ describe('RateCardsTable', () => {
     expect(within(table).getAllByText('Senior Developer')).toHaveLength(2);
     expect(within(table).getAllByText('Active')).toHaveLength(3);
     expect(within(table).getAllByText('Inactive')).toHaveLength(1);
-    expect(screen.getByText('Showing 4 of 4 rate cards')).toBeInTheDocument();
+    expect(screen.getByText('4 rate cards match this filter')).toBeInTheDocument();
   });
 
   it('filters the table to a single country when its summary card is clicked, and clears on a second click', async () => {
     const user = userEvent.setup();
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    mockGetRateCards(rateCards);
     renderWithProviders(<RateCardsTable />);
 
     await screen.findByText('2 roles · SGD 400-700/day');
     await user.click(screen.getByRole('button', { name: /Singapore/ }));
 
-    expect(screen.getByText('Showing 2 of 4 rate cards')).toBeInTheDocument();
+    expect(screen.getByText('2 rate cards match this filter')).toBeInTheDocument();
     const table = screen.getByRole('table');
     expect(within(table).getAllByText('Singapore')).toHaveLength(2);
     expect(within(table).queryByText('India')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Singapore/ }));
-    expect(screen.getByText('Showing 4 of 4 rate cards')).toBeInTheDocument();
+    expect(screen.getByText('4 rate cards match this filter')).toBeInTheDocument();
   });
 
   it('filters the table via the country dropdown, synchronized with the cards', async () => {
     const user = userEvent.setup();
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    mockGetRateCards(rateCards);
     renderWithProviders(<RateCardsTable />);
 
     await screen.findByText('2 roles · SGD 400-700/day');
     await user.selectOptions(screen.getByLabelText('Filter by country:'), 'India');
 
-    expect(screen.getByText('Showing 2 of 4 rate cards')).toBeInTheDocument();
+    expect(screen.getByText('2 rate cards match this filter')).toBeInTheDocument();
     const table = screen.getByRole('table');
     expect(within(table).queryByText('Singapore')).not.toBeInTheDocument();
     expect(within(table).getAllByText('India')).toHaveLength(2);
 
     await user.selectOptions(screen.getByLabelText('Filter by country:'), 'All Countries');
-    expect(screen.getByText('Showing 4 of 4 rate cards')).toBeInTheDocument();
+    expect(screen.getByText('4 rate cards match this filter')).toBeInTheDocument();
   });
 
   it('opens the Add Rate Card modal when the header button is clicked', async () => {
     const user = userEvent.setup();
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
-    countriesApi.getCountries.mockResolvedValue([]);
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue([]);
-    currenciesApi.getCurrencies.mockResolvedValue([]);
+    mockGetRateCards(rateCards);
+    countriesApi.getCountries.mockResolvedValue({ countries: [], totalCount: 0 });
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes: [], totalCount: 0 });
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [], totalCount: 0 });
     renderWithProviders(<RateCardsTable />);
 
     await screen.findByText('2 roles · SGD 400-700/day');
@@ -193,11 +207,11 @@ describe('RateCardsTable', () => {
 
   it('opens the Edit modal pre-filled for the clicked row', async () => {
     const user = userEvent.setup();
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    mockGetRateCards(rateCards);
     // RateCardForm's country/role/currency reference-data hooks are called even in edit mode (see its comment).
-    countriesApi.getCountries.mockResolvedValue([]);
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue([]);
-    currenciesApi.getCurrencies.mockResolvedValue([]);
+    countriesApi.getCountries.mockResolvedValue({ countries: [], totalCount: 0 });
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes: [], totalCount: 0 });
+    currenciesApi.getCurrencies.mockResolvedValue({ currencies: [], totalCount: 0 });
     renderWithProviders(<RateCardsTable />);
 
     await screen.findByText('2 roles · SGD 400-700/day');
@@ -209,7 +223,7 @@ describe('RateCardsTable', () => {
 
   it('opens a confirm dialog before deleting and calls deleteRateCard on confirm', async () => {
     const user = userEvent.setup();
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    mockGetRateCards(rateCards);
     rateCardsApi.deleteRateCard.mockResolvedValue(undefined);
     renderWithProviders(<RateCardsTable />);
 
@@ -228,7 +242,7 @@ describe('RateCardsTable', () => {
 
   it('closes the confirm dialog without deleting when cancelled', async () => {
     const user = userEvent.setup();
-    rateCardsApi.getRateCards.mockResolvedValue(rateCards);
+    mockGetRateCards(rateCards);
     renderWithProviders(<RateCardsTable />);
 
     await screen.findByText('2 roles · SGD 400-700/day');

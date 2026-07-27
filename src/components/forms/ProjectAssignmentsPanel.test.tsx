@@ -87,7 +87,7 @@ describe('ProjectAssignmentsPanel', () => {
     projectsApi.getProject.mockResolvedValue(project);
     authApi.getUserList.mockResolvedValue(candidateUsers);
     authApi.searchUsers.mockResolvedValue(candidateUsers);
-    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue(roleTypes);
+    resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
   });
 
   it('shows a loading state initially', () => {

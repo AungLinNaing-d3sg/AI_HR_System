@@ -30,11 +30,13 @@ function authHeader(accessToken: string): { Authorization: string } {
 }
 
 /**
- * `[Auth]` - Mirrors `exchangeRatesBackend.getAllExchangeRates`'s defaults:
- * the `/admin/rate-cards` table has no pagination UI, so a large `pageSize`
- * is requested up front rather than only the backend's own default page of
- * 20 (see docs/HR_System_BE.postman_collection.json's `GetAllRateCards`
- * example).
+ * `[Auth]` - Mirrors `exchangeRatesBackend.getAllExchangeRates`'s defaults.
+ * Callers that omit `page`/`pageSize` (e.g. the `/admin/rate-cards` summary
+ * cards' unpaginated fetch) get one large page up front rather than only the
+ * backend's own default page of 20 (see
+ * docs/HR_System_BE.postman_collection.json's `GetAllRateCards` example);
+ * the table's own row list always passes explicit `page`/`pageSize` to drive
+ * its real server-side pagination (see `app/api/rate-cards/route.ts`).
  */
 export async function getAllRateCards(
   accessToken: string,

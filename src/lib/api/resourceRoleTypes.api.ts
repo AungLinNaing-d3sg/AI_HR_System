@@ -13,9 +13,28 @@ import type {
  * every call here is same-origin, against this app's own
  * `/api/resource-role-types/*` Route Handlers.
  */
-export async function getResourceRoleTypes(): Promise<ResourceRoleType[]> {
-  const { data } = await axiosInstance.get<ResourceRoleTypeListResponsePayload>('/resource-role-types');
-  return data.roleTypes;
+
+export interface ResourceRoleTypeListParams {
+  pageNo?: number;
+  pageSize?: number;
+}
+
+export interface ResourceRoleTypeListResult {
+  roleTypes: ResourceRoleType[];
+  totalCount: number;
+}
+
+/**
+ * Lists resource role types. `params` is omitted by reference-data dropdown
+ * callers (e.g. `ProjectAssignmentsPanel`/`RateCardForm`), which get one
+ * large page back; the `/admin/resource-role-types` management table always
+ * passes `pageNo`/`pageSize` to drive its own pagination UI.
+ */
+export async function getResourceRoleTypes(
+  params: ResourceRoleTypeListParams = {}
+): Promise<ResourceRoleTypeListResult> {
+  const { data } = await axiosInstance.get<ResourceRoleTypeListResponsePayload>('/resource-role-types', { params });
+  return { roleTypes: data.roleTypes, totalCount: data.totalCount };
 }
 
 export async function createResourceRoleType(

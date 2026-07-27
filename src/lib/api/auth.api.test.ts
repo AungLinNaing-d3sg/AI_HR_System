@@ -135,7 +135,7 @@ describe('auth.api (client)', () => {
     };
     axiosInstance.get.mockResolvedValue({ data: { users: [candidate], totalCount: 1 } });
     const result = await authApi.getUsers();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/users');
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/users', { params: {} });
     expect(result).toEqual({ users: [candidate], totalCount: 1 });
   });
 

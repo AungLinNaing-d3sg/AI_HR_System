@@ -16,9 +16,10 @@ export const REPORT_EXPORT_FORMAT_LABELS: Record<ReportExportFormat, string> = {
 };
 
 /**
- * `GenerateTimesheetReport` is paginated (`Page`/`PageSize`), but none of the
- * wireframe's report screens show pagination controls - so this app always
- * requests one large page instead of building pagination UI the design
- * doesn't call for.
+ * `GenerateTimesheetReport` is paginated (`Page`/`PageSize`). The
+ * `/reports/timesheet` table now drives real server-side pagination
+ * (`pageNo`/`pageSize` - see `TimesheetReportTable`/`usePagination`); this
+ * large default is only used as the fallback when a caller omits
+ * `pageNo`/`pageSize` entirely (see `resolvePagination`).
  */
 export const REPORT_PAGE_SIZE = 500;

@@ -8,13 +8,14 @@ import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapTimesheetReport } from '@/lib/utils/mapReport';
+import { resolvePagination } from '@/lib/utils/pagination';
 import { pickSearchParams } from '@/lib/utils/searchParams';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
 import { timesheetReportQuerySchema } from '@/lib/validators/report.validators';
 import type { TimesheetReportResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/reports/timesheet?startDate=&endDate=&projectId=&userId=&isApproved=
+ * GET /api/reports/timesheet?startDate=&endDate=&projectId=&userId=&isApproved=&pageNo=&pageSize=
  *
  * Backs the `/reports/timesheet` filter bar + data table
  * (`docs/HR_System_FE_wireframe.pdf`). `Report/*` endpoints are tagged only
@@ -23,6 +24,8 @@ import type { TimesheetReportResponsePayload } from '@/types/api.types';
  * a management operation, not something a plain `User` needs - this app's
  * own choice, matching the `PROJECT_MANAGEMENT_ROLES` gate already applied
  * to `/timesheets/periods` and the Approve action on `/timesheets/history`.
+ * `pageNo`/`pageSize` are optional, falling back to one large page
+ * (`REPORT_PAGE_SIZE`) if omitted.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -52,6 +55,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     );
   }
 
+  const { pageNo, pageSize } = resolvePagination(searchParams, { pageNo: 1, pageSize: REPORT_PAGE_SIZE });
+
   try {
     const dto = await reportsBackend.getTimesheetReport(
       {
@@ -60,8 +65,8 @@ export async function GET(request: Request): Promise<NextResponse> {
         projectId: parsed.data.projectId,
         userId: parsed.data.userId,
         isApproved: parsed.data.isApproved === undefined ? undefined : parsed.data.isApproved === 'true',
-        page: 1,
-        pageSize: REPORT_PAGE_SIZE,
+        page: pageNo,
+        pageSize,
       },
       accessToken
     );

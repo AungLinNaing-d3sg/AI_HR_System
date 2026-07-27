@@ -34,7 +34,7 @@ jobs:
           cd /home/cldhrsys/ai-hr-sys/AI_HR_System_FE
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
     
-          export DOCKERHUB_USERNAME=${{ vars.DOCKERHUB_USERNAME }}
+          export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
           export IMAGE_TAG=${{ github.sha }}
 
           docker compose pull

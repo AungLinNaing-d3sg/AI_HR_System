@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.github
+.vscode
+coverage
+dist
+Dockerfile
+docker-compose.yml
+README.md
+.env
+.env.*
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

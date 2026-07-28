@@ -8,7 +8,7 @@ import {
   REFRESH_TOKEN_MAX_AGE_SECONDS,
 } from '@/lib/constants/auth.constants';
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.APP_ENV === 'production';
 
 /**
  * Sets the access/refresh token cookies as httpOnly + Secure + SameSite=Strict,

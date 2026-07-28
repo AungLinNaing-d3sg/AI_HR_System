@@ -22,7 +22,7 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV=UAT
+ENV NODE_ENV=production
 
 # Also make it available at runtime (for any server-side code reading it directly)
 ARG BACKEND_API_URL

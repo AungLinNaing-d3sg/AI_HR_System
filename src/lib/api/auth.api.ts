@@ -13,6 +13,7 @@ import type {
   ChangePasswordFormValues,
   CreateUserFormValues,
   LoginFormValues,
+  ResetPasswordFormValues,
   UpdateProfileFormValues,
   UpdateUserFormValues,
 } from '@/lib/validators/auth.validators';
@@ -107,4 +108,15 @@ export async function getUsers(params: UsersListParams = {}): Promise<UsersPage>
 export async function updateUser(id: string, values: UpdateUserFormValues): Promise<AdminUserListItem> {
   const { data } = await axiosInstance.put<UpdateUserResponsePayload>(`/auth/users/${id}`, values);
   return data.user;
+}
+
+/**
+ * Resets another user's password - backs the `SystemAdmin`-only
+ * `/admin/users` management table's row-level "Reset Password" action (see
+ * `useResetPassword`/`ResetPasswordForm`). Unlike `changePassword`, there is
+ * no current-password confirmation: the backend independently enforces that
+ * only a `SystemAdmin` may call this.
+ */
+export async function resetPassword(id: string, values: ResetPasswordFormValues): Promise<void> {
+  await axiosInstance.put(`/auth/users/${id}/reset-password`, values);
 }

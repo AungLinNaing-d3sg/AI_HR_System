@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Ban, Pencil, UserCheck } from 'lucide-react';
+import { Ban, KeyRound, Pencil, UserCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePagination } from '@/hooks/usePagination';
 import { useUpdateUser } from '@/hooks/useUpdateUser';
@@ -11,6 +11,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { Pagination } from '@/components/common/Pagination';
+import { ResetPasswordFormModal } from '@/components/forms/ResetPasswordFormModal';
 import { UserEditFormModal } from '@/components/forms/UserEditFormModal';
 import { UserRoleBadge } from '@/components/common/UserRoleBadge';
 import {
@@ -45,6 +46,14 @@ type RoleCounts = Record<KnownUserRoleName, number> & { unavailable: number };
  * `useUpdateUser`, resubmitting the row's current values with only
  * `isActive` flipped) as the closest equivalent to delete/restore. The
  * signed-in admin can't deactivate their own account from here.
+ *
+ * The Action column also offers "Reset Password" (opens
+ * `ResetPasswordFormModal`, backed by `PUT /Auth/ResetPassword/{id}` via
+ * `useResetPassword`) so a `SystemAdmin` can set a new password for any
+ * account without knowing its current one. If the edited/reset row is the
+ * signed-in admin's own account, `useUpdateUser` also syncs the change into
+ * `auth.store` so the sidebar/header immediately reflect the new name
+ * instead of showing stale data until the next login.
  */
 export function UsersTable() {
   const { user: currentUser } = useAuth();
@@ -65,6 +74,7 @@ export function UsersTable() {
 
   const [editingUser, setEditingUser] = useState<AdminUserListItem | null>(null);
   const [pendingStatusChange, setPendingStatusChange] = useState<AdminUserListItem | null>(null);
+  const [resettingPasswordUser, setResettingPasswordUser] = useState<AdminUserListItem | null>(null);
 
   const isLoading = isLoadingCounts || isLoadingPage;
 
@@ -248,6 +258,15 @@ export function UsersTable() {
                         type="button"
                         variant="outline"
                         size="sm"
+                        onClick={() => setResettingPasswordUser(candidate)}
+                      >
+                        <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                        Reset Password
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         disabled={isSelf}
                         title={isSelf ? 'You cannot deactivate your own account.' : undefined}
                         onClick={() => {
@@ -290,6 +309,13 @@ export function UsersTable() {
         user={editingUser ?? undefined}
         onSuccess={() => setEditingUser(null)}
         onClose={() => setEditingUser(null)}
+      />
+
+      <ResetPasswordFormModal
+        open={resettingPasswordUser !== null}
+        user={resettingPasswordUser ?? undefined}
+        onSuccess={() => setResettingPasswordUser(null)}
+        onClose={() => setResettingPasswordUser(null)}
       />
 
       <ConfirmDialog

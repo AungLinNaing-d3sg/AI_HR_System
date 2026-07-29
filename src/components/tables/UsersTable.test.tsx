@@ -14,6 +14,7 @@ jest.mock('next/navigation', () => ({
 jest.mock('../../lib/api/auth.api', () => ({
   getUsers: jest.fn(),
   updateUser: jest.fn(),
+  resetPassword: jest.fn(),
   getRoles: jest.fn(),
   getCountries: jest.fn(),
 }));
@@ -25,6 +26,7 @@ jest.mock('../../lib/api/countries.api', () => ({
 const authApi = jest.requireMock('../../lib/api/auth.api') as {
   getUsers: jest.Mock;
   updateUser: jest.Mock;
+  resetPassword: jest.Mock;
   getRoles: jest.Mock;
 };
 const countriesApi = jest.requireMock('../../lib/api/countries.api') as { getCountries: jest.Mock };
@@ -89,6 +91,7 @@ describe('UsersTable', () => {
   beforeEach(() => {
     authApi.getUsers.mockReset();
     authApi.updateUser.mockReset();
+    authApi.resetPassword.mockReset();
     authApi.getRoles.mockReset();
     authApi.getRoles.mockResolvedValue([]);
     countriesApi.getCountries.mockReset();
@@ -205,6 +208,43 @@ describe('UsersTable', () => {
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Edit user' })).toBeInTheDocument();
+  });
+
+  it('opens the reset password modal for a row when its Reset Password action is clicked', async () => {
+    const user = userEvent.setup();
+    authApi.getUsers.mockResolvedValue({ users, totalCount: 3 });
+    renderWithProviders(<UsersTable />);
+
+    const table = await screen.findByRole('table');
+    const row = within(table).getByText('Sarah Chen').closest('tr') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: /reset password/i }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Reset password' })).toBeInTheDocument();
+  });
+
+  it('resets a user\'s password via the reset password modal', async () => {
+    const user = userEvent.setup();
+    authApi.getUsers.mockResolvedValue({ users, totalCount: 3 });
+    authApi.resetPassword.mockResolvedValue(undefined);
+    renderWithProviders(<UsersTable />);
+
+    const table = await screen.findByRole('table');
+    const row = within(table).getByText('Sarah Chen').closest('tr') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: /reset password/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('New password'), 'NewPass@123');
+    await user.type(within(dialog).getByLabelText('Confirm new password'), 'NewPass@123');
+    await user.click(within(dialog).getByRole('button', { name: 'Reset password' }));
+
+    await waitFor(() =>
+      expect(authApi.resetPassword).toHaveBeenCalledWith('user-2', {
+        newPassword: 'NewPass@123',
+        confirmNewPassword: 'NewPass@123',
+      })
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('disables the Deactivate action for the signed-in admin\'s own row', async () => {

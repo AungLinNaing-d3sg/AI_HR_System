@@ -2,6 +2,7 @@ import {
   changePasswordSchema,
   createUserSchema,
   loginSchema,
+  resetPasswordSchema,
   searchUsersQuerySchema,
   updateProfileSchema,
 } from './auth.validators';
@@ -100,6 +101,46 @@ describe('changePasswordSchema', () => {
   it('rejects a new password shorter than 8 characters', () => {
     const result = changePasswordSchema.safeParse({
       ...valid,
+      newPassword: 'Sh0rt@',
+      confirmNewPassword: 'Sh0rt@',
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('resetPasswordSchema', () => {
+  const valid = {
+    newPassword: 'NewPass@123',
+    confirmNewPassword: 'NewPass@123',
+  };
+
+  it('accepts a valid payload with no currentPassword field', () => {
+    expect(resetPasswordSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('rejects when confirmNewPassword does not match newPassword', () => {
+    const result = resetPasswordSchema.safeParse({
+      ...valid,
+      confirmNewPassword: 'Different@123',
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.join('.') === 'confirmNewPassword')).toBe(
+        true
+      );
+    }
+  });
+
+  it('rejects a new password that fails the complexity regex', () => {
+    const result = resetPasswordSchema.safeParse({
+      newPassword: 'alllowercase1',
+      confirmNewPassword: 'alllowercase1',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a new password shorter than 8 characters', () => {
+    const result = resetPasswordSchema.safeParse({
       newPassword: 'Sh0rt@',
       confirmNewPassword: 'Sh0rt@',
     });

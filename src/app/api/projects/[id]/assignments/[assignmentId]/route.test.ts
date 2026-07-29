@@ -39,6 +39,19 @@ const request = new Request('https://example.com/api/projects/project-1/assignme
   method: 'DELETE',
 });
 
+// This route handler intentionally exercises a failure path that calls
+// `logger.error` (see lib/utils/logger.ts), which forwards to the real
+// console. Silence it here so the negative-path test run stays noise-free,
+// without masking genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('DELETE /api/projects/:id/assignments/:assignmentId', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();

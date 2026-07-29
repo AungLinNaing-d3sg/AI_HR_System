@@ -168,4 +168,11 @@ describe('auth.api (client)', () => {
     expect(axiosInstance.put).toHaveBeenCalledWith('/auth/users/user-2', values);
     expect(result).toEqual(updated);
   });
+
+  it('resetPassword puts to /auth/users/:id/reset-password with the given values', async () => {
+    axiosInstance.put.mockResolvedValue({ data: { success: true } });
+    const values = { newPassword: 'NewPass@123', confirmNewPassword: 'NewPass@123' };
+    await authApi.resetPassword('user-2', values);
+    expect(axiosInstance.put).toHaveBeenCalledWith('/auth/users/user-2/reset-password', values);
+  });
 });

@@ -197,6 +197,27 @@ export interface UpdateUserResponseDto {
 }
 
 /**
+ * Mirrors the backend's `ResetPassword` request DTO (`PUT
+ * /Auth/ResetPassword/{id}`, see docs/HR_System_BE.postman_collection.json)
+ * - `SystemAdmin`-only, used by the `/admin/users` management table's
+ * row-level "Reset Password" action to set another account's password
+ * directly. Unlike `ChangePasswordRequest`, there is no `CurrentPassword`
+ * field: the caller is an admin acting on someone else's account, not the
+ * account owner proving they know their own current password.
+ */
+export interface ResetPasswordRequest {
+  NewPassword: string;
+  ConfirmNewPassword: string;
+}
+
+/**
+ * `ResetPassword` returns `Data: null` on success, verified against the
+ * documented example response (same pattern as
+ * `UpdateTimesheetEntryResponse`/`RemoveResourceResponse`).
+ */
+export type ResetPasswordResponse = null;
+
+/**
  * A single row returned by `GET /Auth/SearchUsers?email=&userName=` - the
  * data source for the searchable "Add User to Project" combobox on
  * `/projects/:id/assignments` (see `app/api/auth/search-users/route.ts`),

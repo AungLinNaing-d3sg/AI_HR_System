@@ -143,6 +143,15 @@ describe('authBackend.api (server)', () => {
     expect(result).toEqual(responseData);
   });
 
+  it('resetPassword puts to /Auth/ResetPassword/{id} with a Bearer header', async () => {
+    backendClient.put.mockResolvedValue({ data: null });
+    const payload = { NewPassword: 'NewPass@123', ConfirmNewPassword: 'NewPass@123' };
+    await authBackend.resetPassword('user-2', payload, 'access-token');
+    expect(backendClient.put).toHaveBeenCalledWith('/Auth/ResetPassword/user-2', payload, {
+      headers: { Authorization: 'Bearer access-token' },
+    });
+  });
+
   it('searchUsers gets /Auth/SearchUsers with a Bearer header and the given email/userName params', async () => {
     const results = [
       { UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null },

@@ -12,6 +12,7 @@ import type {
   LogoutRequest,
   RefreshTokenRequest,
   RefreshTokenResponse,
+  ResetPasswordRequest,
   SearchUsersResponse,
   UpdateProfileRequest,
   UpdateProfileResponse,
@@ -149,4 +150,21 @@ export async function updateUser(
     headers: authHeader(accessToken),
   });
   return response.data;
+}
+
+/**
+ * Resets another user's password to a value the calling `SystemAdmin`
+ * chooses - backs the `/admin/users` management table's row-level "Reset
+ * Password" action (see `app/api/auth/users/[id]/reset-password/route.ts`).
+ * `Data: null` on success (see `ResetPasswordResponse`), so there is nothing
+ * to map back to the caller beyond confirmation.
+ */
+export async function resetPassword(
+  id: string,
+  payload: ResetPasswordRequest,
+  accessToken: string
+): Promise<void> {
+  await backendClient.put(`/Auth/ResetPassword/${id}`, payload, {
+    headers: authHeader(accessToken),
+  });
 }

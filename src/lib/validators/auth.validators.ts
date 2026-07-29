@@ -58,6 +58,31 @@ export const changePasswordSchema = z
   });
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
+/**
+ * Backs the `SystemAdmin`-only `/admin/users` management table's row-level
+ * "Reset Password" action (`PUT /Auth/ResetPassword/{id}`, see
+ * `ResetPasswordForm`). Unlike `changePasswordSchema`, there is no
+ * `currentPassword` field - the admin doesn't know (and shouldn't need) the
+ * target account's existing password - and there is no "must differ from
+ * current password" refinement for the same reason.
+ */
+export const resetPasswordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, 'New password must be at least 8 characters.')
+      .regex(
+        PASSWORD_COMPLEXITY_REGEX,
+        'Password must include an uppercase letter, lowercase letter, number, and special character.'
+      ),
+    confirmNewPassword: z.string().min(1, 'Please confirm the new password.'),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmNewPassword'],
+  });
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
 export const createUserSchema = z.object({
   username: z.string().trim().min(3, 'Username must be at least 3 characters.').max(50, 'Username is too long.'),
   email: z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.'),

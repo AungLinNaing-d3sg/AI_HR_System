@@ -19,6 +19,19 @@ const authBackend = jest.requireMock('../../../../lib/api/authBackend.api') as {
 
 import { POST } from './route';
 
+// This route handler intentionally exercises failure paths that call
+// `logger.warn`/`logger.error` (see lib/utils/logger.ts), which forward to
+// the real console. Silence them here so expected/negative-path test runs
+// stay noise-free, without masking genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('POST /api/auth/refresh', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();

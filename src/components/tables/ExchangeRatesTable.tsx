@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Pencil, Plus, Star, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { usePagination } from '@/hooks/usePagination';
 import { useCurrencies } from '@/hooks/useCurrencies';
 import { useDeleteExchangeRate } from '@/hooks/useDeleteExchangeRate';
@@ -13,7 +13,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { Pagination } from '@/components/common/Pagination';
 import { ExchangeRateFormModal } from '@/components/forms/ExchangeRateFormModal';
 import { cn } from '@/lib/utils/cn';
-import type { Currency, ExchangeRate } from '@/types/domain.types';
+import type { ExchangeRate } from '@/types/domain.types';
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; exchangeRate: ExchangeRate } | null;
 
@@ -24,69 +24,25 @@ function formatEffectiveDate(value: string): string {
   return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
-/** Most recent (by `effectiveDate`) rate in `rates` FROM `baseCurrencyId` TO `currencyId`, or `null` if none exists. */
-function findLatestRate(rates: ExchangeRate[], baseCurrencyId: string, currencyId: string): ExchangeRate | null {
-  return rates
-    .filter((rate) => rate.fromCurrency.id === baseCurrencyId && rate.toCurrency.id === currencyId && rate.isActive)
-    .sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate))[0] ?? null;
-}
-
-interface CurrencySummaryCardProps {
-  currency: Currency;
-  baseCurrency: Currency | null;
-  latestRate: ExchangeRate | null;
-}
-
-/** One of the `/admin/exchange-rates` summary cards (`docs/HR_System_FE_wireframe.pdf`): the base currency plus its current rate to every other configured currency. */
-function CurrencySummaryCard({ currency, baseCurrency, latestRate }: CurrencySummaryCardProps) {
-  const isBase = currency.isBaseCurrency;
-
-  return (
-    <div
-      className={cn(
-        'rounded-lg border bg-white p-4 shadow-sm',
-        isBase ? 'border-amber-300 bg-amber-50/40' : 'border-zinc-200'
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold text-zinc-900">{currency.code}</p>
-          <p className="text-xs text-zinc-500">{currency.name}</p>
-        </div>
-        <span className="text-sm font-medium text-zinc-500">{currency.symbol}</span>
-      </div>
-
-      <div className="mt-3">
-        {isBase ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-            <Star className="h-3 w-3 fill-amber-500 text-amber-500" aria-hidden="true" />
-            Base currency
-          </span>
-        ) : baseCurrency && latestRate ? (
-          <p className="text-xs text-zinc-600">
-            1 {baseCurrency.code} = {latestRate.rate} {currency.code}
-          </p>
-        ) : (
-          <p className="text-xs text-zinc-400">No active rate</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /**
  * `/admin/exchange-rates` management page content (`docs/HR_System_FE_wireframe.pdf`):
- * currency summary cards at the top (the base currency plus its current rate
- * to every other currency), a From/To/Rate/Effective date table of every
- * rate defined FROM that base currency, an "+ Add Rate" action, per-row
- * Edit/Delete actions, and an informational note at the bottom.
+ * a From/To/Rate/Effective date table of every rate defined FROM the base
+ * currency, an "+ Add Rate" action, per-row Edit/Delete actions, and an
+ * informational note at the bottom.
  *
- * Owns its own header row, cards, and footer note (rather than splitting
+ * The base-currency summary cards previously shown above the table were
+ * removed (they duplicated the "Base currency" badge/rate info already
+ * visible in the table below and required an extra, unpaginated
+ * `useExchangeRates()` fetch of every rate just to compute each card's
+ * latest-rate figure); this component now only fetches the table's own
+ * paginated page of rates.
+ *
+ * Owns its own header row, table, and footer note (rather than splitting
  * them into `page.tsx`) for the same reason `CurrenciesTable` does: the "+
  * Add Rate" action opens a modal, not a routed page, so keeping the modal's
- * open/edit state, the cards, the table, and the delete confirmation
- * together in one client component avoids splitting closely-related state
- * across a Server Component boundary for no benefit.
+ * open/edit state, the table, and the delete confirmation together in one
+ * client component avoids splitting closely-related state across a Server
+ * Component boundary for no benefit.
  */
 export function ExchangeRatesTable() {
   const {
@@ -95,10 +51,6 @@ export function ExchangeRatesTable() {
     isError: isCurrenciesError,
     error: currenciesError,
   } = useCurrencies();
-  // Unpaginated - the summary cards above the table need every rate to
-  // compute the base currency's latest rate to each other currency, not just
-  // whichever ones happen to be on the table's current page.
-  const { exchangeRates, isLoading, isError, error, refetch } = useExchangeRates();
 
   const baseCurrency = currencies.find((currency) => currency.isBaseCurrency) ?? null;
 
@@ -107,8 +59,7 @@ export function ExchangeRatesTable() {
   // the wireframe's "/admin/exchange-rates" table (From/To/Rate/Effective
   // date, e.g. SGD -> USD, SGD -> INR); cross-rates between two non-base
   // currencies aren't part of this feature. Scoped server-side via
-  // `fromCurrencyId` (rather than filtering the unpaginated `exchangeRates`
-  // above) so this table's own pagination is correct.
+  // `fromCurrencyId` so this table's own pagination is correct.
   const {
     exchangeRates: pagedExchangeRates,
     totalCount: pagedTotalCount,
@@ -132,11 +83,10 @@ export function ExchangeRatesTable() {
       )
     : [];
 
-  const isPageLoading = isLoading || isLoadingCurrencies || isLoadingPaged;
-  const isPageError = isError || isCurrenciesError || isPagedError;
+  const isPageLoading = isLoadingCurrencies || isLoadingPaged;
+  const isPageError = isCurrenciesError || isPagedError;
 
   const handleRetry = () => {
-    refetch();
     refetchPaged();
   };
 
@@ -184,7 +134,7 @@ export function ExchangeRatesTable() {
 
       {isPageError && (
         <div className="space-y-3">
-          <Alert variant="error">{error ?? pagedError ?? currenciesError ?? 'Could not load exchange rates.'}</Alert>
+          <Alert variant="error">{pagedError ?? currenciesError ?? 'Could not load exchange rates.'}</Alert>
           <Button type="button" variant="outline" size="sm" onClick={handleRetry}>
             Try again
           </Button>
@@ -193,7 +143,7 @@ export function ExchangeRatesTable() {
 
       {!isPageLoading && !isPageError && (
         <>
-          {currencies.length === 0 ? (
+          {currencies.length === 0 && (
             <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
               <p className="text-sm text-zinc-600">
                 No currencies configured yet. Add currencies on{' '}
@@ -202,21 +152,6 @@ export function ExchangeRatesTable() {
                 </Link>{' '}
                 first.
               </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {currencies.map((currency) => (
-                <CurrencySummaryCard
-                  key={currency.id}
-                  currency={currency}
-                  baseCurrency={baseCurrency}
-                  latestRate={
-                    baseCurrency && currency.id !== baseCurrency.id
-                      ? findLatestRate(exchangeRates, baseCurrency.id, currency.id)
-                      : null
-                  }
-                />
-              ))}
             </div>
           )}
 

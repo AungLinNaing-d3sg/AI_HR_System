@@ -57,6 +57,19 @@ const assignmentDto = {
   IsActive: true,
 };
 
+// These route handlers intentionally exercise a failure path that calls
+// `logger.error` (see lib/utils/logger.ts), which forwards to the real
+// console. Silence it here so the negative-path test run stays noise-free,
+// without masking genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('GET /api/projects/:id/assignments', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();

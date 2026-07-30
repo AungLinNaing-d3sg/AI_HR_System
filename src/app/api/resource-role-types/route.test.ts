@@ -44,6 +44,19 @@ function makeGetRequest(query = ''): Request {
   return new Request(`https://example.com/api/resource-role-types${query}`);
 }
 
+// These route handlers intentionally exercise failure paths that call
+// `logger.error` (see lib/utils/logger.ts), which forwards to the real
+// console. Silence it here so negative-path test runs stay noise-free,
+// without masking genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('GET /api/resource-role-types', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();

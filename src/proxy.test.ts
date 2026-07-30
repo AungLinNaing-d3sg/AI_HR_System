@@ -18,6 +18,19 @@ const authBackend = jest.requireMock('./lib/api/authBackend.api') as {
 
 import { proxy } from './proxy';
 
+// The proxy intentionally exercises a failure path that calls `logger.warn`
+// (see lib/utils/logger.ts), which forwards to the real console. Silence it
+// here so the negative-path test run stays noise-free, without masking
+// genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 function makeToken(payload: Record<string, unknown>): string {
   const base64url = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url');
   return `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url(payload)}.sig`;

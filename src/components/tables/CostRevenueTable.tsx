@@ -241,8 +241,7 @@ export function CostRevenueTable() {
                         {project.breakdown.map((row, index) => (
                           <tr key={`${project.project.id}-${row.resourceRoleType}-${index}`}>
                             <td className="px-4 py-3 text-zinc-700">
-                              <span className="font-medium text-zinc-900">{project.project.name}</span>{' '}
-                              <span className="font-mono text-xs text-zinc-500">{project.project.code}</span>
+                              <span className="font-medium text-zinc-900">{project.project.name}</span>
                             </td>
                             <td className="px-4 py-3 text-zinc-600">{row.resourceRoleType}</td>
                             <td className="px-4 py-3 text-zinc-600">{row.hours}h</td>

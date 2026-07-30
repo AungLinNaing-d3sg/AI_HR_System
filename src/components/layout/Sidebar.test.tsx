@@ -104,6 +104,16 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: 'Resource Role Types' })).not.toBeInTheDocument();
   });
 
+  it('gives the nav list its own independent scroll container, separate from the surrounding shell', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin' });
+    const { container } = render(<Sidebar />);
+
+    const navList = container.querySelector('.sidebar-scrollbar');
+    expect(navList).toBeInTheDocument();
+    expect(navList).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto');
+  });
+
   it('shows the Billing/Invoices item to a ProjectAdmin but hides it from a plain User', () => {
     mockPathname = '/dashboard';
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });

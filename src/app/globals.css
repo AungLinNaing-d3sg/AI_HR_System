@@ -43,3 +43,31 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Thin, on-brand scrollbar for the sidebar's own nav list (`Sidebar.tsx`),
+ * which now scrolls independently of the main content area (`AppShell.tsx`).
+ * Scoped to `.sidebar-scrollbar` only so it never affects tables/forms/other
+ * scroll containers elsewhere in the app.
+ */
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-sidebar-active) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-sidebar-active);
+  border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-sidebar-foreground-muted);
+}

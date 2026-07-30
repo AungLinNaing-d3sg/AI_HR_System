@@ -287,8 +287,7 @@ export function TimesheetReportTable() {
                     <tr key={`${item.user.id}-${item.project.id}-${item.entryDate}-${index}`}>
                       <td className="px-4 py-3 text-zinc-700">{item.user.fullName}</td>
                       <td className="px-4 py-3 text-zinc-700">
-                        <span className="font-medium text-zinc-900">{item.project.name}</span>{' '}
-                        <span className="font-mono text-xs text-zinc-500">{item.project.code}</span>
+                        <span className="font-medium text-zinc-900">{item.project.name}</span>
                       </td>
                       <td className="px-4 py-3 text-zinc-600">{formatDate(item.entryDate)}</td>
                       <td className="px-4 py-3">

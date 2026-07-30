@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Clock, Trash2 } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Hourglass, Lock, Trash2 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApproveTimesheetEntry } from '@/hooks/useApproveTimesheetEntry';
 import { useDeleteTimesheetEntry } from '@/hooks/useDeleteTimesheetEntry';
 import { useTimesheetHistory } from '@/hooks/useTimesheetHistory';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
@@ -25,23 +27,30 @@ function formatDate(value: string): string {
 
 const ALL_PROJECTS = 'all';
 
-/** Plain text-link styling for the per-row "Edit" action, matching the wireframe's undecorated (no button border) Edit label. */
+/**
+ * Plain text-link styling for the per-row "Edit" action, matching the
+ * wireframe's undecorated (no button border) Edit label. `inline-flex h-8
+ * items-center` gives it the same box height as the adjacent `size="sm"`
+ * (`h-8`) Approve/Delete buttons so all row actions line up on one baseline
+ * regardless of whether they render as a link or a button.
+ */
 const EDIT_LINK_CLASSNAME =
-  'rounded-sm text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
+  'inline-flex h-8 items-center rounded-sm text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
 
 interface HistoryStatCardProps {
   label: string;
   value: string;
+  icon: LucideIcon;
   iconClassName: string;
 }
 
 /** Icon-beside-value stat card (`docs/HR_System_FE_wireframe.pdf`'s `/timesheets/history` screen), with the label underneath the value. */
-function HistoryStatCard({ label, value, iconClassName }: HistoryStatCardProps) {
+function HistoryStatCard({ label, value, icon: Icon, iconClassName }: HistoryStatCardProps) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-5">
+    <div className="rounded-lg border border-zinc-200 bg-white p-5 transition-shadow hover:shadow-sm">
       <div className="flex items-center gap-3">
         <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-md', iconClassName)}>
-          <Clock className="h-4 w-4" aria-hidden="true" />
+          <Icon className="h-4 w-4" aria-hidden="true" />
         </span>
         <div>
           <p className="text-2xl font-semibold text-zinc-900">{value}</p>
@@ -184,40 +193,69 @@ export function TimesheetHistoryTable() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <HistoryStatCard label="Total hours logged" value={`${totalHours}h`} iconClassName="bg-blue-100 text-blue-700" />
-        <HistoryStatCard label="Approved hours" value={`${approvedHours}h`} iconClassName="bg-green-100 text-green-700" />
-        <HistoryStatCard label="Pending approval" value={`${pendingHours}h`} iconClassName="bg-amber-100 text-amber-700" />
+        <HistoryStatCard
+          label="Total hours logged"
+          value={`${totalHours}h`}
+          icon={Clock}
+          iconClassName="bg-blue-100 text-blue-700"
+        />
+        <HistoryStatCard
+          label="Approved hours"
+          value={`${approvedHours}h`}
+          icon={CheckCircle2}
+          iconClassName="bg-green-100 text-green-700"
+        />
+        <HistoryStatCard
+          label="Pending approval"
+          value={`${pendingHours}h`}
+          icon={Hourglass}
+          iconClassName="bg-amber-100 text-amber-700"
+        />
       </div>
 
       <form onSubmit={handleFilterSubmit} className="space-y-2" aria-label="Filter timesheet history">
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-white p-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 bg-white p-4">
           <label htmlFor="history-from" className="sr-only">
             From
           </label>
-          <input
-            id="history-from"
-            type="date"
-            value={fromInput}
-            onChange={(event) => setFromInput(event.target.value)}
-            aria-invalid={filterError ? true : undefined}
-            aria-describedby={filterError ? 'history-filter-error' : undefined}
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-          />
+          <div className="relative">
+            <Calendar
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+              aria-hidden="true"
+            />
+            <Input
+              id="history-from"
+              type="date"
+              value={fromInput}
+              onChange={(event) => setFromInput(event.target.value)}
+              aria-invalid={filterError ? true : undefined}
+              aria-describedby={filterError ? 'history-filter-error' : undefined}
+              className="w-auto pl-9"
+            />
+          </div>
 
-          <span className="text-sm text-zinc-500">to</span>
+          <span className="text-sm text-zinc-500" aria-hidden="true">
+            to
+          </span>
 
           <label htmlFor="history-to" className="sr-only">
             To
           </label>
-          <input
-            id="history-to"
-            type="date"
-            value={toInput}
-            onChange={(event) => setToInput(event.target.value)}
-            aria-invalid={filterError ? true : undefined}
-            aria-describedby={filterError ? 'history-filter-error' : undefined}
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
-          />
+          <div className="relative">
+            <Calendar
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+              aria-hidden="true"
+            />
+            <Input
+              id="history-to"
+              type="date"
+              value={toInput}
+              onChange={(event) => setToInput(event.target.value)}
+              aria-invalid={filterError ? true : undefined}
+              aria-describedby={filterError ? 'history-filter-error' : undefined}
+              className="w-auto pl-9"
+            />
+          </div>
 
           <label htmlFor="history-project" className="sr-only">
             Project
@@ -236,10 +274,12 @@ export function TimesheetHistoryTable() {
             ))}
           </Select>
 
-          <Button type="submit">Filter</Button>
-          <Button type="button" variant="outline" onClick={handleFilterReset}>
-            Reset
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button type="submit">Filter</Button>
+            <Button type="button" variant="outline" onClick={handleFilterReset}>
+              Reset
+            </Button>
+          </div>
         </div>
         {filterError && (
           <p id="history-filter-error" role="alert" className="text-sm text-red-600">
@@ -289,7 +329,7 @@ export function TimesheetHistoryTable() {
               {filteredEntries.map((entry) => {
                 const isOwnEntry = entry.userId === user?.id;
                 return (
-                  <tr key={entry.id}>
+                  <tr key={entry.id} className="transition-colors hover:bg-zinc-50">
                     {canApprove && <td className="px-4 py-3 text-zinc-700">{entry.userName}</td>}
                     <td className="px-4 py-3 text-zinc-600">{formatDate(entry.entryDate)}</td>
                     <td className="px-4 py-3 text-zinc-700">
@@ -306,10 +346,17 @@ export function TimesheetHistoryTable() {
                     <td className="px-4 py-3">
                       <span
                         className={cn(
-                          'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                          'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
                           entry.isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
                         )}
                       >
+                        <span
+                          className={cn(
+                            'h-1.5 w-1.5 shrink-0 rounded-full',
+                            entry.isApproved ? 'bg-green-600' : 'bg-amber-600'
+                          )}
+                          aria-hidden="true"
+                        />
                         {entry.isApproved ? 'Approved' : 'Pending'}
                       </span>
                     </td>
@@ -321,7 +368,7 @@ export function TimesheetHistoryTable() {
                         const hasAction = canEdit || canApproveThis || canDelete;
 
                         return (
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex min-h-8 flex-wrap items-center gap-2.5">
                             {canEdit && (
                               <Link
                                 href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
@@ -340,12 +387,14 @@ export function TimesheetHistoryTable() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                className="border-green-200 text-green-700 hover:bg-green-50"
                                 isLoading={isApproving}
                                 onClick={() => {
                                   resetApproveError();
                                   void approveEntry(entry.id);
                                 }}
                               >
+                                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                                 Approve
                               </Button>
                             )}
@@ -364,7 +413,12 @@ export function TimesheetHistoryTable() {
                                 Delete
                               </Button>
                             )}
-                            {!hasAction && <span className="text-sm text-zinc-400">Locked</span>}
+                            {!hasAction && (
+                              <span className="inline-flex items-center gap-1.5 text-sm text-zinc-400">
+                                <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                                Locked
+                              </span>
+                            )}
                           </div>
                         );
                       })()}

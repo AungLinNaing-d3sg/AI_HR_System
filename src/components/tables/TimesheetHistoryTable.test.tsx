@@ -92,6 +92,19 @@ describe('TimesheetHistoryTable', () => {
     expect(screen.getByText('Approved')).toBeInTheDocument();
   });
 
+  it('renders the three stat cards with their hour totals', async () => {
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    expect(screen.getByText('Total hours logged')).toBeInTheDocument();
+    expect(screen.getByText('14h')).toBeInTheDocument(); // 8 + 6
+    expect(screen.getByText('Approved hours')).toBeInTheDocument();
+    expect(screen.getByText('6h')).toBeInTheDocument();
+    expect(screen.getByText('Pending approval')).toBeInTheDocument();
+    expect(screen.getByText('8h')).toBeInTheDocument();
+  });
+
   it('hides the User column and Approve action for a plain User', async () => {
     mockUseAuth.mockReturnValue({ role: 'User' });
     timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
@@ -127,7 +140,10 @@ describe('TimesheetHistoryTable', () => {
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Lin Thit Htoo');
-    expect(screen.getByText('Locked')).toBeInTheDocument();
+    const lockedLabel = screen.getByText('Locked');
+    expect(lockedLabel).toBeInTheDocument();
+    // "Locked" is paired with a decorative lock icon (`aria-hidden`), not read out twice by assistive tech.
+    expect(lockedLabel.parentElement?.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
   });
 
   it("shows an Edit link (not Locked) for the signed-in user's own already-approved entry, since editing resets it to Pending Approval", async () => {

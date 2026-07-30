@@ -53,7 +53,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <div className="sidebar-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-4">
         {sections.map((section, index) => (
           <div key={section.title ?? `section-${index}`}>
             {section.title && (

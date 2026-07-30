@@ -77,6 +77,19 @@ const validUpdatePayload = {
   notes: 'Updated notes',
 };
 
+// These route handlers intentionally exercise failure paths that call
+// `logger.error` (see lib/utils/logger.ts), which forwards to the real
+// console. Silence it here so negative-path test runs stay noise-free,
+// without masking genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('GET /api/invoices/:id', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();

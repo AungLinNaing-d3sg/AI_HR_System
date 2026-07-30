@@ -55,6 +55,19 @@ const currencyDto = {
   UpdatedAt: '2026-06-23T13:24:01Z',
 };
 
+// These route handlers intentionally exercise failure paths that call
+// `logger.error` (see lib/utils/logger.ts), which forwards to the real
+// console. Silence it here so negative-path test runs stay noise-free,
+// without masking genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('PUT /api/currencies/:id', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();

@@ -44,6 +44,19 @@ function jsonRequest(body: unknown): Request {
 const dto = { Id: 'period-1', PeriodStart: '2026-03-01', PeriodEnd: '2026-05-15', IsLocked: false };
 const validPayload = { periodStart: '2026-03-01', periodEnd: '2026-05-15' };
 
+// These route handlers intentionally exercise failure paths that call
+// `logger.error` (see lib/utils/logger.ts), which forwards to the real
+// console. Silence it here so negative-path test runs stay noise-free,
+// without masking genuinely unexpected console output.
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('GET /api/timesheets/periods', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();

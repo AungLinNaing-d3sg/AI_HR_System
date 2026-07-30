@@ -184,17 +184,23 @@ describe('CreateUserForm', () => {
     expect(await screen.findByText(/could not load roles/i)).toBeInTheDocument();
   });
 
-  it('renders the optional country dropdown populated from useCountries', async () => {
+  it('renders the optional country combobox populated from useCountries, showing every country once opened', async () => {
+    const user = userEvent.setup();
     renderWithProviders(<CreateUserForm />);
-    expect(await screen.findByRole('option', { name: 'Singapore' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'United States' })).toBeInTheDocument();
     expect(screen.getByLabelText('Country (optional)')).not.toBeRequired();
+
+    await user.click(screen.getByLabelText('Country (optional)'));
+    expect(await screen.findByRole('option', { name: /singapore/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /united states/i })).toBeInTheDocument();
   });
 
-  it('disables the country dropdown while countries are loading', () => {
+  it('shows a loading state in the country combobox while countries are loading', async () => {
     countriesApi.getCountries.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
     renderWithProviders(<CreateUserForm />);
-    expect(screen.getByLabelText('Country (optional)')).toBeDisabled();
+
+    await user.click(screen.getByLabelText('Country (optional)'));
+    expect(await screen.findByText(/loading countries/i)).toBeInTheDocument();
   });
 
   it('submits successfully without selecting a country (optional field)', async () => {
@@ -220,14 +226,16 @@ describe('CreateUserForm', () => {
     authApi.createUser.mockResolvedValue(createdUser);
     renderWithProviders(<CreateUserForm />);
     await screen.findByRole('option', { name: 'SystemAdmin' });
-    await screen.findByRole('option', { name: 'Singapore' });
 
     await user.type(screen.getByLabelText('Username'), 'jdoe');
     await user.type(screen.getByLabelText('Email'), 'jdoe@example.com');
     await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.type(screen.getByLabelText('Last name'), 'Doe');
-    await user.selectOptions(screen.getByLabelText('Country (optional)'), '22222222-2222-2222-2222-222222222201');
+
+    await user.click(screen.getByLabelText('Country (optional)'));
+    await user.click(await screen.findByRole('option', { name: /singapore/i }));
+
     await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
@@ -238,9 +246,12 @@ describe('CreateUserForm', () => {
     );
   });
 
-  it('shows an error alert when countries fail to load', async () => {
+  it('shows an error message in the country combobox when countries fail to load', async () => {
     countriesApi.getCountries.mockRejectedValue(new Error('network down'));
+    const user = userEvent.setup();
     renderWithProviders(<CreateUserForm />);
-    expect(await screen.findByText(/could not load countries/i)).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('Country (optional)'));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 });

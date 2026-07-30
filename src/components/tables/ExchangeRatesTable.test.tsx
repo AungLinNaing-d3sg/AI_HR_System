@@ -96,19 +96,19 @@ describe('ExchangeRatesTable', () => {
     renderWithProviders(<ExchangeRatesTable />);
 
     expect(await screen.findByText(/no exchange rates yet/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/no active rate/i)).toHaveLength(2);
   });
 
-  it('renders a summary card per currency, highlighting the base currency and showing conversion rates for the rest', async () => {
+  it('does not render currency summary cards above the table', async () => {
     currenciesApi.getCurrencies.mockResolvedValue({ currencies, totalCount: currencies.length });
     exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
-    expect(await screen.findByText('Base currency')).toBeInTheDocument();
-    // The same "1 SGD = <rate> <code>" text appears once in the summary
-    // card and once more in the table's Rate column subtitle.
-    expect(screen.getAllByText('1 SGD = 0.74 USD')).toHaveLength(2);
-    expect(screen.getAllByText('1 SGD = 62.5 INR')).toHaveLength(2);
+    await screen.findByRole('table');
+    expect(screen.queryByText('Base currency')).not.toBeInTheDocument();
+    // "1 SGD = <rate> <code>" now appears only once, in the table's Rate
+    // column subtitle - no longer duplicated in a summary card above it.
+    expect(screen.getAllByText('1 SGD = 0.74 USD')).toHaveLength(1);
+    expect(screen.getAllByText('1 SGD = 62.5 INR')).toHaveLength(1);
   });
 
   it('renders a table row per exchange rate with formatted dates and status', async () => {
@@ -116,8 +116,7 @@ describe('ExchangeRatesTable', () => {
     exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
-    await screen.findByText('Base currency');
-    const table = screen.getByRole('table');
+    const table = await screen.findByRole('table');
     expect(within(table).getAllByText('SGD')).toHaveLength(2);
     expect(within(table).getByText('USD')).toBeInTheDocument();
     expect(within(table).getByText('INR')).toBeInTheDocument();
@@ -131,7 +130,7 @@ describe('ExchangeRatesTable', () => {
     exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
-    await screen.findByText('Base currency');
+    await screen.findByRole('table');
     await user.click(screen.getByRole('button', { name: /add rate/i }));
 
     expect(screen.getByRole('heading', { name: 'Add exchange rate' })).toBeInTheDocument();
@@ -143,8 +142,7 @@ describe('ExchangeRatesTable', () => {
     exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates: [], totalCount: 0 });
     renderWithProviders(<ExchangeRatesTable />);
 
-    await screen.findAllByText(/no active rate/i);
-    expect(screen.getByRole('button', { name: /add rate/i })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: /add rate/i })).toBeDisabled());
   });
 
   it('opens the Edit modal pre-filled for the clicked row', async () => {
@@ -153,7 +151,7 @@ describe('ExchangeRatesTable', () => {
     exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
-    await screen.findByText('Base currency');
+    await screen.findByRole('table');
     // Rows are sorted by target currency code (INR before USD), so index 1 is the SGD -> USD row.
     const editButtons = screen.getAllByRole('button', { name: 'Edit' });
     await user.click(editButtons[1]);
@@ -169,7 +167,7 @@ describe('ExchangeRatesTable', () => {
     exchangeRatesApi.deleteExchangeRate.mockResolvedValue(undefined);
     renderWithProviders(<ExchangeRatesTable />);
 
-    await screen.findByText('Base currency');
+    await screen.findByRole('table');
     // Rows are sorted by target currency code (INR before USD), so index 1 is the SGD -> USD row (rate-1).
     const deleteButtons = screen.getAllByRole('button', { name: 'Delete' });
     await user.click(deleteButtons[1]);
@@ -188,7 +186,7 @@ describe('ExchangeRatesTable', () => {
     exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
-    await screen.findByText('Base currency');
+    await screen.findByRole('table');
     const deleteButtons = screen.getAllByRole('button', { name: 'Delete' });
     await user.click(deleteButtons[0]);
 
@@ -203,7 +201,7 @@ describe('ExchangeRatesTable', () => {
     exchangeRatesApi.getExchangeRates.mockResolvedValue({ exchangeRates, totalCount: exchangeRates.length });
     renderWithProviders(<ExchangeRatesTable />);
 
-    await screen.findByText('Base currency');
+    await screen.findByRole('table');
     expect(screen.getByText(/applied when generating invoices in non-base currencies/i)).toBeInTheDocument();
   });
 });

@@ -101,6 +101,15 @@ describe('TimesheetReportTable', () => {
     expect(screen.getByText(/total hours/i)).toBeInTheDocument();
   });
 
+  it('shows only the project name (no project code) in the Project column', async () => {
+    reportsApi.getTimesheetReport.mockResolvedValue(report);
+    renderWithProviders(<TimesheetReportTable />);
+
+    await screen.findByRole('cell', { name: 'Alex Kumar' });
+    expect(screen.queryByText('PRJ-ALPHA')).not.toBeInTheDocument();
+    expect(screen.queryByText(/PRJ-ALPHA/)).not.toBeInTheDocument();
+  });
+
   it('shows a validation error when Date From is after Date To', async () => {
     const user = userEvent.setup();
     reportsApi.getTimesheetReport.mockResolvedValue(report);

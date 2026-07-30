@@ -92,6 +92,36 @@ describe('TimesheetHistoryTable', () => {
     expect(screen.getByText('Approved')).toBeInTheDocument();
   });
 
+  it('shows only the project name (no project code) in the Project column', async () => {
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    expect(screen.queryByText('PRJ-001')).not.toBeInTheDocument();
+    expect(screen.queryByText(/PRJ-001/)).not.toBeInTheDocument();
+  });
+
+  it('renders a leading edit icon on the Edit action and right-aligns/border-strips the row actions', async () => {
+    mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Lin Thit Htoo');
+
+    const [editLink] = screen.getAllByRole('link', { name: 'Edit' });
+    expect(editLink.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+
+    const actionsContainer = editLink.parentElement;
+    expect(actionsContainer).toHaveClass('justify-end');
+
+    const deleteButton = screen.getByRole('button', { name: 'Delete' });
+    const deleteClassNames = deleteButton.className.split(/\s+/);
+    // `border-0` (zero border-width) wins over the `outline` variant's `border` utility once
+    // merged by `twMerge`, so no border renders even though a border-color utility remains.
+    expect(deleteClassNames).toContain('border-0');
+    expect(deleteClassNames).not.toContain('border');
+  });
+
   it('renders the three stat cards with their hour totals', async () => {
     timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
     renderWithProviders(<TimesheetHistoryTable />);

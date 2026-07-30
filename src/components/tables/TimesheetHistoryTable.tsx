@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Calendar, CheckCircle2, Clock, Hourglass, Lock, Trash2 } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Hourglass, Lock, Pencil, Trash2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApproveTimesheetEntry } from '@/hooks/useApproveTimesheetEntry';
@@ -32,10 +32,21 @@ const ALL_PROJECTS = 'all';
  * wireframe's undecorated (no button border) Edit label. `inline-flex h-8
  * items-center` gives it the same box height as the adjacent `size="sm"`
  * (`h-8`) Approve/Delete buttons so all row actions line up on one baseline
- * regardless of whether they render as a link or a button.
+ * regardless of whether they render as a link or a button. `gap-1.5` spaces
+ * the leading `Pencil` icon from the "Edit" text the same way the
+ * Approve/Delete buttons space their own icons.
  */
 const EDIT_LINK_CLASSNAME =
-  'inline-flex h-8 items-center rounded-sm text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
+  'inline-flex h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
+
+/**
+ * Borderless button styling shared by the row-level Approve/Delete actions -
+ * only the `Button` `outline` variant's border is stripped (`border-0`,
+ * `bg-transparent`) so the buttons read as plain icon+label actions like
+ * "Edit", while keeping the same `size="sm"` box height/padding and a subtle
+ * tinted hover background for affordance.
+ */
+const ACTION_BUTTON_CLASSNAME = 'border-0 bg-transparent';
 
 interface HistoryStatCardProps {
   label: string;
@@ -88,8 +99,10 @@ function matchesFilters(
  * `User`, every entry for `ProjectAdmin`/`SystemAdmin`), so this component
  * only adds the User column for the roles that can see everyone's entries.
  *
- * Actions column, per row: "Edit" (a plain text link, not a bordered button -
- * matching the wireframe) jumps to `/timesheets` pre-navigated to that
+ * Actions column, per row: all actions are right-aligned (the column's own
+ * header label included) and rendered without button borders - "Edit" (a
+ * plain text link, not a bordered button - matching the wireframe) jumps to
+ * `/timesheets` pre-navigated to that
  * entry's week, reusing the grid's own create/update flow rather than
  * duplicating it here, for the signed-in user's own entry, *including* an
  * already-approved one - editing it resets it to Pending Approval and
@@ -320,7 +333,7 @@ export function TimesheetHistoryTable() {
                 <th scope="col" className="px-4 py-3 font-medium">
                   Status
                 </th>
-                <th scope="col" className="px-4 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 text-right font-medium">
                   Actions
                 </th>
               </tr>
@@ -334,9 +347,6 @@ export function TimesheetHistoryTable() {
                     <td className="px-4 py-3 text-zinc-600">{formatDate(entry.entryDate)}</td>
                     <td className="px-4 py-3 text-zinc-700">
                       <span className="font-medium text-zinc-900">{entry.projectName}</span>
-                      {entry.projectCode && (
-                        <span className="ml-1 font-mono text-xs text-zinc-500">{entry.projectCode}</span>
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-zinc-900">{entry.hours}</span>{' '}
@@ -368,7 +378,7 @@ export function TimesheetHistoryTable() {
                         const hasAction = canEdit || canApproveThis || canDelete;
 
                         return (
-                          <div className="flex min-h-8 flex-wrap items-center gap-2.5">
+                          <div className="flex min-h-8 flex-wrap items-center justify-end gap-2.5">
                             {canEdit && (
                               <Link
                                 href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
@@ -379,6 +389,7 @@ export function TimesheetHistoryTable() {
                                     : undefined
                                 }
                               >
+                                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                                 Edit
                               </Link>
                             )}
@@ -387,7 +398,7 @@ export function TimesheetHistoryTable() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="border-green-200 text-green-700 hover:bg-green-50"
+                                className={cn(ACTION_BUTTON_CLASSNAME, 'text-green-700 hover:bg-green-50')}
                                 isLoading={isApproving}
                                 onClick={() => {
                                   resetApproveError();
@@ -403,7 +414,7 @@ export function TimesheetHistoryTable() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="border-red-200 text-red-600 hover:bg-red-50"
+                                className={cn(ACTION_BUTTON_CLASSNAME, 'text-red-600 hover:bg-red-50')}
                                 onClick={() => {
                                   resetDeleteError();
                                   setPendingDelete(entry);

@@ -99,6 +99,15 @@ describe('CostRevenueTable', () => {
     expect(screen.getByText(/margin/i)).toBeInTheDocument();
   });
 
+  it('shows only the project name (no project code) in the Project column', async () => {
+    reportsApi.getMonthlyCostRevenue.mockResolvedValue(report);
+    renderWithProviders(<CostRevenueTable />);
+
+    expect(await screen.findByText('Senior Developer')).toBeInTheDocument();
+    expect(screen.queryByText('PRJ-001')).not.toBeInTheDocument();
+    expect(screen.queryByText(/PRJ-001/)).not.toBeInTheDocument();
+  });
+
   it('exports the report when an export button is clicked', async () => {
     const user = userEvent.setup();
     reportsApi.getMonthlyCostRevenue.mockResolvedValue(report);

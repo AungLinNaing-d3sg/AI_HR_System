@@ -28,25 +28,15 @@ function formatDate(value: string): string {
 const ALL_PROJECTS = 'all';
 
 /**
- * Plain text-link styling for the per-row "Edit" action, matching the
- * wireframe's undecorated (no button border) Edit label. `inline-flex h-8
- * items-center` gives it the same box height as the adjacent `size="sm"`
- * (`h-8`) Approve/Delete buttons so all row actions line up on one baseline
- * regardless of whether they render as a link or a button. `gap-1.5` spaces
- * the leading `Pencil` icon from the "Edit" text the same way the
- * Approve/Delete buttons space their own icons.
+ * Bordered, button-look styling for the per-row "Edit" action `<Link>`,
+ * matching `ProjectsTable`'s own `ACTION_LINK_CLASSNAME` convention: the same
+ * `h-8` height, border, background, and hover affordance as the adjacent
+ * `size="sm"` `outline`-variant Approve/Delete `Button`s, so every row action
+ * renders as an identically-sized, identically-styled control regardless of
+ * whether it navigates (a link) or triggers a click handler (a button).
  */
-const EDIT_LINK_CLASSNAME =
-  'inline-flex h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
-
-/**
- * Borderless button styling shared by the row-level Approve/Delete actions -
- * only the `Button` `outline` variant's border is stripped (`border-0`,
- * `bg-transparent`) so the buttons read as plain icon+label actions like
- * "Edit", while keeping the same `size="sm"` box height/padding and a subtle
- * tinted hover background for affordance.
- */
-const ACTION_BUTTON_CLASSNAME = 'border-0 bg-transparent';
+const ACTION_LINK_CLASSNAME =
+  'inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
 
 interface HistoryStatCardProps {
   label: string;
@@ -100,10 +90,13 @@ function matchesFilters(
  * only adds the User column for the roles that can see everyone's entries.
  *
  * Actions column, per row: all actions are right-aligned (the column's own
- * header label included) and rendered without button borders - "Edit" (a
- * plain text link, not a bordered button - matching the wireframe) jumps to
- * `/timesheets` pre-navigated to that
- * entry's week, reusing the grid's own create/update flow rather than
+ * header label included) and rendered as identically-sized, identically-styled
+ * bordered controls - same `h-8` box height, border, corner radius, and hover
+ * affordance, with only a per-action text/border tint (neutral for Edit,
+ * green for Approve, red for Delete) and a tight `gap-1.5` between them to
+ * keep the actions column as narrow as possible. "Edit" (a `<Link>` styled to
+ * look identical to the adjacent buttons) jumps to `/timesheets` pre-navigated
+ * to that entry's week, reusing the grid's own create/update flow rather than
  * duplicating it here, for the signed-in user's own entry, *including* an
  * already-approved one - editing it resets it to Pending Approval and
  * requires the Project Admin to re-approve it, so it is never locked out for
@@ -378,11 +371,11 @@ export function TimesheetHistoryTable() {
                         const hasAction = canEdit || canApproveThis || canDelete;
 
                         return (
-                          <div className="flex min-h-8 flex-wrap items-center justify-end gap-2.5">
+                          <div className="flex min-h-8 flex-wrap items-center justify-end gap-1.5">
                             {canEdit && (
                               <Link
                                 href={`/timesheets?week=${getMondayOfWeek(new Date(`${entry.entryDate}T00:00:00.000Z`))}`}
-                                className={EDIT_LINK_CLASSNAME}
+                                className={ACTION_LINK_CLASSNAME}
                                 title={
                                   entry.isApproved
                                     ? 'Editing this entry resets it to Pending Approval for re-review.'
@@ -398,7 +391,7 @@ export function TimesheetHistoryTable() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className={cn(ACTION_BUTTON_CLASSNAME, 'text-green-700 hover:bg-green-50')}
+                                className="border-green-200 text-green-700 hover:bg-green-50"
                                 isLoading={isApproving}
                                 onClick={() => {
                                   resetApproveError();
@@ -414,7 +407,7 @@ export function TimesheetHistoryTable() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className={cn(ACTION_BUTTON_CLASSNAME, 'text-red-600 hover:bg-red-50')}
+                                className="border-red-200 text-red-600 hover:bg-red-50"
                                 onClick={() => {
                                   resetDeleteError();
                                   setPendingDelete(entry);

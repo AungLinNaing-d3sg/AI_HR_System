@@ -101,7 +101,7 @@ describe('TimesheetHistoryTable', () => {
     expect(screen.queryByText(/PRJ-001/)).not.toBeInTheDocument();
   });
 
-  it('renders a leading edit icon on the Edit action and right-aligns/border-strips the row actions', async () => {
+  it('renders a leading edit icon and right-aligns the row actions, with Edit matching the bordered Approve/Delete buttons', async () => {
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'user-1' } });
     timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
     renderWithProviders(<TimesheetHistoryTable />);
@@ -110,16 +110,17 @@ describe('TimesheetHistoryTable', () => {
 
     const [editLink] = screen.getAllByRole('link', { name: 'Edit' });
     expect(editLink.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+    // Same box height/border/corner-radius as the adjacent `size="sm"` `outline` buttons,
+    // so the link renders as a visually-identical control.
+    expect(editLink).toHaveClass('h-8', 'border', 'rounded-md');
 
     const actionsContainer = editLink.parentElement;
     expect(actionsContainer).toHaveClass('justify-end');
+    // A tight gap between actions keeps the actions column as narrow as possible.
+    expect(actionsContainer).toHaveClass('gap-1.5');
 
     const deleteButton = screen.getByRole('button', { name: 'Delete' });
-    const deleteClassNames = deleteButton.className.split(/\s+/);
-    // `border-0` (zero border-width) wins over the `outline` variant's `border` utility once
-    // merged by `twMerge`, so no border renders even though a border-color utility remains.
-    expect(deleteClassNames).toContain('border-0');
-    expect(deleteClassNames).not.toContain('border');
+    expect(deleteButton).toHaveClass('h-8', 'border-red-200');
   });
 
   it('renders the three stat cards with their hour totals', async () => {
@@ -159,6 +160,8 @@ describe('TimesheetHistoryTable', () => {
     await screen.findAllByText('Lin Thit Htoo');
     const approveButtons = screen.getAllByRole('button', { name: 'Approve' });
     expect(approveButtons).toHaveLength(1);
+    // Same bordered `h-8` box as the Edit/Delete actions, only tinted green for this action.
+    expect(approveButtons[0]).toHaveClass('h-8', 'border-green-200');
 
     await user.click(approveButtons[0]);
     await waitFor(() => expect(timesheetsApi.approveTimesheetEntry).toHaveBeenCalledWith('entry-1'));

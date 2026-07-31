@@ -14,6 +14,14 @@ import type {
  * docs/HR_System_BE.postman_collection.json) through `backendClient`. Only
  * Route Handlers under `app/api/reports/**` may import this file - it is
  * never bundled for the browser.
+ *
+ * Each admin report (`get*`/`export*`) has a `ProjectAdmin`-scoped "My"
+ * counterpart (`getMy*`/`exportMy*`) hitting `/Report/GenerateMy*` and
+ * `/Report/ExportMy*`. Those mirror the admin endpoint's request/response
+ * shape exactly, but the backend automatically scopes the result to the
+ * projects the calling `ProjectAdmin` is assigned to - the Route Handlers
+ * under `app/api/reports/**` pick which pair to call based on the caller's
+ * role (see e.g. `app/api/reports/timesheet/route.ts`).
  */
 
 function authHeader(accessToken: string): { Authorization: string } {
@@ -73,6 +81,26 @@ export async function exportTimesheetReport(
   return exportFile('/Report/ExportTimesheetReport', { ...query }, accessToken);
 }
 
+/** `ProjectAdmin`-scoped counterpart of {@link getTimesheetReport} - see the module doc comment above. */
+export async function getMyTimesheetReport(
+  query: TimesheetReportQuery,
+  accessToken: string
+): Promise<TimesheetReportResponseDto> {
+  const response = await backendClient.get<TimesheetReportResponseDto>('/Report/GenerateMyTimesheetReport', {
+    headers: authHeader(accessToken),
+    params: query,
+  });
+  return response.data;
+}
+
+/** `ProjectAdmin`-scoped counterpart of {@link exportTimesheetReport} - see the module doc comment above. */
+export async function exportMyTimesheetReport(
+  query: TimesheetReportExportQuery,
+  accessToken: string
+): Promise<ExportedReportFile> {
+  return exportFile('/Report/ExportMyTimesheetReport', { ...query }, accessToken);
+}
+
 export interface UserRolesSummaryQuery {
   startDate: string;
   endDate: string;
@@ -99,6 +127,26 @@ export async function exportUserRolesSummary(
   accessToken: string
 ): Promise<ExportedReportFile> {
   return exportFile('/Report/ExportUserRolesSummary', { ...query }, accessToken);
+}
+
+/** `ProjectAdmin`-scoped counterpart of {@link getUserRolesSummary} - see the module doc comment above. */
+export async function getMyUserRolesSummary(
+  query: UserRolesSummaryQuery,
+  accessToken: string
+): Promise<UserRolesSummaryResponseDto> {
+  const response = await backendClient.get<UserRolesSummaryResponseDto>('/Report/GenerateMyUserRolesSummary', {
+    headers: authHeader(accessToken),
+    params: query,
+  });
+  return response.data;
+}
+
+/** `ProjectAdmin`-scoped counterpart of {@link exportUserRolesSummary} - see the module doc comment above. */
+export async function exportMyUserRolesSummary(
+  query: UserRolesSummaryExportQuery,
+  accessToken: string
+): Promise<ExportedReportFile> {
+  return exportFile('/Report/ExportMyUserRolesSummary', { ...query }, accessToken);
 }
 
 export interface MonthlyCostRevenueQuery {
@@ -128,4 +176,24 @@ export async function exportMonthlyCostRevenue(
   accessToken: string
 ): Promise<ExportedReportFile> {
   return exportFile('/Report/ExportMonthlyCostRevenue', { ...query }, accessToken);
+}
+
+/** `ProjectAdmin`-scoped counterpart of {@link getMonthlyCostRevenue} - see the module doc comment above. */
+export async function getMyCostRevenue(
+  query: MonthlyCostRevenueQuery,
+  accessToken: string
+): Promise<MonthlyCostRevenueResponseDto> {
+  const response = await backendClient.get<MonthlyCostRevenueResponseDto>('/Report/GenerateMyCostRevenue', {
+    headers: authHeader(accessToken),
+    params: query,
+  });
+  return response.data;
+}
+
+/** `ProjectAdmin`-scoped counterpart of {@link exportMonthlyCostRevenue} - see the module doc comment above. */
+export async function exportMyCostRevenue(
+  query: MonthlyCostRevenueExportQuery,
+  accessToken: string
+): Promise<ExportedReportFile> {
+  return exportFile('/Report/ExportMyCostRevenue', { ...query }, accessToken);
 }

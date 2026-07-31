@@ -15,7 +15,8 @@ import { monthlyCostRevenueExportQuerySchema } from '@/lib/validators/report.val
  *
  * Streams back the raw xlsx/csv file `ExportMonthlyCostRevenue` returns -
  * see `app/api/reports/timesheet/export/route.ts` for the shared pattern
- * this mirrors.
+ * this mirrors, including the `ProjectAdmin` -> `ExportMyCostRevenue` /
+ * `SystemAdmin` -> `ExportMonthlyCostRevenue` routing.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -46,7 +47,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const file = await reportsBackend.exportMonthlyCostRevenue(parsed.data, accessToken);
+    const file =
+      role === 'ProjectAdmin'
+        ? await reportsBackend.exportMyCostRevenue(parsed.data, accessToken)
+        : await reportsBackend.exportMonthlyCostRevenue(parsed.data, accessToken);
 
     return new NextResponse(file.data, {
       status: 200,

@@ -18,7 +18,11 @@ import type { MonthlyCostRevenueResponsePayload } from '@/types/api.types';
  * Backs the `/reports/cost-revenue` KPI cards + cost/revenue table + chart
  * placeholder (`docs/HR_System_FE_wireframe.pdf`). Same
  * `PROJECT_MANAGEMENT_ROLES` gate as the other Report routes - project
- * cost/revenue is financial data, not something a plain `User` needs to see.
+ * cost/revenue is financial data, not something a plain `User` needs to see -
+ * and the same `ProjectAdmin` -> `GenerateMyCostRevenue`
+ * (`reportsBackend.getMyCostRevenue`) / `SystemAdmin` ->
+ * `GenerateMonthlyCostRevenue` (`reportsBackend.getMonthlyCostRevenue`)
+ * routing.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -49,7 +53,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const dto = await reportsBackend.getMonthlyCostRevenue(parsed.data, accessToken);
+    const dto =
+      role === 'ProjectAdmin'
+        ? await reportsBackend.getMyCostRevenue(parsed.data, accessToken)
+        : await reportsBackend.getMonthlyCostRevenue(parsed.data, accessToken);
     return NextResponse.json<MonthlyCostRevenueResponsePayload>(
       { report: mapMonthlyCostRevenue(dto) },
       { status: 200 }

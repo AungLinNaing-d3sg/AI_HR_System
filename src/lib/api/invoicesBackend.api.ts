@@ -18,6 +18,14 @@ import type { InvoiceStatus } from '@/types/domain.types';
  * docs/HR_System_BE.postman_collection.json) through `backendClient`. Only
  * Route Handlers under `app/api/invoices/**` may import this file - it is
  * never bundled for the browser.
+ *
+ * `getAllInvoices` (`/Invoice/GetAllInvoices`) has a `ProjectAdmin`-scoped
+ * counterpart, `getMyInvoices` (`/Invoice/GetMyInvoices`) - mirroring the
+ * Report domain's own `get*`/`getMy*` pair (see `reportsBackend.api.ts`).
+ * Both share the same query params and response shape; the backend
+ * automatically scopes `GetMyInvoices` to the projects the calling
+ * `ProjectAdmin` is assigned to. `app/api/invoices/route.ts` picks which one
+ * to call based on the caller's role.
  */
 
 function authHeader(accessToken: string): { Authorization: string } {
@@ -33,6 +41,15 @@ export interface InvoiceListQuery {
 
 export async function getAllInvoices(query: InvoiceListQuery, accessToken: string): Promise<InvoiceListResponseDto> {
   const response = await backendClient.get<InvoiceListResponseDto>('/Invoice/GetAllInvoices', {
+    headers: authHeader(accessToken),
+    params: query,
+  });
+  return response.data;
+}
+
+/** `ProjectAdmin`-scoped counterpart of {@link getAllInvoices} - see the module doc comment above. */
+export async function getMyInvoices(query: InvoiceListQuery, accessToken: string): Promise<InvoiceListResponseDto> {
+  const response = await backendClient.get<InvoiceListResponseDto>('/Invoice/GetMyInvoices', {
     headers: authHeader(accessToken),
     params: query,
   });

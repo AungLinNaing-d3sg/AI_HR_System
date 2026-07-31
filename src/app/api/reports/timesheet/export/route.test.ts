@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../../lib/api/reportsBackend.api', () => ({
   exportTimesheetReport: jest.fn(),
+  exportMyTimesheetReport: jest.fn(),
 }));
 
 const reportsBackend = jest.requireMock('../../../../../lib/api/reportsBackend.api') as {
   exportTimesheetReport: jest.Mock;
+  exportMyTimesheetReport: jest.Mock;
 };
 
 import { GET } from './route';
@@ -52,6 +54,7 @@ describe('GET /api/reports/timesheet/export', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     reportsBackend.exportTimesheetReport.mockReset();
+    reportsBackend.exportMyTimesheetReport.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -94,6 +97,23 @@ describe('GET /api/reports/timesheet/export', () => {
       expect.objectContaining({ startDate: '2025-01-01', endDate: '2025-01-31', format: 'csv' }),
       expect.any(String)
     );
+  });
+
+  it('exports the report for a ProjectAdmin via the My-scoped endpoint', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    const buffer = new TextEncoder().encode('csv,bytes').buffer as ArrayBuffer;
+    reportsBackend.exportMyTimesheetReport.mockResolvedValue({ data: buffer, contentType: 'text/csv' });
+
+    const response = await GET(requestWithQuery('?startDate=2025-01-01&endDate=2025-01-31&format=csv'));
+
+    expect(response.status).toBe(200);
+    expect(reportsBackend.exportMyTimesheetReport).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2025-01-01', endDate: '2025-01-31', format: 'csv' }),
+      expect.any(String)
+    );
+    expect(reportsBackend.exportTimesheetReport).not.toHaveBeenCalled();
   });
 
   it('defaults to xlsx when no format is given', async () => {

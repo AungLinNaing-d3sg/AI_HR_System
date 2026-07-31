@@ -26,6 +26,14 @@ import type { TimesheetReportResponsePayload } from '@/types/api.types';
  * to `/timesheets/periods` and the Approve action on `/timesheets/history`.
  * `pageNo`/`pageSize` are optional, falling back to one large page
  * (`REPORT_PAGE_SIZE`) if omitted.
+ *
+ * A `ProjectAdmin` is routed to `GenerateMyTimesheetReport`
+ * (`reportsBackend.getMyTimesheetReport`), which the backend automatically
+ * scopes to that caller's own assigned projects; a `SystemAdmin` keeps using
+ * the unscoped `GenerateTimesheetReport` (`reportsBackend.getTimesheetReport`)
+ * for system-wide oversight. Both endpoints share the same request/response
+ * shape, so the rest of this handler (validation, pagination, mapping) is
+ * identical for either role.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -58,18 +66,19 @@ export async function GET(request: Request): Promise<NextResponse> {
   const { pageNo, pageSize } = resolvePagination(searchParams, { pageNo: 1, pageSize: REPORT_PAGE_SIZE });
 
   try {
-    const dto = await reportsBackend.getTimesheetReport(
-      {
-        startDate: parsed.data.startDate,
-        endDate: parsed.data.endDate,
-        projectId: parsed.data.projectId,
-        userId: parsed.data.userId,
-        isApproved: parsed.data.isApproved === undefined ? undefined : parsed.data.isApproved === 'true',
-        page: pageNo,
-        pageSize,
-      },
-      accessToken
-    );
+    const query = {
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate,
+      projectId: parsed.data.projectId,
+      userId: parsed.data.userId,
+      isApproved: parsed.data.isApproved === undefined ? undefined : parsed.data.isApproved === 'true',
+      page: pageNo,
+      pageSize,
+    };
+    const dto =
+      role === 'ProjectAdmin'
+        ? await reportsBackend.getMyTimesheetReport(query, accessToken)
+        : await reportsBackend.getTimesheetReport(query, accessToken);
 
     return NextResponse.json<TimesheetReportResponsePayload>(
       { report: mapTimesheetReport(dto) },

@@ -18,7 +18,10 @@ import type { UserRolesSummaryResponsePayload } from '@/types/api.types';
  * Backs the `/reports/roles-summary` summary table + horizontal bar chart
  * placeholder (`docs/HR_System_FE_wireframe.pdf`). Same
  * `PROJECT_MANAGEMENT_ROLES` gate as `app/api/reports/timesheet/route.ts`
- * (see that file for why).
+ * (see that file for why), and the same `ProjectAdmin` ->
+ * `GenerateMyUserRolesSummary` (`reportsBackend.getMyUserRolesSummary`) /
+ * `SystemAdmin` -> `GenerateUserRolesSummary` (`reportsBackend.getUserRolesSummary`)
+ * routing.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -49,7 +52,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const dto = await reportsBackend.getUserRolesSummary(parsed.data, accessToken);
+    const dto =
+      role === 'ProjectAdmin'
+        ? await reportsBackend.getMyUserRolesSummary(parsed.data, accessToken)
+        : await reportsBackend.getUserRolesSummary(parsed.data, accessToken);
     return NextResponse.json<UserRolesSummaryResponsePayload>(
       { summary: mapUserRolesSummary(dto) },
       { status: 200 }

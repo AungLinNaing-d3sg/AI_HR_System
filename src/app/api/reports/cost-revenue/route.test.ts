@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../lib/api/reportsBackend.api', () => ({
   getMonthlyCostRevenue: jest.fn(),
+  getMyCostRevenue: jest.fn(),
 }));
 
 const reportsBackend = jest.requireMock('../../../../lib/api/reportsBackend.api') as {
   getMonthlyCostRevenue: jest.Mock;
+  getMyCostRevenue: jest.Mock;
 };
 
 import { GET } from './route';
@@ -70,6 +72,7 @@ describe('GET /api/reports/cost-revenue', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     reportsBackend.getMonthlyCostRevenue.mockReset();
+    reportsBackend.getMyCostRevenue.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -102,19 +105,33 @@ describe('GET /api/reports/cost-revenue', () => {
     expect(response.status).toBe(400);
   });
 
-  it('generates the report for a ProjectAdmin, coercing year/month to numbers, and maps the response', async () => {
+  it('generates the report for a ProjectAdmin via the My-scoped endpoint, coercing year/month to numbers, and maps the response', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
     );
-    reportsBackend.getMonthlyCostRevenue.mockResolvedValue(reportDto);
+    reportsBackend.getMyCostRevenue.mockResolvedValue(reportDto);
 
     const response = await GET(requestWithQuery('?year=2025&month=3'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(reportsBackend.getMonthlyCostRevenue).toHaveBeenCalledWith({ year: 2025, month: 3 }, expect.any(String));
+    expect(reportsBackend.getMyCostRevenue).toHaveBeenCalledWith({ year: 2025, month: 3 }, expect.any(String));
+    expect(reportsBackend.getMonthlyCostRevenue).not.toHaveBeenCalled();
     expect(body.report.currency.symbol).toBe('S$');
     expect(body.report.projects[0].totalRevenue).toBe(1800);
+  });
+
+  it('generates the report for a SystemAdmin via the unscoped admin endpoint', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
+    );
+    reportsBackend.getMonthlyCostRevenue.mockResolvedValue(reportDto);
+
+    const response = await GET(requestWithQuery('?year=2025&month=3'));
+
+    expect(response.status).toBe(200);
+    expect(reportsBackend.getMonthlyCostRevenue).toHaveBeenCalledWith({ year: 2025, month: 3 }, expect.any(String));
+    expect(reportsBackend.getMyCostRevenue).not.toHaveBeenCalled();
   });
 
   it('returns a normalized error when the backend call fails', async () => {

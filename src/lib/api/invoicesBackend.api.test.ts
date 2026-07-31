@@ -33,6 +33,15 @@ describe('invoicesBackend.api (server)', () => {
     });
   });
 
+  it('getMyInvoices gets /Invoice/GetMyInvoices with the query params and a Bearer header', async () => {
+    backendClient.get.mockResolvedValue({ data: { Items: [], TotalCount: 0, Page: 1, PageSize: 200 } });
+    await invoicesBackend.getMyInvoices({ projectId: 'project-1', page: 1, pageSize: 200 }, 'access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Invoice/GetMyInvoices', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { projectId: 'project-1', page: 1, pageSize: 200 },
+    });
+  });
+
   it('getInvoiceById gets /Invoice/GetInvoiceById/:id with a Bearer header', async () => {
     backendClient.get.mockResolvedValue({ data: { Id: 'invoice-1' } });
     await invoicesBackend.getInvoiceById('invoice-1', 'access-token');

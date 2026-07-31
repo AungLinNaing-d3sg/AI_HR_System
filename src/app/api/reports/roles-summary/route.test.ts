@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../lib/api/reportsBackend.api', () => ({
   getUserRolesSummary: jest.fn(),
+  getMyUserRolesSummary: jest.fn(),
 }));
 
 const reportsBackend = jest.requireMock('../../../../lib/api/reportsBackend.api') as {
   getUserRolesSummary: jest.Mock;
+  getMyUserRolesSummary: jest.Mock;
 };
 
 import { GET } from './route';
@@ -59,6 +61,7 @@ describe('GET /api/reports/roles-summary', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     reportsBackend.getUserRolesSummary.mockReset();
+    reportsBackend.getMyUserRolesSummary.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -99,6 +102,25 @@ describe('GET /api/reports/roles-summary', () => {
     );
     expect(body.summary.grandTotalHours).toBe(24);
     expect(body.summary.summary[0].resourceRoleType.name).toBe('Senior Developer');
+    expect(reportsBackend.getMyUserRolesSummary).not.toHaveBeenCalled();
+  });
+
+  it('generates the summary for a ProjectAdmin via the My-scoped endpoint', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    reportsBackend.getMyUserRolesSummary.mockResolvedValue(summaryDto);
+
+    const response = await GET(requestWithQuery('?startDate=2025-01-01&endDate=2025-03-07'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(reportsBackend.getMyUserRolesSummary).toHaveBeenCalledWith(
+      { startDate: '2025-01-01', endDate: '2025-03-07' },
+      expect.any(String)
+    );
+    expect(reportsBackend.getUserRolesSummary).not.toHaveBeenCalled();
+    expect(body.summary.grandTotalHours).toBe(24);
   });
 
   it('returns a normalized error when the backend call fails', async () => {

@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../../lib/api/reportsBackend.api', () => ({
   exportUserRolesSummary: jest.fn(),
+  exportMyUserRolesSummary: jest.fn(),
 }));
 
 const reportsBackend = jest.requireMock('../../../../../lib/api/reportsBackend.api') as {
   exportUserRolesSummary: jest.Mock;
+  exportMyUserRolesSummary: jest.Mock;
 };
 
 import { GET } from './route';
@@ -52,6 +54,7 @@ describe('GET /api/reports/roles-summary/export', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     reportsBackend.exportUserRolesSummary.mockReset();
+    reportsBackend.exportMyUserRolesSummary.mockReset();
   });
 
   it('returns 403 for a plain User', async () => {
@@ -62,9 +65,28 @@ describe('GET /api/reports/roles-summary/export', () => {
     expect(response.status).toBe(403);
   });
 
-  it('streams the exported file back with the backend content type', async () => {
+  it('streams the exported file back with the backend content type for a ProjectAdmin via the My-scoped endpoint', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    const buffer = new TextEncoder().encode('csv,bytes').buffer as ArrayBuffer;
+    reportsBackend.exportMyUserRolesSummary.mockResolvedValue({ data: buffer, contentType: 'text/csv' });
+
+    const response = await GET(requestWithQuery('?startDate=2025-01-01&endDate=2025-01-31&format=csv'));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('text/csv');
+    expect(response.headers.get('Content-Disposition')).toContain('user-roles-summary.csv');
+    expect(reportsBackend.exportMyUserRolesSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2025-01-01', endDate: '2025-01-31', format: 'csv' }),
+      expect.any(String)
+    );
+    expect(reportsBackend.exportUserRolesSummary).not.toHaveBeenCalled();
+  });
+
+  it('streams the exported file back with the backend content type for a SystemAdmin via the admin endpoint', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
     const buffer = new TextEncoder().encode('csv,bytes').buffer as ArrayBuffer;
     reportsBackend.exportUserRolesSummary.mockResolvedValue({ data: buffer, contentType: 'text/csv' });
@@ -72,8 +94,8 @@ describe('GET /api/reports/roles-summary/export', () => {
     const response = await GET(requestWithQuery('?startDate=2025-01-01&endDate=2025-01-31&format=csv'));
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toBe('text/csv');
-    expect(response.headers.get('Content-Disposition')).toContain('user-roles-summary.csv');
+    expect(reportsBackend.exportUserRolesSummary).toHaveBeenCalled();
+    expect(reportsBackend.exportMyUserRolesSummary).not.toHaveBeenCalled();
   });
 
   it('returns a normalized error when the backend export fails', async () => {

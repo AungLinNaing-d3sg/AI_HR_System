@@ -15,8 +15,10 @@ import { timesheetReportExportQuerySchema } from '@/lib/validators/report.valida
  *
  * Streams back the raw xlsx/csv file `ExportTimesheetReport` returns - see
  * `app/api/reports/timesheet/route.ts` for the shared auth/role gate this
- * mirrors, and `getBackendFileErrorDetails` for why export errors need
- * different decoding than the JSON `Generate*` routes.
+ * mirrors (including the `ProjectAdmin` -> `ExportMyTimesheetReport` /
+ * `SystemAdmin` -> `ExportTimesheetReport` routing), and
+ * `getBackendFileErrorDetails` for why export errors need different decoding
+ * than the JSON `Generate*` routes.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -47,17 +49,18 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const file = await reportsBackend.exportTimesheetReport(
-      {
-        startDate: parsed.data.startDate,
-        endDate: parsed.data.endDate,
-        projectId: parsed.data.projectId,
-        userId: parsed.data.userId,
-        isApproved: parsed.data.isApproved === undefined ? undefined : parsed.data.isApproved === 'true',
-        format: parsed.data.format,
-      },
-      accessToken
-    );
+    const query = {
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate,
+      projectId: parsed.data.projectId,
+      userId: parsed.data.userId,
+      isApproved: parsed.data.isApproved === undefined ? undefined : parsed.data.isApproved === 'true',
+      format: parsed.data.format,
+    };
+    const file =
+      role === 'ProjectAdmin'
+        ? await reportsBackend.exportMyTimesheetReport(query, accessToken)
+        : await reportsBackend.exportTimesheetReport(query, accessToken);
 
     return new NextResponse(file.data, {
       status: 200,

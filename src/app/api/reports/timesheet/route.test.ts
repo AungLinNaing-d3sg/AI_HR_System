@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../lib/api/reportsBackend.api', () => ({
   getTimesheetReport: jest.fn(),
+  getMyTimesheetReport: jest.fn(),
 }));
 
 const reportsBackend = jest.requireMock('../../../../lib/api/reportsBackend.api') as {
   getTimesheetReport: jest.Mock;
+  getMyTimesheetReport: jest.Mock;
 };
 
 import { GET } from './route';
@@ -72,6 +74,7 @@ describe('GET /api/reports/timesheet', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     reportsBackend.getTimesheetReport.mockReset();
+    reportsBackend.getMyTimesheetReport.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -107,17 +110,17 @@ describe('GET /api/reports/timesheet', () => {
     expect(response.status).toBe(400);
   });
 
-  it('generates the report for a ProjectAdmin and maps the response', async () => {
+  it('generates the report for a ProjectAdmin via the My-scoped endpoint and maps the response', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
     );
-    reportsBackend.getTimesheetReport.mockResolvedValue(reportDto);
+    reportsBackend.getMyTimesheetReport.mockResolvedValue(reportDto);
 
     const response = await GET(requestWithQuery('?startDate=2025-01-01&endDate=2025-01-31&projectId=project-1'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(reportsBackend.getTimesheetReport).toHaveBeenCalledWith(
+    expect(reportsBackend.getMyTimesheetReport).toHaveBeenCalledWith(
       {
         startDate: '2025-01-01',
         endDate: '2025-01-31',
@@ -129,8 +132,25 @@ describe('GET /api/reports/timesheet', () => {
       },
       expect.any(String)
     );
+    expect(reportsBackend.getTimesheetReport).not.toHaveBeenCalled();
     expect(body.report.totalHours).toBe(6);
     expect(body.report.items[0].user.fullName).toBe('Lin Thit Htoo');
+  });
+
+  it('generates the report for a SystemAdmin via the unscoped admin endpoint', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
+    );
+    reportsBackend.getTimesheetReport.mockResolvedValue(reportDto);
+
+    const response = await GET(requestWithQuery('?startDate=2025-01-01&endDate=2025-01-31'));
+
+    expect(response.status).toBe(200);
+    expect(reportsBackend.getTimesheetReport).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2025-01-01', endDate: '2025-01-31' }),
+      expect.any(String)
+    );
+    expect(reportsBackend.getMyTimesheetReport).not.toHaveBeenCalled();
   });
 
   it('forwards pageNo/pageSize query params to the backend', async () => {

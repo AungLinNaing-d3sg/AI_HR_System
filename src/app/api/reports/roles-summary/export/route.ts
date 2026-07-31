@@ -15,7 +15,8 @@ import { userRolesSummaryExportQuerySchema } from '@/lib/validators/report.valid
  *
  * Streams back the raw xlsx/csv file `ExportUserRolesSummary` returns - see
  * `app/api/reports/timesheet/export/route.ts` for the shared pattern this
- * mirrors.
+ * mirrors, including the `ProjectAdmin` -> `ExportMyUserRolesSummary` /
+ * `SystemAdmin` -> `ExportUserRolesSummary` routing.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -46,7 +47,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const file = await reportsBackend.exportUserRolesSummary(parsed.data, accessToken);
+    const file =
+      role === 'ProjectAdmin'
+        ? await reportsBackend.exportMyUserRolesSummary(parsed.data, accessToken)
+        : await reportsBackend.exportUserRolesSummary(parsed.data, accessToken);
 
     return new NextResponse(file.data, {
       status: 200,

@@ -13,10 +13,12 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../../../lib/api/reportsBackend.api', () => ({
   exportMonthlyCostRevenue: jest.fn(),
+  exportMyCostRevenue: jest.fn(),
 }));
 
 const reportsBackend = jest.requireMock('../../../../../lib/api/reportsBackend.api') as {
   exportMonthlyCostRevenue: jest.Mock;
+  exportMyCostRevenue: jest.Mock;
 };
 
 import { GET } from './route';
@@ -52,6 +54,7 @@ describe('GET /api/reports/cost-revenue/export', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     reportsBackend.exportMonthlyCostRevenue.mockReset();
+    reportsBackend.exportMyCostRevenue.mockReset();
   });
 
   it('returns 403 for a plain User', async () => {
@@ -80,6 +83,28 @@ describe('GET /api/reports/cost-revenue/export', () => {
       { year: 2025, month: 1, format: 'xlsx' },
       expect.any(String)
     );
+    expect(reportsBackend.exportMyCostRevenue).not.toHaveBeenCalled();
+  });
+
+  it('exports the report for a ProjectAdmin via the My-scoped endpoint', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    const buffer = new TextEncoder().encode('xlsx-bytes').buffer as ArrayBuffer;
+    reportsBackend.exportMyCostRevenue.mockResolvedValue({
+      data: buffer,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    const response = await GET(requestWithQuery('?year=2025&month=1'));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toContain('cost-revenue-report.xlsx');
+    expect(reportsBackend.exportMyCostRevenue).toHaveBeenCalledWith(
+      { year: 2025, month: 1, format: 'xlsx' },
+      expect.any(String)
+    );
+    expect(reportsBackend.exportMonthlyCostRevenue).not.toHaveBeenCalled();
   });
 
   it('returns a normalized error when the backend export fails', async () => {

@@ -13,11 +13,13 @@ jest.mock('next/headers', () => ({
 
 jest.mock('../../../lib/api/invoicesBackend.api', () => ({
   getAllInvoices: jest.fn(),
+  getMyInvoices: jest.fn(),
   generateInvoice: jest.fn(),
 }));
 
 const invoicesBackend = jest.requireMock('../../../lib/api/invoicesBackend.api') as {
   getAllInvoices: jest.Mock;
+  getMyInvoices: jest.Mock;
   generateInvoice: jest.Mock;
 };
 
@@ -112,6 +114,7 @@ describe('GET /api/invoices', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     invoicesBackend.getAllInvoices.mockReset();
+    invoicesBackend.getMyInvoices.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -119,6 +122,7 @@ describe('GET /api/invoices', () => {
     const response = await GET(getRequest());
     expect(response.status).toBe(401);
     expect(invoicesBackend.getAllInvoices).not.toHaveBeenCalled();
+    expect(invoicesBackend.getMyInvoices).not.toHaveBeenCalled();
   });
 
   it('returns 403 for a plain User', async () => {
@@ -128,6 +132,7 @@ describe('GET /api/invoices', () => {
     const response = await GET(getRequest());
     expect(response.status).toBe(403);
     expect(invoicesBackend.getAllInvoices).not.toHaveBeenCalled();
+    expect(invoicesBackend.getMyInvoices).not.toHaveBeenCalled();
   });
 
   it('returns 400 for an invalid status filter', async () => {
@@ -137,11 +142,31 @@ describe('GET /api/invoices', () => {
     const response = await GET(getRequest('?status=Finalized'));
     expect(response.status).toBe(400);
     expect(invoicesBackend.getAllInvoices).not.toHaveBeenCalled();
+    expect(invoicesBackend.getMyInvoices).not.toHaveBeenCalled();
   });
 
-  it('lists invoices for a ProjectAdmin and maps the response', async () => {
+  it('lists invoices for a ProjectAdmin via GetMyInvoices, scoped to their own projects', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    invoicesBackend.getMyInvoices.mockResolvedValue(listDto);
+
+    const response = await GET(getRequest('?projectId=project-1&status=Draft'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(invoicesBackend.getMyInvoices).toHaveBeenCalledWith(
+      { projectId: 'project-1', status: 'Draft', page: 1, pageSize: 200 },
+      expect.any(String)
+    );
+    expect(invoicesBackend.getAllInvoices).not.toHaveBeenCalled();
+    expect(body.totalCount).toBe(1);
+    expect(body.invoices[0].invoiceNumber).toBe('INV-2025-0001');
+  });
+
+  it('lists invoices for a SystemAdmin via GetAllInvoices, unscoped', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
     invoicesBackend.getAllInvoices.mockResolvedValue(listDto);
 
@@ -153,6 +178,7 @@ describe('GET /api/invoices', () => {
       { projectId: 'project-1', status: 'Draft', page: 1, pageSize: 200 },
       expect.any(String)
     );
+    expect(invoicesBackend.getMyInvoices).not.toHaveBeenCalled();
     expect(body.totalCount).toBe(1);
     expect(body.invoices[0].invoiceNumber).toBe('INV-2025-0001');
   });
@@ -176,6 +202,16 @@ describe('GET /api/invoices', () => {
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
     invoicesBackend.getAllInvoices.mockRejectedValue(new Error('network down'));
+
+    const response = await GET(getRequest());
+    expect(response.status).toBe(500);
+  });
+
+  it('returns a normalized error when the ProjectAdmin-scoped backend call fails', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    invoicesBackend.getMyInvoices.mockRejectedValue(new Error('network down'));
 
     const response = await GET(getRequest());
     expect(response.status).toBe(500);

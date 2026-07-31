@@ -37,6 +37,15 @@ function forbidden(action: string): NextResponse {
  * Lists invoices, backing the `/invoices` table's status-count chips (an
  * unfiltered, unpaginated call - see `INVOICE_LIST_PAGE_SIZE`) and its own
  * paginated, status-filtered row table (see `InvoicesTable`).
+ *
+ * A `ProjectAdmin` is routed to `Invoice/GetMyInvoices`
+ * (`invoicesBackend.getMyInvoices`), which the backend automatically scopes
+ * to that caller's own assigned projects; a `SystemAdmin` keeps using the
+ * unscoped `Invoice/GetAllInvoices` (`invoicesBackend.getAllInvoices`) for
+ * system-wide access. Both endpoints share the same request/response shape,
+ * so the rest of this handler (validation, pagination, mapping) is identical
+ * for either role - mirroring `app/api/reports/timesheet/route.ts`'s own
+ * `get*`/`getMy*` role split.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -60,15 +69,16 @@ export async function GET(request: Request): Promise<NextResponse> {
   const { pageNo, pageSize } = resolvePagination(searchParams, { pageNo: 1, pageSize: INVOICE_LIST_PAGE_SIZE });
 
   try {
-    const dto = await invoicesBackend.getAllInvoices(
-      {
-        projectId: parsed.data.projectId,
-        status: parsed.data.status,
-        page: pageNo,
-        pageSize,
-      },
-      accessToken
-    );
+    const query = {
+      projectId: parsed.data.projectId,
+      status: parsed.data.status,
+      page: pageNo,
+      pageSize,
+    };
+    const dto =
+      role === 'ProjectAdmin'
+        ? await invoicesBackend.getMyInvoices(query, accessToken)
+        : await invoicesBackend.getAllInvoices(query, accessToken);
     return NextResponse.json<InvoiceListResponsePayload>(
       {
         invoices: mapInvoiceSummaryList(dto.Items),

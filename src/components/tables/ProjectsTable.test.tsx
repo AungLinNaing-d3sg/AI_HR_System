@@ -5,13 +5,20 @@ import type { ReactNode } from 'react';
 import { ProjectsTable } from './ProjectsTable';
 import type { Project } from '@/types/domain.types';
 
+const mockUseAuth = jest.fn();
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
 jest.mock('../../lib/api/projects.api', () => ({
   getProjects: jest.fn(),
+  getMyProjects: jest.fn(),
   deleteProject: jest.fn(),
 }));
 
 const projectsApi = jest.requireMock('../../lib/api/projects.api') as {
   getProjects: jest.Mock;
+  getMyProjects: jest.Mock;
   deleteProject: jest.Mock;
 };
 
@@ -50,7 +57,33 @@ function renderWithProviders(ui: ReactNode) {
 describe('ProjectsTable', () => {
   beforeEach(() => {
     projectsApi.getProjects.mockReset();
+    projectsApi.getMyProjects.mockReset();
     projectsApi.deleteProject.mockReset();
+    mockUseAuth.mockReset();
+    // Default to a non-`ProjectAdmin` caller so the existing scenarios below
+    // (which only stub `getProjects`) keep exercising the `GetProjectList`
+    // branch of `useProjectList` unchanged.
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin' });
+  });
+
+  it('uses GetMyProjectList (getMyProjects) for a ProjectAdmin caller and not GetProjectList', async () => {
+    mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });
+    projectsApi.getMyProjects.mockResolvedValue(projects);
+    renderWithProviders(<ProjectsTable />);
+
+    expect(await screen.findByText('Project Alpha - Web Platform')).toBeInTheDocument();
+    expect(projectsApi.getMyProjects).toHaveBeenCalled();
+    expect(projectsApi.getProjects).not.toHaveBeenCalled();
+  });
+
+  it('uses GetProjectList (getProjects) for a SystemAdmin caller and not GetMyProjectList', async () => {
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin' });
+    projectsApi.getProjects.mockResolvedValue(projects);
+    renderWithProviders(<ProjectsTable />);
+
+    expect(await screen.findByText('Project Alpha - Web Platform')).toBeInTheDocument();
+    expect(projectsApi.getProjects).toHaveBeenCalled();
+    expect(projectsApi.getMyProjects).not.toHaveBeenCalled();
   });
 
   it('shows a loading state initially', () => {

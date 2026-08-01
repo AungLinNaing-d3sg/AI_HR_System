@@ -20,7 +20,11 @@ import type { ProjectListResponsePayload, ProjectResponsePayload } from '@/types
 /**
  * GET /api/projects
  *
- * Lists all projects, visible to any authenticated user.
+ * Lists all projects, visible to any authenticated user. For the `/projects`
+ * management table specifically, a `ProjectAdmin` caller is instead scoped
+ * to their own projects via `GET /api/projects/mine` (`GetMyProjectList`) -
+ * see `useProjectList`; this unscoped endpoint keeps backing that table for
+ * a `SystemAdmin` (or any other role).
  */
 export async function GET(): Promise<NextResponse> {
   const cookieStore = await cookies();

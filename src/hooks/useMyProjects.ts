@@ -9,8 +9,8 @@ import { getApiErrorMessage } from '@/lib/utils/apiError';
  * (`GET /api/projects/mine` -> `Project/GetMyProjectList`). Backs the
  * `ProjectAdmin` branch of `useProjectFilterOptions` (the Project
  * filter/select on `/reports/timesheet`, `/reports/cost-revenue`, and
- * `/invoices/generate`) - not the `/projects` management table, which keeps
- * using `useProjects`/`GetProjectList` for every role. Query key:
+ * `/invoices/generate`) and of `useProjectList` (the `/projects` management
+ * table, `ProjectsTable`) for a `ProjectAdmin` caller. Query key:
  * `['projects', 'mine']`.
  *
  * `enabled` (default `true`) lets `useProjectFilterOptions` skip this query

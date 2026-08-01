@@ -27,6 +27,7 @@ const entries: TimesheetHistoryEntry[] = [
     id: 'entry-1',
     userId: 'user-1',
     userName: 'Lin Thit Htoo',
+    resourceRoleTypeName: 'Senior Developer',
     projectId: 'project-1',
     projectCode: 'PRJ-001',
     projectName: 'Project Helix',
@@ -40,6 +41,7 @@ const entries: TimesheetHistoryEntry[] = [
     id: 'entry-2',
     userId: 'user-1',
     userName: 'Lin Thit Htoo',
+    resourceRoleTypeName: 'Senior Developer',
     projectId: 'project-1',
     projectCode: 'PRJ-001',
     projectName: 'Project Helix',
@@ -92,13 +94,25 @@ describe('TimesheetHistoryTable', () => {
     expect(screen.getByText('Approved')).toBeInTheDocument();
   });
 
-  it('shows only the project name (no project code) in the Project column', async () => {
+  it('shows the project code as secondary text beneath the project name', async () => {
     timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
-    expect(screen.queryByText('PRJ-001')).not.toBeInTheDocument();
-    expect(screen.queryByText(/PRJ-001/)).not.toBeInTheDocument();
+    const [projectCode] = screen.getAllByText('PRJ-001');
+    expect(projectCode).toBeInTheDocument();
+    expect(projectCode).toHaveClass('text-xs', 'text-zinc-500');
+  });
+
+  it('shows the resource role type as secondary text beneath the user name for a role that can see the User column', async () => {
+    mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Lin Thit Htoo');
+    const [roleName] = screen.getAllByText('Senior Developer');
+    expect(roleName).toBeInTheDocument();
+    expect(roleName).toHaveClass('text-xs', 'text-zinc-500');
   });
 
   it('renders a leading edit icon and right-aligns the row actions, with Edit matching the bordered Approve/Delete buttons', async () => {

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Download } from 'lucide-react';
 import { usePagination } from '@/hooks/usePagination';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjectFilterOptions } from '@/hooks/useProjectFilterOptions';
 import { useTimesheetReport } from '@/hooks/useTimesheetReport';
 import { useExportTimesheetReport } from '@/hooks/useExportTimesheetReport';
 import { Alert } from '@/components/ui/Alert';
@@ -52,6 +52,11 @@ function getUserOptions(items: TimesheetReportItem[]): UserOption[] {
  * rather than sent to the backend, because there is no "list all users"
  * reference endpoint to populate the dropdown from ahead of a fetch - the
  * same documented workaround `UnassignedUser` uses elsewhere in this app.
+ *
+ * The Project filter's own options come from `useProjectFilterOptions`,
+ * which scopes them to a `ProjectAdmin` caller's own assigned projects
+ * (`GetMyProjectList`) while a `SystemAdmin` still sees every project
+ * (`GetProjectList`) - see that hook's doc comment.
  */
 export function TimesheetReportTable() {
   const defaultRange = useMemo(() => getCurrentMonthDateRange(), []);
@@ -66,7 +71,7 @@ export function TimesheetReportTable() {
   });
   const [filterError, setFilterError] = useState<string | null>(null);
 
-  const { projects } = useProjects();
+  const { projects } = useProjectFilterOptions();
   const { pageNo, pageSize, goToPage } = usePagination();
   const { report, isLoading, isError, error, refetch } = useTimesheetReport(
     appliedFilters ? { ...appliedFilters, pageNo, pageSize } : null

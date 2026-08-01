@@ -6,6 +6,13 @@ import { TimesheetReportTable } from './TimesheetReportTable';
 import type { Project } from '@/types/domain.types';
 import type { TimesheetReport } from '@/types/domain.types';
 
+// `useProjectFilterOptions` (via `useAuth`) calls `useRouter()` from
+// `next/navigation` - stub it the same way `GenerateInvoiceForm.test.tsx`
+// does, since there's no mounted Next.js App Router in this unit test.
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}));
+
 jest.mock('../../lib/api/projects.api', () => ({
   getProjects: jest.fn(),
 }));

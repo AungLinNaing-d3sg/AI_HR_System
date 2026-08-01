@@ -85,7 +85,31 @@ describe('GET /api/auth/search-users', () => {
     const response = await GET(requestWithQuery('?email=jane&userName=jane'));
     expect(response.status).toBe(200);
     expect(authBackend.searchUsers).toHaveBeenCalledWith(
-      { email: 'jane', userName: 'jane' },
+      { email: 'jane', userName: 'jane', isAllRole: false },
+      expect.any(String)
+    );
+  });
+
+  it('sets isAllRole: true for a ProjectAdmin caller', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
+    );
+    authBackend.searchUsers.mockResolvedValue([]);
+    await GET(requestWithQuery('?email=jane&userName=jane'));
+    expect(authBackend.searchUsers).toHaveBeenCalledWith(
+      { email: 'jane', userName: 'jane', isAllRole: true },
+      expect.any(String)
+    );
+  });
+
+  it('sets isAllRole: true for a SystemAdmin caller', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
+    );
+    authBackend.searchUsers.mockResolvedValue([]);
+    await GET(requestWithQuery('?email=jane&userName=jane'));
+    expect(authBackend.searchUsers).toHaveBeenCalledWith(
+      { email: 'jane', userName: 'jane', isAllRole: true },
       expect.any(String)
     );
   });

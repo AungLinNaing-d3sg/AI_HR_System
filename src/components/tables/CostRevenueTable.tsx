@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { DollarSign, Download, TrendingUp } from 'lucide-react';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjectFilterOptions } from '@/hooks/useProjectFilterOptions';
 import { useMonthlyCostRevenue } from '@/hooks/useMonthlyCostRevenue';
 import { useExportMonthlyCostRevenue } from '@/hooks/useExportMonthlyCostRevenue';
 import { Alert } from '@/components/ui/Alert';
@@ -53,6 +53,11 @@ function KpiCard({ label, value, icon: Icon, iconClassName, badge }: KpiCardProp
  * with no per-user field to show, so the table here is built against that
  * actual API contract instead of fabricating a name the backend never
  * returns.
+ *
+ * The Project filter's own options come from `useProjectFilterOptions`,
+ * which scopes them to a `ProjectAdmin` caller's own assigned projects
+ * (`GetMyProjectList`) while a `SystemAdmin` still sees every project
+ * (`GetProjectList`) - see that hook's doc comment.
  */
 export function CostRevenueTable() {
   const defaultYearMonth = useMemo(() => getCurrentYearMonth(), []);
@@ -62,7 +67,7 @@ export function CostRevenueTable() {
   const [appliedFilters, setAppliedFilters] = useState<MonthlyCostRevenueFilters>(defaultYearMonth);
   const [filterError, setFilterError] = useState<string | null>(null);
 
-  const { projects } = useProjects();
+  const { projects } = useProjectFilterOptions();
   const { report, isLoading, isError, error, refetch } = useMonthlyCostRevenue(appliedFilters);
   const { exportReport, isExporting, error: exportError, reset: resetExportError } = useExportMonthlyCostRevenue();
 

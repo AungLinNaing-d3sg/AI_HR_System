@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Pencil, Trash2, UserPlus } from 'lucide-react';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjectList } from '@/hooks/useProjectList';
 import { useDeleteProject } from '@/hooks/useDeleteProject';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -21,9 +21,14 @@ function formatDate(value: string | null): string {
   return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-/** Lists all projects with Edit/Delete row actions. Handles loading, error, and empty states. */
+/**
+ * Lists projects with Edit/Delete row actions. Handles loading, error, and
+ * empty states. Scoped to the caller's own projects (`GetMyProjectList`) for
+ * a `ProjectAdmin`, or every project (`GetProjectList`) for a `SystemAdmin`/
+ * any other role - see `useProjectList`.
+ */
 export function ProjectsTable() {
-  const { projects, isLoading, isError, error, refetch } = useProjects();
+  const { projects, isLoading, isError, error, refetch } = useProjectList();
   const { deleteProject, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteProject();
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
 

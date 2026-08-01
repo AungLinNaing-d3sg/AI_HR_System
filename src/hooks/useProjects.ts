@@ -9,9 +9,9 @@ import { getApiErrorMessage } from '@/lib/utils/apiError';
  * convention).
  *
  * `enabled` (default `true`) lets a caller that only sometimes wants this
- * list - e.g. `useProjectFilterOptions`, which switches between this hook and
- * `useMyProjects` depending on the caller's role - opt out without firing an
- * unnecessary request.
+ * list - e.g. `useProjectList`/`useProjectFilterOptions`, which each switch
+ * between this hook and `useMyProjects` depending on the caller's role - opt
+ * out without firing an unnecessary request.
  */
 export function useProjects(enabled: boolean = true) {
   const query = useQuery({

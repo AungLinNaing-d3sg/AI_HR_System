@@ -37,10 +37,12 @@ export async function getProjectList(accessToken: string): Promise<ProjectListRe
  * docs/HR_System_BE.postman_collection.json). Mirrors the `getMy*`/`get*`
  * role split already established for the Report and Invoice domains (see
  * `reportsBackend.getMyTimesheetReport`/`invoicesBackend.getMyInvoices`).
- * Used by `GET /api/projects/mine`, which backs the Project filter/select on
- * `/reports/timesheet`, `/reports/cost-revenue`, and `/invoices/generate`
- * for a `ProjectAdmin` caller - not the `/projects` management table
- * (`ProjectsTable`), which keeps using `getProjectList` for every role.
+ * Used by `GET /api/projects/mine`, which backs both the `/projects`
+ * management table (`ProjectsTable`/`useProjectList`) and the Project
+ * filter/select on `/reports/timesheet`, `/reports/cost-revenue`, and
+ * `/invoices/generate` (`useProjectFilterOptions`) for a `ProjectAdmin`
+ * caller. A `SystemAdmin` (or any other role) keeps using `getProjectList`
+ * for both.
  */
 export async function getMyProjectList(accessToken: string): Promise<ProjectListResponse> {
   const response = await backendClient.get<ProjectListResponse>('/Project/GetMyProjectList', {

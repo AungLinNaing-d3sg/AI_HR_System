@@ -85,6 +85,7 @@ describe('mapTimesheetHistoryEntry', () => {
     ...entryDto,
     UserFirstName: 'Lin Thit',
     UserLastName: 'Htoo',
+    ResourceRoleTypeName: 'Senior Developer',
     ProjectCode: 'PRJ-001',
     ProjectName: 'Project Helix',
     IsApproved: true,
@@ -96,6 +97,7 @@ describe('mapTimesheetHistoryEntry', () => {
       id: 'entry-1',
       userId: 'user-1',
       userName: 'Lin Thit Htoo',
+      resourceRoleTypeName: 'Senior Developer',
       projectId: 'project-1',
       projectCode: 'PRJ-001',
       projectName: 'Project Helix',
@@ -107,9 +109,10 @@ describe('mapTimesheetHistoryEntry', () => {
     });
   });
 
-  it('falls back to placeholders when the name fields are absent', () => {
+  it('falls back to placeholders when the name/role fields are absent', () => {
     const result = mapTimesheetHistoryEntry(entryDto);
     expect(result.userName).toBe('Unknown user');
+    expect(result.resourceRoleTypeName).toBe('');
     expect(result.projectName).toBe('Unknown project');
     expect(result.approvedAt).toBeNull();
   });

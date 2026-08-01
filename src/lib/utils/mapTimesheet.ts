@@ -45,6 +45,7 @@ export function mapTimesheetHistoryEntry(dto: TimesheetEntryDto): TimesheetHisto
     id: dto.Id,
     userId: dto.UserId,
     userName: [dto.UserFirstName, dto.UserLastName].filter(Boolean).join(' ') || 'Unknown user',
+    resourceRoleTypeName: dto.ResourceRoleTypeName ?? '',
     projectId: dto.ProjectId,
     projectCode: dto.ProjectCode ?? '',
     projectName: dto.ProjectName ?? 'Unknown project',

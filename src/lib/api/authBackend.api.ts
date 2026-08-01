@@ -111,6 +111,15 @@ export async function getUserList(
 export interface SearchUsersQuery {
   email?: string;
   userName?: string;
+  /**
+   * `true` widens the search to accounts of every role; `false` restricts it
+   * to `Employee` ("Assigned User") accounts only. Always computed
+   * server-side by `app/api/auth/search-users/route.ts` from the caller's own
+   * decoded JWT role (`SystemAdmin`/`ProjectAdmin` -> `true`, `Employee`/plain
+   * `User` -> `false`) - never accepted as a client-supplied query param, so a
+   * lower-privileged caller can't widen their own search results.
+   */
+  isAllRole: boolean;
 }
 
 /**
@@ -120,7 +129,8 @@ export interface SearchUsersQuery {
  * its already-loaded `getUserList` result set client-side (see
  * `UserSearchCombobox`). The Route Handler sends the browser's as-you-type
  * query as both `email` and `userName` (see `useUserSearch`), so the backend
- * matches a user by either field.
+ * matches a user by either field, plus the caller-role-derived `isAllRole`
+ * (see `SearchUsersQuery#isAllRole` above).
  */
 export async function searchUsers(
   query: SearchUsersQuery,

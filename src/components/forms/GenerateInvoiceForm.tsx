@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useCurrencies } from '@/hooks/useCurrencies';
 import { useGenerateInvoice } from '@/hooks/useGenerateInvoice';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjectFilterOptions } from '@/hooks/useProjectFilterOptions';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { FieldError } from '@/components/ui/FieldError';
@@ -47,13 +47,18 @@ const DEFAULT_VALUES: GenerateInvoiceFormValues = {
  * form keeps the wireframe's two-step feel with a real review step (the
  * entered parameters, read back for confirmation) before the actual
  * `Invoice/GenerateInvoice` call fires on the final "Generate Invoice" click.
+ *
+ * The Project select's own options come from `useProjectFilterOptions`,
+ * which scopes them to a `ProjectAdmin` caller's own assigned projects
+ * (`GetMyProjectList`) while a `SystemAdmin` still sees every project
+ * (`GetProjectList`) - see that hook's doc comment.
  */
 export function GenerateInvoiceForm() {
   const router = useRouter();
   const [step, setStep] = useState<'parameters' | 'review'>('parameters');
   const [reviewValues, setReviewValues] = useState<GenerateInvoiceFormValues | null>(null);
 
-  const { projects, isLoading: isLoadingProjects } = useProjects();
+  const { projects, isLoading: isLoadingProjects } = useProjectFilterOptions();
   const { currencies, isLoading: isLoadingCurrencies, isError: isCurrenciesError, error: currenciesError } =
     useCurrencies();
   const { generateInvoice, isGenerating, error: generateError, reset: resetGenerateError } = useGenerateInvoice();

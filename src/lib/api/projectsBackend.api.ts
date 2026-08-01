@@ -30,6 +30,25 @@ export async function getProjectList(accessToken: string): Promise<ProjectListRe
   return response.data;
 }
 
+/**
+ * `GET /Project/GetMyProjectList` - scoped to the caller's own
+ * assigned/managed projects (per JWT), the same shape as `getProjectList`
+ * above (see the documented example response in
+ * docs/HR_System_BE.postman_collection.json). Mirrors the `getMy*`/`get*`
+ * role split already established for the Report and Invoice domains (see
+ * `reportsBackend.getMyTimesheetReport`/`invoicesBackend.getMyInvoices`).
+ * Used by `GET /api/projects/mine`, which backs the Project filter/select on
+ * `/reports/timesheet`, `/reports/cost-revenue`, and `/invoices/generate`
+ * for a `ProjectAdmin` caller - not the `/projects` management table
+ * (`ProjectsTable`), which keeps using `getProjectList` for every role.
+ */
+export async function getMyProjectList(accessToken: string): Promise<ProjectListResponse> {
+  const response = await backendClient.get<ProjectListResponse>('/Project/GetMyProjectList', {
+    headers: authHeader(accessToken),
+  });
+  return response.data;
+}
+
 export async function getProject(id: string, accessToken: string): Promise<ProjectResponse> {
   const response = await backendClient.get<ProjectResponse>(`/Project/GetProject/${id}`, {
     headers: authHeader(accessToken),

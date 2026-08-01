@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import * as authBackend from '@/lib/api/authBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
-import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapUserSearchItemList } from '@/lib/utils/mapAuthUser';
 import { pickSearchParams } from '@/lib/utils/searchParams';
@@ -16,7 +16,7 @@ import type { SearchUsersResponsePayload } from '@/types/api.types';
  *
  * Backs the searchable "Add User to Project" combobox on
  * `/projects/:id/assignments` (`docs/HR_System_FE_wireframe.pdf`), sourced
- * from `GET /Auth/SearchUsers?email={email}&userName={userName}` -
+ * from `GET /Auth/SearchUsers?email={email}&userName={userName}&isAllRole=` -
  * replacing the previously used, non-search `GET /Auth/GetUserList` dropdown
  * (see the removed `app/api/auth/user-list/route.ts`). The combobox sends
  * the same as-you-type query text as both `email` and `userName` (see
@@ -24,6 +24,12 @@ import type { SearchUsersResponsePayload } from '@/types/api.types';
  * by either field; `searchUsersQuerySchema` requires at least one of the two
  * to meet `MIN_USER_SEARCH_QUERY_LENGTH`. Open to any authenticated user,
  * matching the rest of the Projects surface.
+ *
+ * `isAllRole` is never accepted from the client - it's derived here from the
+ * caller's own decoded JWT role: a `SystemAdmin`/`ProjectAdmin` searches
+ * across every role (`true`, so they can find any account to assign), while
+ * any other authenticated role (a plain `Employee`/"Assigned User") is
+ * restricted to searching other `Employee` accounts only (`false`).
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -33,6 +39,9 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (!accessToken || isTokenExpired(claims)) {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
+
+  const role = extractRole(claims);
+  const isAllRole = role === 'SystemAdmin' || role === 'ProjectAdmin';
 
   const searchParams = new URL(request.url).searchParams;
   const parsed = searchUsersQuerySchema.safeParse(pickSearchParams(searchParams, ['email', 'userName']));
@@ -44,7 +53,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const users = await authBackend.searchUsers(parsed.data, accessToken);
+    const users = await authBackend.searchUsers({ ...parsed.data, isAllRole }, accessToken);
     return NextResponse.json<SearchUsersResponsePayload>(
       { users: mapUserSearchItemList(users) },
       { status: 200 }

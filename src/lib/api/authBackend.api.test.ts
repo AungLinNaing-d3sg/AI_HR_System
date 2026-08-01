@@ -152,16 +152,25 @@ describe('authBackend.api (server)', () => {
     });
   });
 
-  it('searchUsers gets /Auth/SearchUsers with a Bearer header and the given email/userName params', async () => {
+  it('searchUsers gets /Auth/SearchUsers with a Bearer header and the given email/userName/isAllRole params', async () => {
     const results = [
       { UserId: 'user-1', Username: 'jdoe', Email: 'jdoe@example.com', FirstName: 'Jane', LastName: 'Doe', EmployeeId: null },
     ];
     backendClient.get.mockResolvedValue({ data: results });
-    const result = await authBackend.searchUsers({ email: 'jdoe', userName: 'jdoe' }, 'access-token');
+    const result = await authBackend.searchUsers({ email: 'jdoe', userName: 'jdoe', isAllRole: true }, 'access-token');
     expect(backendClient.get).toHaveBeenCalledWith('/Auth/SearchUsers', {
       headers: { Authorization: 'Bearer access-token' },
-      params: { email: 'jdoe', userName: 'jdoe' },
+      params: { email: 'jdoe', userName: 'jdoe', isAllRole: true },
     });
     expect(result).toEqual(results);
+  });
+
+  it('searchUsers forwards isAllRole: false unchanged', async () => {
+    backendClient.get.mockResolvedValue({ data: [] });
+    await authBackend.searchUsers({ email: 'jdoe', userName: 'jdoe', isAllRole: false }, 'access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Auth/SearchUsers', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { email: 'jdoe', userName: 'jdoe', isAllRole: false },
+    });
   });
 });

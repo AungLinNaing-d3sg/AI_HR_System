@@ -336,10 +336,18 @@ export function TimesheetHistoryTable() {
                 const isOwnEntry = entry.userId === user?.id;
                 return (
                   <tr key={entry.id} className="transition-colors hover:bg-zinc-50">
-                    {canApprove && <td className="px-4 py-3 text-zinc-700">{entry.userName}</td>}
+                    {canApprove && (
+                      <td className="px-4 py-3 text-zinc-700">
+                        <p>{entry.userName}</p>
+                        {entry.resourceRoleTypeName && (
+                          <p className="text-xs font-normal text-zinc-500">{entry.resourceRoleTypeName}</p>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-zinc-600">{formatDate(entry.entryDate)}</td>
                     <td className="px-4 py-3 text-zinc-700">
-                      <span className="font-medium text-zinc-900">{entry.projectName}</span>
+                      <p className="font-medium text-zinc-900">{entry.projectName}</p>
+                      {entry.projectCode && <p className="text-xs text-zinc-500">{entry.projectCode}</p>}
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-zinc-900">{entry.hours}</span>{' '}

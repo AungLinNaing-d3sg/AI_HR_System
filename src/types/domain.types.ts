@@ -149,6 +149,8 @@ export interface TimesheetHistoryEntry {
   id: string;
   userId: string;
   userName: string;
+  /** The user's assigned resource role type (e.g. "Senior Developer"), shown beneath their name. */
+  resourceRoleTypeName: string;
   projectId: string;
   projectCode: string;
   projectName: string;

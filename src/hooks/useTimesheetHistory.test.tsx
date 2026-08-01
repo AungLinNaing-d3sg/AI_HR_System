@@ -15,6 +15,7 @@ const entries: TimesheetHistoryEntry[] = [
     id: 'entry-1',
     userId: 'user-1',
     userName: 'Lin Thit Htoo',
+    resourceRoleTypeName: 'Senior Developer',
     projectId: 'project-1',
     projectCode: 'PRJ-001',
     projectName: 'Project Helix',

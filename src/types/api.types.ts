@@ -458,6 +458,8 @@ export interface TimesheetEntryDto {
   /** Only present on `GetAllTimesheetEntries`/`GetTimesheetEntryById` - absent on `CreateTimesheetEntry`'s response. */
   UserFirstName?: string;
   UserLastName?: string;
+  /** Only present on `GetAllTimesheetEntries`/`GetTimesheetEntryById` - the assigned resource role type's display name. */
+  ResourceRoleTypeName?: string;
   ProjectId: string;
   ProjectCode?: string;
   ProjectName?: string;

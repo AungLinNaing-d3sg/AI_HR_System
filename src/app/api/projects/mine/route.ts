@@ -12,18 +12,19 @@ import type { ProjectListResponsePayload } from '@/types/api.types';
 /**
  * GET /api/projects/mine
  *
- * Backs the Project filter/select on `/reports/timesheet`,
- * `/reports/cost-revenue`, and `/invoices/generate` (see `useMyProjects`/
- * `useProjectFilterOptions`) for a `ProjectAdmin` caller, scoped to that
- * caller's own assigned projects via `Project/GetMyProjectList`
- * (`projectsBackend.getMyProjectList`) - a separate endpoint from the
- * unscoped `GET /api/projects` (`GetProjectList`), which keeps listing every
- * project for every role, unchanged, for the `/projects` management table
- * (`ProjectsTable`/`useProjects`). A `SystemAdmin` never calls this endpoint
- * (their filters keep using `useProjects`/`GetProjectList`, per the feature
- * spec); it's restricted to `PROJECT_MANAGEMENT_ROLES` purely as a safety
- * net, mirroring the same gate already applied to the Report/Invoice domains
- * (see `app/api/reports/timesheet/route.ts`, `app/api/invoices/route.ts`).
+ * Backs the `/projects` management table (see `useProjectList`) and the
+ * Project filter/select on `/reports/timesheet`, `/reports/cost-revenue`,
+ * and `/invoices/generate` (see `useMyProjects`/`useProjectFilterOptions`)
+ * for a `ProjectAdmin` caller, scoped to that caller's own assigned projects
+ * via `Project/GetMyProjectList` (`projectsBackend.getMyProjectList`) - a
+ * separate endpoint from the unscoped `GET /api/projects` (`GetProjectList`),
+ * which keeps listing every project, unchanged, for a `SystemAdmin` (or any
+ * other role) via `useProjects`. A `SystemAdmin` never calls this endpoint
+ * (their table/filters keep using `useProjects`/`GetProjectList`, per the
+ * feature spec); it's restricted to `PROJECT_MANAGEMENT_ROLES` purely as a
+ * safety net, mirroring the same gate already applied to the Report/Invoice
+ * domains (see `app/api/reports/timesheet/route.ts`,
+ * `app/api/invoices/route.ts`).
  */
 export async function GET(): Promise<NextResponse> {
   const cookieStore = await cookies();

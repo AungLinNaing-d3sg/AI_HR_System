@@ -7,9 +7,10 @@ import { useProjects } from '@/hooks/useProjects';
 /**
  * Project options for the report/invoice "Project" filter & select fields -
  * `TimesheetReportTable`'s and `CostRevenueTable`'s Project filter, and
- * `GenerateInvoiceForm`'s Project select. Distinct from the `/projects`
- * management table (`ProjectsTable`), which always lists every project via
- * `useProjects`/`GetProjectList` regardless of role.
+ * `GenerateInvoiceForm`'s Project select. Same role-scoped `useMyProjects`/
+ * `useProjects` split as the `/projects` management table's `useProjectList`,
+ * kept as a separate hook since these two call sites can evolve
+ * independently.
  *
  * A `ProjectAdmin` only ever reports on/invoices their own assigned projects
  * (see `app/api/reports/timesheet/route.ts`'s `getMyTimesheetReport`/

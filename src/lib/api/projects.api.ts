@@ -28,10 +28,11 @@ export async function getProjects(): Promise<Project[]> {
 /**
  * Lists only the current `ProjectAdmin` caller's own assigned projects
  * (`GET /api/projects/mine` -> `Project/GetMyProjectList`). Used by
- * `useMyProjects`/`useProjectFilterOptions` for the Project filter/select on
- * `/reports/timesheet`, `/reports/cost-revenue`, and `/invoices/generate` -
- * not by the `/projects` management table, which keeps using `getProjects`
- * above for every role.
+ * `useMyProjects` for the `/projects` management table (`useProjectList`,
+ * `ProjectAdmin` branch) and the report/invoice Project filter/select
+ * (`useProjectFilterOptions`) on `/reports/timesheet`, `/reports/cost-revenue`,
+ * and `/invoices/generate`. A `SystemAdmin` (or any other role) keeps using
+ * `getProjects` above for both.
  */
 export async function getMyProjects(): Promise<Project[]> {
   const { data } = await axiosInstance.get<ProjectListResponsePayload>('/projects/mine');

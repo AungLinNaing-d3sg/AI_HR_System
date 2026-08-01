@@ -42,6 +42,13 @@ describe('projects.api (client)', () => {
     expect(result).toEqual([project]);
   });
 
+  it('getMyProjects gets /projects/mine and returns the project list', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { projects: [project] } });
+    const result = await projectsApi.getMyProjects();
+    expect(axiosInstance.get).toHaveBeenCalledWith('/projects/mine');
+    expect(result).toEqual([project]);
+  });
+
   it('getProject gets /projects/:id and returns the project', async () => {
     axiosInstance.get.mockResolvedValue({ data: { project } });
     const result = await projectsApi.getProject('project-1');

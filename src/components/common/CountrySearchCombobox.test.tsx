@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -151,6 +151,41 @@ describe('CountrySearchCombobox', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('pre-fills the input with the matching country label when mounted with a non-empty value (e.g. an edit form)', async () => {
+    renderCombobox('country-1');
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Singapore (SG)'));
+  });
+
+  it('shows every country (not filtered by the pre-filled label) when the listbox is opened right after mounting with a value', async () => {
+    renderCombobox('country-1');
+    const user = userEvent.setup();
+
+    await screen.findByDisplayValue('Singapore (SG)');
+    await user.click(screen.getByRole('combobox'));
+
+    expect(await screen.findByRole('option', { name: /singapore/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /united states/i })).toBeInTheDocument();
+  });
+
+  it('filters normally by query once the caller starts typing over a pre-filled value', async () => {
+    renderCombobox('country-1');
+    const user = userEvent.setup();
+
+    await screen.findByDisplayValue('Singapore (SG)');
+    await user.type(screen.getByRole('combobox'), 'x');
+
+    expect(await screen.findByText(/no countries found/i)).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /singapore/i })).not.toBeInTheDocument();
+  });
+
+  it('leaves the input blank when mounted with a value that matches no known country (e.g. a deleted reference record)', async () => {
+    renderCombobox('country-does-not-exist');
+
+    await screen.findByRole('combobox');
+    expect(screen.getByRole('combobox')).toHaveValue('');
   });
 
   it('clears the visible text when the selected value is reset externally', async () => {

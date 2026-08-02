@@ -6,6 +6,9 @@ import type { UserRole } from '@/types/domain.types';
 jest.mock('../../hooks/useProjects', () => ({
   useProjects: jest.fn(),
 }));
+jest.mock('../../hooks/useMyProjects', () => ({
+  useMyProjects: jest.fn(),
+}));
 jest.mock('../../hooks/useTimesheetWeek', () => ({
   useTimesheetWeek: jest.fn(),
 }));
@@ -14,6 +17,7 @@ jest.mock('../../hooks/useTimesheetHistory', () => ({
 }));
 
 const { useProjects } = jest.requireMock('../../hooks/useProjects') as { useProjects: jest.Mock };
+const { useMyProjects } = jest.requireMock('../../hooks/useMyProjects') as { useMyProjects: jest.Mock };
 const { useTimesheetWeek } = jest.requireMock('../../hooks/useTimesheetWeek') as { useTimesheetWeek: jest.Mock };
 const { useTimesheetHistory } = jest.requireMock('../../hooks/useTimesheetHistory') as {
   useTimesheetHistory: jest.Mock;
@@ -21,6 +25,7 @@ const { useTimesheetHistory } = jest.requireMock('../../hooks/useTimesheetHistor
 
 function setupHooks(overrides?: { entries?: Array<Record<string, unknown>> }) {
   useProjects.mockReturnValue({ projects: [], isLoading: false, isError: false, error: null, refetch: jest.fn() });
+  useMyProjects.mockReturnValue({ projects: [], isLoading: false, isError: false, error: null, refetch: jest.fn() });
   useTimesheetWeek.mockReturnValue({
     week: { entries: [] },
     isLoading: false,
@@ -40,6 +45,7 @@ function setupHooks(overrides?: { entries?: Array<Record<string, unknown>> }) {
 describe('DashboardOverview', () => {
   beforeEach(() => {
     useProjects.mockReset();
+    useMyProjects.mockReset();
     useTimesheetWeek.mockReset();
     useTimesheetHistory.mockReset();
     setupHooks();
@@ -56,7 +62,7 @@ describe('DashboardOverview', () => {
       refetch: jest.fn(),
     });
 
-    render(<DashboardOverview role="User" />);
+    render(<DashboardOverview role="SystemAdmin" />);
 
     expect(screen.getByText('Loading…')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(3);
@@ -118,13 +124,44 @@ describe('DashboardOverview', () => {
       refetch: refetchWeek,
     });
 
-    render(<DashboardOverview role="User" />);
+    render(<DashboardOverview role="SystemAdmin" />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load projects.');
 
     await userEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(refetchProjects).toHaveBeenCalledTimes(1);
     expect(refetchWeek).not.toHaveBeenCalled();
+  });
+
+  it('uses GetMyProjectList (useMyProjects) for the Total Projects stat card for a plain User (Employee)', () => {
+    useMyProjects.mockReturnValue({
+      projects: [{ id: 'p1' }, { id: 'p2' }],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: jest.fn(),
+    });
+
+    render(<DashboardOverview role="User" />);
+
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(useProjects).toHaveBeenCalledWith(false);
+    expect(useMyProjects).toHaveBeenCalledWith(true);
+  });
+
+  it('uses GetProjectList (useProjects) for the Total Projects stat card for a SystemAdmin', () => {
+    useProjects.mockReturnValue({
+      projects: [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: jest.fn(),
+    });
+
+    render(<DashboardOverview role="SystemAdmin" />);
+
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(useMyProjects).toHaveBeenCalledWith(false);
   });
 
   it('hides the "View Reports" quick action for a plain User', () => {

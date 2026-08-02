@@ -87,8 +87,21 @@ describe('useProjectList', () => {
     expect(projectsApi.getMyProjects).not.toHaveBeenCalled();
   });
 
-  it('falls back to GetProjectList (getProjects) for any other role', async () => {
+  it('uses GetMyProjectList (getMyProjects) for a plain User (Employee) caller', async () => {
     mockUseAuth.mockReturnValue({ role: 'User' });
+    projectsApi.getMyProjects.mockResolvedValue(myProjects);
+    projectsApi.getProjects.mockResolvedValue(allProjects);
+
+    const { result } = renderHook(() => useProjectList(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.projects).toEqual(myProjects);
+    expect(projectsApi.getMyProjects).toHaveBeenCalled();
+    expect(projectsApi.getProjects).not.toHaveBeenCalled();
+  });
+
+  it('falls back to GetProjectList (getProjects) for any other role', async () => {
+    mockUseAuth.mockReturnValue({ role: 'Guest' });
     projectsApi.getProjects.mockResolvedValue(allProjects);
 
     const { result } = renderHook(() => useProjectList(), { wrapper });

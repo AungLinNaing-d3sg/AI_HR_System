@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { BarChart3, ClipboardCheck, Clock, FolderKanban, UserPlus, User as UserIcon } from 'lucide-react';
+import { useMyProjects } from '@/hooks/useMyProjects';
 import { useProjects } from '@/hooks/useProjects';
 import { useTimesheetWeek } from '@/hooks/useTimesheetWeek';
 import { useTimesheetHistory } from '@/hooks/useTimesheetHistory';
@@ -47,14 +48,23 @@ function formatEntryDate(value: string): string {
 export function DashboardOverview({ role }: DashboardOverviewProps) {
   const isSystemAdmin = role === 'SystemAdmin';
   const canViewReports = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
+  // A plain `User` (the backend's "Employee" role) only ever works their own
+  // assigned projects, so the "Total Projects" stat card uses the same
+  // `GET /Project/GetMyProjectList` (`useMyProjects`) the `/projects`
+  // management table scopes to for that role (see `useProjectList`), instead
+  // of the unscoped `GetProjectList` (`useProjects`) every other role sees
+  // here.
+  const isEmployee = role === 'User';
 
+  const myProjectsQuery = useMyProjects(isEmployee);
+  const allProjectsQuery = useProjects(!isEmployee);
   const {
     projects,
     isLoading: isLoadingProjects,
     isError: isProjectsError,
     error: projectsError,
     refetch: refetchProjects,
-  } = useProjects();
+  } = isEmployee ? myProjectsQuery : allProjectsQuery;
   const {
     week,
     isLoading: isLoadingWeek,

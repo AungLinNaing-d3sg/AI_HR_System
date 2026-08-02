@@ -2,11 +2,11 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useCountries } from '@/hooks/useCountries';
 import { useRoles } from '@/hooks/useRoles';
 import { useUpdateUser } from '@/hooks/useUpdateUser';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { CountrySearchCombobox } from '@/components/common/CountrySearchCombobox';
 import { FieldError } from '@/components/ui/FieldError';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -49,9 +49,12 @@ function toFormValues(user: AdminUserListItem): UpdateUserFormValues {
  * field (password changes go through the dedicated Change Password flow)
  * and `roleId` is optional: left on "Keep current role", the account's
  * existing role is preserved (the backend accepts `RoleId: null` to mean
- * "no change" - see `updateUserSchema`'s comment). The Country dropdown
- * mirrors `CreateUserForm`'s (`useCountries`), and the Status dropdown
- * mirrors `CurrencyForm`'s edit-mode Active/Inactive `Select` pattern -
+ * "no change" - see `updateUserSchema`'s comment). The Country field mirrors
+ * `CreateUserForm`'s searchable `CountrySearchCombobox` (same
+ * `GET /Country/GetAllCountries`-backed, search-as-you-type UX), pre-filled
+ * with the user's current country label once the reference list loads (see
+ * `CountrySearchCombobox`'s doc comment). The Status dropdown mirrors
+ * `CurrencyForm`'s edit-mode Active/Inactive `Select` pattern -
  * this is also how a row is "deleted": there is no delete/deactivate
  * endpoint for a user account, so setting Status to Inactive here is the
  * closest equivalent (see `UsersTable`'s row-level Activate/Deactivate
@@ -60,12 +63,6 @@ function toFormValues(user: AdminUserListItem): UpdateUserFormValues {
 export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
   const { updateUser, isUpdating, error, reset: resetMutation } = useUpdateUser();
   const { roles, isLoading: isLoadingRoles, isError: isRolesError, error: rolesError } = useRoles();
-  const {
-    countries,
-    isLoading: isLoadingCountries,
-    isError: isCountriesError,
-    error: countriesError,
-  } = useCountries();
 
   const {
     register,
@@ -91,7 +88,6 @@ export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       {error && <Alert variant="error">{error}</Alert>}
       {isRolesError && <Alert variant="error">{rolesError ?? 'Could not load roles.'}</Alert>}
-      {isCountriesError && <Alert variant="error">{countriesError ?? 'Could not load countries.'}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -150,20 +146,20 @@ export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
 
         <div>
           <Label htmlFor="edit-countryId">Country (optional)</Label>
-          <Select
-            id="edit-countryId"
-            hasError={Boolean(errors.countryId)}
-            aria-describedby={errors.countryId ? 'edit-countryId-error' : undefined}
-            disabled={isLoadingCountries}
-            {...register('countryId')}
-          >
-            <option value="">{isLoadingCountries ? 'Loading countries…' : 'No country'}</option>
-            {countries.map((country) => (
-              <option key={country.id} value={country.id}>
-                {country.name}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            name="countryId"
+            control={control}
+            render={({ field }) => (
+              <CountrySearchCombobox
+                id="edit-countryId"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                hasError={Boolean(errors.countryId)}
+                aria-describedby={errors.countryId ? 'edit-countryId-error' : undefined}
+              />
+            )}
+          />
           <FieldError id="edit-countryId-error" message={errors.countryId?.message} />
         </div>
 

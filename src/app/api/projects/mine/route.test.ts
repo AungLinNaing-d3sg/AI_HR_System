@@ -72,7 +72,7 @@ describe('GET /api/projects/mine', () => {
 
   it('returns the mapped project list for a plain User (Employee)', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
-      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('Employee') } : undefined
     );
     projectsBackend.getMyProjectList.mockResolvedValue([dto]);
 
@@ -128,7 +128,7 @@ describe('GET /api/projects/mine', () => {
 
   it('returns an empty array for a plain User (Employee) with no assigned projects', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
-      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('Employee') } : undefined
     );
     projectsBackend.getMyProjectList.mockResolvedValue([]);
 

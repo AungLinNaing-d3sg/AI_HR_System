@@ -8,9 +8,9 @@ import { MY_PROJECT_LIST_ROLES } from '@/lib/constants/project.constants';
 /**
  * Project list for the `/projects` management table (`ProjectsTable`).
  *
- * A `ProjectAdmin` only manages, and a plain `User` (the backend's "Employee"
- * role) only works, their own assigned projects - so both scope their list
- * via `GET /Project/GetMyProjectList` (`useMyProjects`, see
+ * A `ProjectAdmin` only manages, and an `Employee` only works, their own
+ * assigned projects - so both scope their list via
+ * `GET /Project/GetMyProjectList` (`useMyProjects`, see
  * `MY_PROJECT_LIST_ROLES`) instead of the unscoped `GetProjectList` a
  * `SystemAdmin` (or `Guest`) still sees via `useProjects`. Mirrors the same
  * `ProjectAdmin` split already used for the report/invoice Project

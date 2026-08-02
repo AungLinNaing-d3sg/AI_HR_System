@@ -45,7 +45,7 @@ const createdUser: AuthenticatedUser = {
   lastName: 'User',
   employeeId: null,
   countryId: null,
-  role: 'User',
+  role: 'Employee',
 };
 
 function renderWithProviders(ui: ReactNode) {

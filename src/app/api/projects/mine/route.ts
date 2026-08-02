@@ -13,9 +13,9 @@ import type { ProjectListResponsePayload } from '@/types/api.types';
  * GET /api/projects/mine
  *
  * Backs the `/projects` management table (see `useProjectList`) for a
- * `ProjectAdmin` or plain `User` (the backend's "Employee" role) caller, and
- * the Project filter/select on `/reports/timesheet`, `/reports/cost-revenue`,
- * and `/invoices/generate` (see `useMyProjects`/`useProjectFilterOptions`)
+ * `ProjectAdmin` or `Employee` caller, and the Project filter/select on
+ * `/reports/timesheet`, `/reports/cost-revenue`, and `/invoices/generate`
+ * (see `useMyProjects`/`useProjectFilterOptions`)
  * for a `ProjectAdmin` caller - scoped to that caller's own assigned
  * projects via `Project/GetMyProjectList` (`projectsBackend.getMyProjectList`)
  * - a separate endpoint from the unscoped `GET /api/projects`
@@ -39,7 +39,7 @@ export async function GET(): Promise<NextResponse> {
   const role = extractRole(claims);
   if (!role || !MY_PROJECT_LIST_ROLES.includes(role)) {
     return NextResponse.json(
-      { message: 'Only a Project Admin or a regular user can view this project list.' },
+      { message: 'Only a Project Admin or an Employee can view this project list.' },
       { status: 403 }
     );
   }

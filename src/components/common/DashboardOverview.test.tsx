@@ -69,7 +69,7 @@ describe('DashboardOverview', () => {
   });
 
   it('shows an empty state when there are no recent timesheet entries', () => {
-    render(<DashboardOverview role="User" />);
+    render(<DashboardOverview role="Employee" />);
     expect(screen.getByText('No timesheet entries yet.')).toBeInTheDocument();
   });
 
@@ -95,7 +95,7 @@ describe('DashboardOverview', () => {
       ],
     });
 
-    render(<DashboardOverview role="User" />);
+    render(<DashboardOverview role="Employee" />);
 
     const items = screen.getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Project Beta');
@@ -142,7 +142,7 @@ describe('DashboardOverview', () => {
       refetch: jest.fn(),
     });
 
-    render(<DashboardOverview role="User" />);
+    render(<DashboardOverview role="Employee" />);
 
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(useProjects).toHaveBeenCalledWith(false);
@@ -165,7 +165,7 @@ describe('DashboardOverview', () => {
   });
 
   it('hides the "View Reports" quick action for a plain User', () => {
-    render(<DashboardOverview role="User" />);
+    render(<DashboardOverview role="Employee" />);
     expect(screen.queryByRole('link', { name: /view reports/i })).not.toBeInTheDocument();
   });
 

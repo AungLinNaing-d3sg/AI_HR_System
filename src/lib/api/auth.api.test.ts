@@ -21,7 +21,7 @@ const user: AuthenticatedUser = {
   lastName: 'Doe',
   employeeId: null,
   countryId: null,
-  role: 'User',
+  role: 'Employee',
 };
 
 describe('auth.api (client)', () => {

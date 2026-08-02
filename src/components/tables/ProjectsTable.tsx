@@ -18,7 +18,7 @@ const ACTION_LINK_CLASSNAME =
 const DISABLED_ACTION_CLASSNAME =
   'inline-flex h-8 cursor-not-allowed items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-2.5 text-sm font-medium text-zinc-400';
 
-/** A plain `User` (the backend's "Employee" role) only works their own assigned projects and cannot assign resources to them. */
+/** An `Employee` only works their own assigned projects and cannot assign resources to them. */
 const ASSIGN_DISABLED_MESSAGE = 'Only a System Admin or Project Admin can assign resources to a project.';
 
 function formatDate(value: string | null): string {
@@ -31,16 +31,14 @@ function formatDate(value: string | null): string {
 /**
  * Lists projects with Assign/Edit/Delete row actions. Handles loading,
  * error, and empty states. Scoped to the caller's own projects
- * (`GetMyProjectList`) for a `ProjectAdmin` or plain `User` (the backend's
- * "Employee" role), or every project (`GetProjectList`) for a `SystemAdmin`/
- * `Guest` - see `useProjectList`. The Assign action is disabled (with an
- * explanatory `title` tooltip) for a plain `User`, who can only view - not
- * manage - resource assignments.
+ * (`GetMyProjectList`) for a `ProjectAdmin` or `Employee`, or every project
+ * (`GetProjectList`) for a `SystemAdmin`/`Guest` - see `useProjectList`. The
+ * Assign action is disabled (with an explanatory `title` tooltip) for an
+ * `Employee`, who can only view - not manage - resource assignments.
  */
 export function ProjectsTable() {
   const { role } = useAuth();
-  console.log('logggggggggggg role;;;', role)
-  const canAssign = role !== 'User';
+  const canAssign = role !== 'Employee';
   const { projects, isLoading, isError, error, refetch } = useProjectList();
   const { deleteProject, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteProject();
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);

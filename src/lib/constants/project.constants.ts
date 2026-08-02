@@ -22,14 +22,14 @@ export const PROJECT_MANAGEMENT_ROLES: readonly UserRole[] = ['SystemAdmin', 'Pr
  * is scoped to only their own assigned projects, via
  * `GET /Project/GetMyProjectList` (`useMyProjects`), instead of the unscoped
  * `GetProjectList` (`useProjects`) a `SystemAdmin` (or any other role) still
- * sees. A `ProjectAdmin` only manages their own assigned projects; a plain
- * `User` (the backend's "Employee" role) likewise only works their own
- * assigned projects. Also gates `GET /api/projects/mine`
- * (`app/api/projects/mine/route.ts`), since both roles now call it. Kept
- * separate from `PROJECT_MANAGEMENT_ROLES` above, which grants broader
- * report/invoice/timesheet-approval access a plain `User` must not have.
+ * sees. A `ProjectAdmin` only manages their own assigned projects; an
+ * `Employee` likewise only works their own assigned projects. Also gates
+ * `GET /api/projects/mine` (`app/api/projects/mine/route.ts`), since both
+ * roles now call it. Kept separate from `PROJECT_MANAGEMENT_ROLES` above,
+ * which grants broader report/invoice/timesheet-approval access an `Employee`
+ * must not have.
  */
-export const MY_PROJECT_LIST_ROLES: readonly UserRole[] = ['ProjectAdmin', 'User'];
+export const MY_PROJECT_LIST_ROLES: readonly UserRole[] = ['ProjectAdmin', 'Employee'];
 
 /** Matches the wireframe's "Unique, uppercase letters and hyphens" project code hint. */
 export const PROJECT_CODE_REGEX = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;

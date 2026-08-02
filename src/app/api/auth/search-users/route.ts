@@ -44,7 +44,6 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const role = extractRole(claims);
   const isAllRole = role === 'SystemAdmin';
-  console.log('is all role;;;;;;;;;', isAllRole)
   const searchParams = new URL(request.url).searchParams;
   const parsed = searchUsersQuerySchema.safeParse(pickSearchParams(searchParams, ['email', 'userName']));
   if (!parsed.success) {

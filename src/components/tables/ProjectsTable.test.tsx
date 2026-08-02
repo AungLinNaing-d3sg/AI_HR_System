@@ -87,7 +87,7 @@ describe('ProjectsTable', () => {
   });
 
   it('uses GetMyProjectList (getMyProjects) for a plain User (Employee) caller and not GetProjectList', async () => {
-    mockUseAuth.mockReturnValue({ role: 'User' });
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     projectsApi.getMyProjects.mockResolvedValue(projects);
     renderWithProviders(<ProjectsTable />);
 
@@ -97,7 +97,7 @@ describe('ProjectsTable', () => {
   });
 
   it('disables the Assign action for a plain User (Employee) caller', async () => {
-    mockUseAuth.mockReturnValue({ role: 'User' });
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     projectsApi.getMyProjects.mockResolvedValue(projects);
     renderWithProviders(<ProjectsTable />);
 
@@ -119,7 +119,7 @@ describe('ProjectsTable', () => {
   });
 
   it('shows the empty state (not an error) for a plain User (Employee) with no assigned projects', async () => {
-    mockUseAuth.mockReturnValue({ role: 'User' });
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     projectsApi.getMyProjects.mockResolvedValue([]);
     renderWithProviders(<ProjectsTable />);
 
@@ -128,7 +128,7 @@ describe('ProjectsTable', () => {
   });
 
   it('the disabled Assign button for a plain User (Employee) is not keyboard-focusable, unlike the enabled Edit link next to it', async () => {
-    mockUseAuth.mockReturnValue({ role: 'User' });
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     projectsApi.getMyProjects.mockResolvedValue(projects);
     renderWithProviders(<ProjectsTable />);
 

@@ -88,7 +88,7 @@ describe('useProjectList', () => {
   });
 
   it('uses GetMyProjectList (getMyProjects) for a plain User (Employee) caller', async () => {
-    mockUseAuth.mockReturnValue({ role: 'User' });
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     projectsApi.getMyProjects.mockResolvedValue(myProjects);
     projectsApi.getProjects.mockResolvedValue(allProjects);
 

@@ -276,9 +276,9 @@ describe('searchUsersQuerySchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects when neither email nor userName is provided', () => {
+  it('accepts neither email nor userName being provided (the backend returns its broad/unfiltered candidate list)', () => {
     const result = searchUsersQuerySchema.safeParse({});
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('rejects a search term shorter than the minimum length', () => {
@@ -286,8 +286,8 @@ describe('searchUsersQuerySchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects an empty-string search term', () => {
+  it('accepts an empty-string search term (equivalent to omitting it entirely)', () => {
     const result = searchUsersQuerySchema.safeParse({ email: '', userName: '' });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });

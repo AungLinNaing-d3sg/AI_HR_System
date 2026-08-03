@@ -184,24 +184,28 @@ export type UpdateUserFormSchemaValues = z.infer<typeof updateUserFormSchema>;
  * Validates the `URLSearchParams` `GET /api/auth/search-users` reads off
  * `request.url` (see `lib/utils/searchParams.ts`'s `pickSearchParams`) before
  * forwarding to `GET /Auth/SearchUsers?email=&userName=`. Both params are
- * optional individually, but at least one must be present and long enough to
- * avoid an overly broad (or empty) backend query - the client always sends
- * the same as-you-type text as both (see `auth.api.ts#searchUsers`), so in
- * practice this only ever rejects a query shorter than
- * `MIN_USER_SEARCH_QUERY_LENGTH`.
+ * fully optional - the backend supports calling `SearchUsers` with neither
+ * one to return its broad/unfiltered candidate list, which is what the "Add
+ * User to Project" combobox's initial, pre-search view now relies on (see
+ * `useUserSearch`, replacing the removed `GetUserList`-backed `useUserList`
+ * dropdown). When a param *is* supplied, though, it must still meet
+ * `MIN_USER_SEARCH_QUERY_LENGTH` - the client always sends the same
+ * as-you-type text as both (see `auth.api.ts#searchUsers`), so this guards
+ * against an overly narrow 1-character search reaching the backend, without
+ * blocking the no-params case.
  */
-export const searchUsersQuerySchema = z
-  .object({
-    email: z.string().trim().max(200, 'Search term is too long.').optional(),
-    userName: z.string().trim().max(100, 'Search term is too long.').optional(),
-  })
-  .refine(
-    (data) =>
-      (data.email?.length ?? 0) >= MIN_USER_SEARCH_QUERY_LENGTH ||
-      (data.userName?.length ?? 0) >= MIN_USER_SEARCH_QUERY_LENGTH,
-    {
+const optionalSearchTermSchema = (maxLength: number) =>
+  z
+    .string()
+    .trim()
+    .max(maxLength, 'Search term is too long.')
+    .refine((value) => value.length === 0 || value.length >= MIN_USER_SEARCH_QUERY_LENGTH, {
       message: `Enter at least ${MIN_USER_SEARCH_QUERY_LENGTH} characters to search.`,
-      path: ['userName'],
-    }
-  );
+    })
+    .optional();
+
+export const searchUsersQuerySchema = z.object({
+  email: optionalSearchTermSchema(200),
+  userName: optionalSearchTermSchema(100),
+});
 export type SearchUsersQueryValues = z.infer<typeof searchUsersQuerySchema>;

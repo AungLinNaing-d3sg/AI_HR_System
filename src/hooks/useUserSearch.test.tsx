@@ -20,22 +20,24 @@ function wrapper({ children }: { children: ReactNode }) {
 describe('useUserSearch', () => {
   beforeEach(() => {
     authApi.searchUsers.mockReset();
+    authApi.searchUsers.mockResolvedValue(users);
   });
 
-  it('does not call the API when the query is shorter than the minimum length', () => {
+  it('searches with an empty string (not the raw short input) when the query is shorter than the minimum length', async () => {
     const { result } = renderHook(() => useUserSearch('j'), { wrapper });
-    expect(authApi.searchUsers).not.toHaveBeenCalled();
-    expect(result.current.users).toEqual([]);
-    expect(result.current.isLoading).toBe(false);
+
+    await waitFor(() => expect(authApi.searchUsers).toHaveBeenCalledWith(''));
+    expect(authApi.searchUsers).not.toHaveBeenCalledWith('j');
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.users).toEqual(users);
   });
 
-  it('does not call the API for a blank/whitespace-only query', () => {
+  it('searches with an empty string for a blank/whitespace-only query', async () => {
     renderHook(() => useUserSearch('   '), { wrapper });
-    expect(authApi.searchUsers).not.toHaveBeenCalled();
+    await waitFor(() => expect(authApi.searchUsers).toHaveBeenCalledWith(''));
   });
 
   it('searches once the query reaches the minimum length and returns the results', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     const { result } = renderHook(() => useUserSearch('ja'), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -44,7 +46,6 @@ describe('useUserSearch', () => {
   });
 
   it('trims the query before checking its length and searching', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     renderHook(() => useUserSearch('  ja  '), { wrapper });
 
     await waitFor(() => expect(authApi.searchUsers).toHaveBeenCalledWith('ja'));

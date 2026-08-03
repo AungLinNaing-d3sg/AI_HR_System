@@ -60,13 +60,14 @@ describe('GET /api/auth/search-users', () => {
     expect(response.status).toBe(401);
   });
 
-  it('returns 400 when neither email nor userName is provided', async () => {
+  it('allows neither email nor userName to be provided, forwarding no search params so the backend returns its broad/unfiltered list', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
     );
+    authBackend.searchUsers.mockResolvedValue([]);
     const response = await GET(requestWithQuery(''));
-    expect(response.status).toBe(400);
-    expect(authBackend.searchUsers).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(authBackend.searchUsers).toHaveBeenCalledWith({ isAllRole: false }, expect.any(String));
   });
 
   it('returns 400 when the search term is shorter than the minimum length', async () => {

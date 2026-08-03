@@ -17,13 +17,18 @@ import type { SearchUsersResponsePayload } from '@/types/api.types';
  * Backs the searchable "Add User to Project" combobox on
  * `/projects/:id/assignments` (`docs/HR_System_FE_wireframe.pdf`), sourced
  * from `GET /Auth/SearchUsers?email={email}&userName={userName}&isAllRole=` -
- * replacing the previously used, non-search `GET /Auth/GetUserList` dropdown
- * (see the removed `app/api/auth/user-list/route.ts`). The combobox sends
- * the same as-you-type query text as both `email` and `userName` (see
+ * this is now that combobox's *only* data source, including its initial,
+ * pre-search candidate list, replacing the previously used, separate,
+ * non-search `GET /Auth/GetUserList` dropdown (see the removed
+ * `app/api/auth/user-list/route.ts`). The combobox sends the same as-you-type
+ * query text as both `email` and `userName` (see
  * `useUserSearch`/`auth.api.ts#searchUsers`), so the backend matches a user
- * by either field; `searchUsersQuerySchema` requires at least one of the two
- * to meet `MIN_USER_SEARCH_QUERY_LENGTH`. Open to any authenticated user,
- * matching the rest of the Projects surface.
+ * by either field; `email`/`userName` are both fully optional -
+ * `searchUsersQuerySchema` only rejects a *supplied* value shorter than
+ * `MIN_USER_SEARCH_QUERY_LENGTH`, since the backend supports calling
+ * `SearchUsers` with neither param to return its broad/unfiltered candidate
+ * list. Open to any authenticated user, matching the rest of the Projects
+ * surface.
  *
  * `isAllRole` is never accepted from the client - it's derived here from the
  * caller's own decoded JWT role: only a `SystemAdmin` searches across every

@@ -89,12 +89,12 @@ export interface GetUserListQuery {
  * Paginated list of every user account in the system - backs the
  * `SystemAdmin`-only `/admin/users` management table (see
  * `app/api/auth/users/route.ts`, which requests a large single page via
- * `USERS_PAGE_SIZE`), and the "Add User to Project" combobox's initial,
- * pre-search option list (`app/api/auth/user-list/route.ts`, also
- * `USERS_PAGE_SIZE`), so that combobox shows every candidate user up front
- * instead of only once the caller starts typing - `searchUsers`/
- * `GET /Auth/SearchUsers` below still backs that same combobox's as-you-type
- * filtering once the query is long enough.
+ * `USERS_PAGE_SIZE`). The "Add User to Project" combobox on
+ * `/projects/:id/assignments` no longer uses this endpoint for its initial,
+ * pre-search option list - it now calls `searchUsers` below with no
+ * `email`/`userName` instead (see the removed
+ * `app/api/auth/user-list/route.ts`), so `SearchUsers` backs that combobox's
+ * data end-to-end.
  */
 export async function getUserList(
   accessToken: string,
@@ -124,13 +124,16 @@ export interface SearchUsersQuery {
 
 /**
  * Free-text user search backing the searchable "Add User to Project"
- * combobox on `/projects/:id/assignments` once its query text reaches
- * `MIN_USER_SEARCH_QUERY_LENGTH` - below that, the combobox instead filters
- * its already-loaded `getUserList` result set client-side (see
- * `UserSearchCombobox`). The Route Handler sends the browser's as-you-type
- * query as both `email` and `userName` (see `useUserSearch`), so the backend
- * matches a user by either field, plus the caller-role-derived `isAllRole`
- * (see `SearchUsersQuery#isAllRole` above).
+ * combobox on `/projects/:id/assignments` - both its as-you-type search once
+ * the query text reaches `MIN_USER_SEARCH_QUERY_LENGTH`, and (called with
+ * neither `email` nor `userName`) its initial, pre-search candidate list,
+ * which the combobox then filters client-side (see `UserSearchCombobox`,
+ * `useUserSearch`). Below that threshold, the Route Handler omits both
+ * params entirely rather than forwarding an overly narrow 1-character term;
+ * at/above it, it sends the browser's as-you-type query as both `email` and
+ * `userName` (see `useUserSearch`), so the backend matches a user by either
+ * field, plus the caller-role-derived `isAllRole` (see
+ * `SearchUsersQuery#isAllRole` above).
  */
 export async function searchUsers(
   query: SearchUsersQuery,

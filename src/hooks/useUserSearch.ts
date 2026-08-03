@@ -7,8 +7,8 @@ import { getApiErrorMessage } from '@/lib/utils/apiError';
 import type { UserListItem } from '@/types/domain.types';
 
 /**
- * Stable empty-array reference returned while the query is disabled/loading
- * - a fresh `[]` literal on every render would change identity each time,
+ * Stable empty-array reference returned while the query is loading - a
+ * fresh `[]` literal on every render would change identity each time,
  * defeating callers (like `UserSearchCombobox`) that reset UI state (e.g.
  * the highlighted option index) only when the `users` result actually
  * changes.
@@ -16,33 +16,39 @@ import type { UserListItem } from '@/types/domain.types';
 const EMPTY_USERS: UserListItem[] = [];
 
 /**
- * Free-text search for the "Add User to Project" combobox on
- * `/projects/:id/assignments` (`UserSearchCombobox`), sourced from
+ * Free-text search backing the searchable "Add User to Project" combobox on
+ * `/projects/:id/assignments` (`UserSearchCombobox`), sourced entirely from
  * `GET /Auth/SearchUsers?email={query}&userName={query}` (see
- * `app/api/auth/search-users/route.ts`), replacing the previously used
- * `useUserList`/`GET /Auth/GetUserList` dropdown. `query` is expected to
- * already be debounced by the caller (see `useDebounce`) - this hook only
- * adds the "don't search on too-short input" gate, disabling the query
- * entirely below `MIN_USER_SEARCH_QUERY_LENGTH` so the combobox never fires
- * an overly broad request while the user is still typing the first
- * character. Query key is scoped by the trimmed search text so each
- * distinct search gets its own cache entry.
+ * `app/api/auth/search-users/route.ts`) - this is now the combobox's *only*
+ * data source, including its initial, pre-search candidate list (previously
+ * a separate `GET /Auth/GetUserList` call via the now-removed `useUserList`/
+ * `/api/auth/user-list`), since the backend supports calling `SearchUsers`
+ * with neither param to return that same broad/unfiltered list. `query` is
+ * expected to already be debounced by the caller (see `useDebounce`).
+ *
+ * Below `MIN_USER_SEARCH_QUERY_LENGTH`, the *request* sent to the backend is
+ * pinned to an empty string regardless of the (too-short) input - so the
+ * combobox never fires an overly narrow 1-character search - while the
+ * `queryKey` collapses to that same `''` entry, meaning every call made
+ * below the threshold (including `UserSearchCombobox`'s own always-on tier-1
+ * call) shares one cached, unfiltered result instead of issuing a fresh
+ * request per keystroke.
  */
 export function useUserSearch(query: string) {
   const trimmedQuery = query.trim();
-  const enabled = trimmedQuery.length >= MIN_USER_SEARCH_QUERY_LENGTH;
+  const isServerFiltered = trimmedQuery.length >= MIN_USER_SEARCH_QUERY_LENGTH;
+  const effectiveQuery = isServerFiltered ? trimmedQuery : '';
 
   const searchQuery = useQuery({
-    queryKey: ['auth', 'search-users', trimmedQuery],
-    queryFn: () => authApi.searchUsers(trimmedQuery),
-    enabled,
+    queryKey: ['auth', 'search-users', effectiveQuery],
+    queryFn: () => authApi.searchUsers(effectiveQuery),
   });
 
   return {
-    users: enabled ? (searchQuery.data ?? EMPTY_USERS) : EMPTY_USERS,
-    isLoading: enabled && searchQuery.isLoading,
-    isFetching: enabled && searchQuery.isFetching,
-    isError: enabled && searchQuery.isError,
-    error: enabled && searchQuery.error ? getApiErrorMessage(searchQuery.error, 'Could not search for users.') : null,
+    users: searchQuery.data ?? EMPTY_USERS,
+    isLoading: searchQuery.isLoading,
+    isFetching: searchQuery.isFetching,
+    isError: searchQuery.isError,
+    error: searchQuery.error ? getApiErrorMessage(searchQuery.error, 'Could not search for users.') : null,
   };
 }

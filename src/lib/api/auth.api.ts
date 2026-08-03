@@ -5,7 +5,6 @@ import type {
   RoleListResponsePayload,
   SearchUsersResponsePayload,
   UpdateUserResponsePayload,
-  UserListResponsePayload,
   UsersListResponsePayload,
 } from '@/types/api.types';
 import type { AdminUserListItem, AuthenticatedUser, CreatedUser, Role, UserListItem } from '@/types/domain.types';
@@ -56,27 +55,19 @@ export async function getRoles(): Promise<Role[]> {
 }
 
 /**
- * Every candidate user for the searchable "Add User to Project" combobox on
- * `/projects/:id/assignments`, shown before the caller has typed anything
- * (and filtered client-side for a query below `MIN_USER_SEARCH_QUERY_LENGTH`)
- * - see `useUserList`/`UserSearchCombobox`.
- */
-export async function getUserList(): Promise<UserListItem[]> {
-  const { data } = await axiosInstance.get<UserListResponsePayload>('/auth/user-list');
-  return data.users;
-}
-
-/**
  * Free-text user search for the searchable "Add User to Project" combobox on
- * `/projects/:id/assignments`, once the as-you-type query reaches
- * `MIN_USER_SEARCH_QUERY_LENGTH` (below that, the combobox filters
- * `getUserList`'s already-loaded result set client-side instead - see
- * `useUserSearch`, `useUserList`). `query` is sent to the BFF route as both
- * `email` and `userName`.
+ * `/projects/:id/assignments` - this is that combobox's *only* data source,
+ * including its initial, pre-search candidate list (called with an empty
+ * `query`, sending neither `email` nor `userName` to the BFF route so the
+ * backend returns its broad/unfiltered list - see `useUserSearch`,
+ * `UserSearchCombobox`), and its as-you-type search once the query reaches
+ * `MIN_USER_SEARCH_QUERY_LENGTH`. A non-empty `query` is sent to the BFF
+ * route as both `email` and `userName`.
  */
 export async function searchUsers(query: string): Promise<UserListItem[]> {
+  const trimmedQuery = query.trim();
   const { data } = await axiosInstance.get<SearchUsersResponsePayload>('/auth/search-users', {
-    params: { email: query, userName: query },
+    params: trimmedQuery ? { email: trimmedQuery, userName: trimmedQuery } : undefined,
   });
   return data.users;
 }

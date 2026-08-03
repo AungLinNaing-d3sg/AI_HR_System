@@ -121,21 +121,22 @@ export type GetRolesResponse = RoleDto[];
 
 /**
  * A single row within `GET /Auth/GetUserList`'s paginated `Items` - every
- * user account in the system (not filtered by project assignment). Backs
- * the "Add User to Project" dropdown on `/projects/:id/assignments` (see
- * `app/api/auth/user-list/route.ts`), replacing the now-removed
- * `/Auth/GetUnassignedUsers` endpoint this app previously called for that
- * same dropdown, as well as the `SystemAdmin`-only `/admin/users`
- * management table (see `app/api/auth/users/route.ts`).
+ * user account in the system (not filtered by project assignment). Backs the
+ * `SystemAdmin`-only `/admin/users` management table (see
+ * `app/api/auth/users/route.ts`). The "Add User to Project" dropdown on
+ * `/projects/:id/assignments` no longer sources from this DTO/endpoint - it
+ * now calls `GET /Auth/SearchUsers` exclusively instead (see
+ * `UserSearchItemDto`/`useUserSearch`, and the removed
+ * `app/api/auth/user-list/route.ts`, which previously called
+ * `GET /Auth/GetUserList` for that same dropdown).
  *
  * As of the latest backend contract (see
  * docs/HR_System_BE.postman_collection.json), each item additionally
  * carries `RoleName`/`CountryId`/`CountryCode`/`CountryName` (and, on
- * `SearchUsers`, `IsActive`) - fields the "Add User to Project" dropdown
- * still doesn't need (see `mapUserListItem`) but the `/admin/users` table's
- * Role/Country columns and row-level actions do (see
- * `mapAdminUserListItem`). Declared optional here (rather than required) so
- * a row missing one of them degrades gracefully instead of failing to map.
+ * `SearchUsers`, `IsActive`) - fields the `/admin/users` table's Role/Country
+ * columns and row-level actions need (see `mapAdminUserListItem`).
+ * Declared optional here (rather than required) so a row missing one of them
+ * degrades gracefully instead of failing to map.
  */
 export interface UserListItemDto {
   UserId: string;
@@ -353,30 +354,25 @@ export interface ProjectAssignmentListResponsePayload {
   assignments: import('./domain.types').ProjectAssignment[];
 }
 
-/** Shape returned by `GET /api/auth/search-users` to the browser. */
+/**
+ * Shape returned by `GET /api/auth/search-users` to the browser - both the
+ * "Add User to Project" combobox's as-you-type search results and (called
+ * with no `email`/`userName`) its initial, pre-search candidate list (see
+ * `UserSearchCombobox`/`useUserSearch`), open to any authenticated role.
+ */
 export interface SearchUsersResponsePayload {
   users: import('./domain.types').UserListItem[];
 }
 
 /**
- * Shape returned by `GET /api/auth/user-list` to the browser - the "Add User
- * to Project" combobox's initial, pre-search list (see
- * `app/api/auth/user-list/route.ts` and `UserSearchCombobox`), open to any
- * authenticated role.
- */
-export interface UserListResponsePayload {
-  users: import('./domain.types').UserListItem[];
-}
-
-/**
  * Shape returned by `GET /api/auth/users` (the `/admin/users` management
- * table - distinct from the `/api/auth/user-list` dropdown above: this one
- * is `SystemAdmin`-only and requests a much larger page, see
- * `USERS_PAGE_SIZE`). `totalCount` lets the UI note if more accounts exist
- * than were returned, since no pagination UI is built for this screen.
- * Uses `AdminUserListItem` (not the lighter `UserListItem` the dropdown
- * above uses) since this table also renders Role/Country columns and
- * row-level Edit/Activate actions.
+ * table - distinct from the "Add User to Project" combobox's
+ * `/api/auth/search-users` above: this one is `SystemAdmin`-only and
+ * requests a much larger page, see `USERS_PAGE_SIZE`). `totalCount` lets the
+ * UI note if more accounts exist than were returned, since no pagination UI
+ * is built for this screen. Uses `AdminUserListItem` (not the lighter
+ * `UserListItem` the combobox above uses) since this table also renders
+ * Role/Country columns and row-level Edit/Activate actions.
  */
 export interface UsersListResponsePayload {
   users: import('./domain.types').AdminUserListItem[];

@@ -11,9 +11,10 @@ import type { UsersListParams } from '@/lib/api/auth.api';
  * `app/api/auth/users/route.ts`. `params` drives the table's own
  * server-side pagination (`pageNo`/`pageSize`), falling back to one large
  * page if omitted - see `USERS_PAGE_SIZE`. Distinct query key
- * (`['auth', 'users', params]`) from `useUserList`'s `['auth', 'user-list']`,
- * since the two hit the same backend endpoint with different page
- * sizes/permissions for different UI.
+ * (`['auth', 'users', params]`) from the "Add User to Project" combobox's
+ * `useUserSearch`/`['auth', 'search-users', ...]`, since the two are backed
+ * by different endpoints (`GetUserList` vs `SearchUsers`) with different
+ * permissions for different UI.
  */
 export function useUsers(params: UsersListParams = {}) {
   const query = useQuery({

@@ -90,16 +90,27 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </div>
 
       {user && (
-        <div className="flex items-center gap-2.5 border-t border-sidebar-border px-4 py-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
-            {getInitials(user.firstName, user.lastName)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">
-              {user.firstName} {user.lastName}
-            </p>
-            <p className="truncate text-xs text-sidebar-foreground-muted">{formatRole(user.role)}</p>
-          </div>
+        <div className="flex items-center gap-1 border-t border-sidebar-border px-2 py-3">
+          <Link
+            href="/profile"
+            onClick={onNavigate}
+            aria-current={pathname === '/profile' ? 'page' : undefined}
+            title="View profile"
+            className={cn(
+              'flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-sidebar-active/60',
+              pathname === '/profile' && 'bg-sidebar-active'
+            )}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
+              {getInitials(user.firstName, user.lastName)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="truncate text-xs text-sidebar-foreground-muted">{formatRole(user.role)}</p>
+            </div>
+          </Link>
           <button
             type="button"
             onClick={() => {

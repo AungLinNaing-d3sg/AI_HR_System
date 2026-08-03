@@ -124,4 +124,41 @@ describe('Sidebar', () => {
     rerender(<Sidebar />);
     expect(screen.queryByRole('link', { name: 'Invoices' })).not.toBeInTheDocument();
   });
+
+  it('links the bottom user profile icon/name to the Profile page', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({
+      role: 'Employee',
+      user: { firstName: 'Jane', lastName: 'Doe', role: 'Employee' },
+      logout: jest.fn(),
+      isLoggingOut: false,
+    });
+    render(<Sidebar />);
+    expect(screen.getByRole('link', { name: /jane doe/i })).toHaveAttribute('href', '/profile');
+  });
+
+  it('marks the user profile link as the current page when already on /profile', () => {
+    mockPathname = '/profile';
+    mockUseAuth.mockReturnValue({
+      role: 'Employee',
+      user: { firstName: 'Jane', lastName: 'Doe', role: 'Employee' },
+      logout: jest.fn(),
+      isLoggingOut: false,
+    });
+    render(<Sidebar />);
+    expect(screen.getByRole('link', { name: /jane doe/i })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('still exposes a separate Sign out control alongside the profile link', () => {
+    mockPathname = '/dashboard';
+    const logout = jest.fn();
+    mockUseAuth.mockReturnValue({
+      role: 'Employee',
+      user: { firstName: 'Jane', lastName: 'Doe', role: 'Employee' },
+      logout,
+      isLoggingOut: false,
+    });
+    render(<Sidebar />);
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  });
 });

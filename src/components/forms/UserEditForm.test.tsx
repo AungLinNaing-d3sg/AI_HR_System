@@ -72,15 +72,15 @@ describe('UserEditForm', () => {
     expect(screen.getByLabelText('Last name')).toHaveValue('Doe');
     expect(screen.getByLabelText('Employee ID (optional)')).toHaveValue('EMP-002');
     expect(screen.getByLabelText('Status')).toHaveValue('true');
-    await waitFor(() => expect(screen.getByLabelText('Country (optional)')).toHaveValue('Singapore (SG)'));
+    await waitFor(() => expect(screen.getByLabelText('Country')).toHaveValue('Singapore (SG)'));
   });
 
   it('shows every country once the searchable Country combobox is opened, same as the Create User form', async () => {
     const testUser = userEvent.setup();
     renderWithProviders(<UserEditForm user={user} onSuccess={onSuccess} onCancel={onCancel} />);
 
-    await waitFor(() => expect(screen.getByLabelText('Country (optional)')).toHaveValue('Singapore (SG)'));
-    await testUser.click(screen.getByLabelText('Country (optional)'));
+    await waitFor(() => expect(screen.getByLabelText('Country')).toHaveValue('Singapore (SG)'));
+    await testUser.click(screen.getByLabelText('Country'));
 
     expect(await screen.findByRole('option', { name: /united states/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /singapore/i })).toBeInTheDocument();
@@ -91,8 +91,8 @@ describe('UserEditForm', () => {
     authApi.updateUser.mockResolvedValue(user);
     renderWithProviders(<UserEditForm user={user} onSuccess={onSuccess} onCancel={onCancel} />);
 
-    await waitFor(() => expect(screen.getByLabelText('Country (optional)')).toHaveValue('Singapore (SG)'));
-    await testUser.click(screen.getByLabelText('Country (optional)'));
+    await waitFor(() => expect(screen.getByLabelText('Country')).toHaveValue('Singapore (SG)'));
+    await testUser.click(screen.getByLabelText('Country'));
     await testUser.click(await screen.findByRole('option', { name: /united states/i }));
     await testUser.click(screen.getByRole('button', { name: 'Save changes' }));
 
@@ -120,6 +120,18 @@ describe('UserEditForm', () => {
     await testUser.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(await screen.findByText(/email is required/i)).toBeInTheDocument();
+    expect(authApi.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('shows a validation error and does not submit when the Country is cleared (Country is required)', async () => {
+    const testUser = userEvent.setup();
+    renderWithProviders(<UserEditForm user={user} onSuccess={onSuccess} onCancel={onCancel} />);
+
+    await waitFor(() => expect(screen.getByLabelText('Country')).toHaveValue('Singapore (SG)'));
+    await testUser.clear(screen.getByLabelText('Country'));
+    await testUser.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Please select a country.')).toBeInTheDocument();
     expect(authApi.updateUser).not.toHaveBeenCalled();
   });
 

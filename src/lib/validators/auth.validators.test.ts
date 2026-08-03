@@ -5,6 +5,8 @@ import {
   resetPasswordSchema,
   searchUsersQuerySchema,
   updateProfileSchema,
+  updateUserFormSchema,
+  updateUserSchema,
 } from './auth.validators';
 
 describe('loginSchema', () => {
@@ -155,6 +157,7 @@ describe('createUserSchema', () => {
     password: 'Password@123',
     firstName: 'Jane',
     lastName: 'Doe',
+    countryId: '22222222-2222-2222-2222-222222222201',
     roleId: '11111111-1111-1111-1111-111111111101',
   };
 
@@ -184,14 +187,76 @@ describe('createUserSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('accepts empty-string optional fields for employeeId/countryId', () => {
-    const result = createUserSchema.safeParse({ ...valid, employeeId: '', countryId: '' });
+  it('rejects a missing countryId (Country is required)', () => {
+    const withoutCountry: Record<string, unknown> = { ...valid };
+    delete withoutCountry.countryId;
+    expect(createUserSchema.safeParse(withoutCountry).success).toBe(false);
+  });
+
+  it('rejects an empty-string countryId (Country is required)', () => {
+    const result = createUserSchema.safeParse({ ...valid, countryId: '' });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts empty-string optional employeeId', () => {
+    const result = createUserSchema.safeParse({ ...valid, employeeId: '' });
     expect(result.success).toBe(true);
   });
 
   it('accepts a valid GUID countryId', () => {
-    const result = createUserSchema.safeParse({ ...valid, countryId: '22222222-2222-2222-2222-222222222201' });
+    const result = createUserSchema.safeParse({ ...valid, countryId: '22222222-2222-2222-2222-222222222202' });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('updateUserFormSchema', () => {
+  const valid = {
+    username: 'jdoe',
+    email: 'jdoe@example.com',
+    firstName: 'Jane',
+    lastName: 'Doe',
+    countryId: '22222222-2222-2222-2222-222222222201',
+    isActive: true,
+    roleId: '',
+  };
+
+  it('accepts a valid payload with a selected country', () => {
+    expect(updateUserFormSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('rejects a missing countryId (Country is required on the Edit User form)', () => {
+    const withoutCountry: Record<string, unknown> = { ...valid };
+    delete withoutCountry.countryId;
+    expect(updateUserFormSchema.safeParse(withoutCountry).success).toBe(false);
+  });
+
+  it('rejects an empty-string countryId (Country is required on the Edit User form)', () => {
+    const result = updateUserFormSchema.safeParse({ ...valid, countryId: '' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a countryId that is not a valid GUID', () => {
+    const result = updateUserFormSchema.safeParse({ ...valid, countryId: 'not-a-guid' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('updateUserSchema (wire-level contract, stays permissive for the Activate/Deactivate quick action)', () => {
+  const valid = {
+    username: 'jdoe',
+    email: 'jdoe@example.com',
+    firstName: 'Jane',
+    lastName: 'Doe',
+    isActive: true,
+    roleId: '',
+  };
+
+  it('still accepts a missing countryId, unlike updateUserFormSchema', () => {
+    expect(updateUserSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('still accepts an empty-string countryId, unlike updateUserFormSchema', () => {
+    expect(updateUserSchema.safeParse({ ...valid, countryId: '' }).success).toBe(true);
   });
 });
 

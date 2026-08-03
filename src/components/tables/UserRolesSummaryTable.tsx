@@ -3,34 +3,53 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { BarChart3, Download } from 'lucide-react';
+import { useProjectFilterOptions } from '@/hooks/useProjectFilterOptions';
 import { useUserRolesSummary } from '@/hooks/useUserRolesSummary';
 import { useExportUserRolesSummary } from '@/hooks/useExportUserRolesSummary';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { REPORT_EXPORT_FORMAT_LABELS, REPORT_EXPORT_FORMATS } from '@/lib/constants/report.constants';
 import { getCurrentMonthDateRange } from '@/lib/utils/dateRange';
 import type { UserRolesSummaryFilters } from '@/lib/api/reports.api';
 
+const ALL_PROJECTS = 'all';
+
 /**
  * The `/reports/roles-summary` summary table + horizontal bar chart
- * placeholder (`docs/HR_System_FE_wireframe.pdf`): a Date From/To filter, the
- * Role/Users/Total Hours/Avg Hrs per User/% of Total table (with a Total
- * row), and an "Hours by Role" side panel rendering each role's share as a
- * plain proportional `<div>` bar - a lightweight stand-in for a real
- * charting library, matching the feature brief's "horizontal bar chart
- * placeholder" requirement without adding a new dependency.
+ * placeholder (`docs/HR_System_FE_wireframe.pdf`): a Date From/To + Project
+ * filter (matching `TimesheetReportTable`'s filter bar UI/behavior - same
+ * "Apply Filters"/"Reset" pair, and the Project filter cleared back to "All
+ * Projects" on Reset), the Role/Users/Total Hours/Avg Hrs per User/% of
+ * Total table (with a Total row), and an "Hours by Role" side panel
+ * rendering each role's share as a plain proportional `<div>` bar - a
+ * lightweight stand-in for a real charting library, matching the feature
+ * brief's "horizontal bar chart placeholder" requirement without adding a
+ * new dependency.
+ *
+ * The Project filter's own options come from `useProjectFilterOptions`,
+ * which scopes them to a `ProjectAdmin` caller's own assigned projects
+ * (`GetMyProjectList`) while a `SystemAdmin` still sees every project
+ * (`GetProjectList`) - see that hook's doc comment. The selected
+ * `projectId` is forwarded to both `GenerateUserRolesSummary`/
+ * `GenerateMyUserRolesSummary` (via `useUserRolesSummary`) and
+ * `ExportUserRolesSummary`/`ExportMyUserRolesSummary` (via
+ * `useExportUserRolesSummary`), which both already accept an optional
+ * `projectId` query param (see docs/HR_System_BE.postman_collection.json).
  */
 export function UserRolesSummaryTable() {
   const defaultRange = useMemo(() => getCurrentMonthDateRange(), []);
 
   const [fromInput, setFromInput] = useState(defaultRange.from);
   const [toInput, setToInput] = useState(defaultRange.to);
+  const [projectInput, setProjectInput] = useState(ALL_PROJECTS);
   const [appliedFilters, setAppliedFilters] = useState<UserRolesSummaryFilters>({
     startDate: defaultRange.from,
     endDate: defaultRange.to,
   });
   const [filterError, setFilterError] = useState<string | null>(null);
 
+  const { projects } = useProjectFilterOptions();
   const { summary, isLoading, isError, error, refetch } = useUserRolesSummary(appliedFilters);
   const { exportReport, isExporting, error: exportError, reset: resetExportError } = useExportUserRolesSummary();
 
@@ -49,7 +68,19 @@ export function UserRolesSummaryTable() {
       return;
     }
     setFilterError(null);
-    setAppliedFilters({ startDate: fromInput, endDate: toInput });
+    setAppliedFilters({
+      startDate: fromInput,
+      endDate: toInput,
+      projectId: projectInput === ALL_PROJECTS ? undefined : projectInput,
+    });
+  };
+
+  const handleReset = () => {
+    setFromInput(defaultRange.from);
+    setToInput(defaultRange.to);
+    setProjectInput(ALL_PROJECTS);
+    setFilterError(null);
+    setAppliedFilters({ startDate: defaultRange.from, endDate: defaultRange.to });
   };
 
   const handleExport = async (format: (typeof REPORT_EXPORT_FORMATS)[number]) => {
@@ -114,7 +145,28 @@ export function UserRolesSummaryTable() {
               className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
             />
           </div>
-          <Button type="submit">Apply</Button>
+          <div>
+            <label htmlFor="roles-summary-project" className="mb-1.5 block text-xs font-medium text-zinc-500">
+              Project
+            </label>
+            <Select
+              id="roles-summary-project"
+              className="w-auto"
+              value={projectInput}
+              onChange={(event) => setProjectInput(event.target.value)}
+            >
+              <option value={ALL_PROJECTS}>All Projects</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <Button type="submit">Apply Filters</Button>
+          <Button type="button" variant="outline" onClick={handleReset}>
+            Reset
+          </Button>
         </form>
         {filterError && (
           <p id="roles-summary-filter-error" role="alert" className="text-sm text-red-600">

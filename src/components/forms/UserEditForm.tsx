@@ -11,7 +11,7 @@ import { FieldError } from '@/components/ui/FieldError';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
-import { updateUserSchema, type UpdateUserFormValues } from '@/lib/validators/auth.validators';
+import { updateUserFormSchema, type UpdateUserFormSchemaValues } from '@/lib/validators/auth.validators';
 import type { AdminUserListItem } from '@/types/domain.types';
 
 export interface UserEditFormProps {
@@ -22,7 +22,7 @@ export interface UserEditFormProps {
   onCancel: () => void;
 }
 
-function toFormValues(user: AdminUserListItem): UpdateUserFormValues {
+function toFormValues(user: AdminUserListItem): UpdateUserFormSchemaValues {
   return {
     username: user.username,
     email: user.email,
@@ -53,12 +53,17 @@ function toFormValues(user: AdminUserListItem): UpdateUserFormValues {
  * `CreateUserForm`'s searchable `CountrySearchCombobox` (same
  * `GET /Country/GetAllCountries`-backed, search-as-you-type UX), pre-filled
  * with the user's current country label once the reference list loads (see
- * `CountrySearchCombobox`'s doc comment). The Status dropdown mirrors
+ * `CountrySearchCombobox`'s doc comment), and - like `CreateUserForm` - is
+ * required to save this form (see `updateUserFormSchema`, the stricter,
+ * form-only variant of `updateUserSchema` used by this form's
+ * `zodResolver`). The Status dropdown mirrors
  * `CurrencyForm`'s edit-mode Active/Inactive `Select` pattern -
  * this is also how a row is "deleted": there is no delete/deactivate
  * endpoint for a user account, so setting Status to Inactive here is the
  * closest equivalent (see `UsersTable`'s row-level Activate/Deactivate
- * action, which submits this same shape without opening this form).
+ * action, which submits this same shape without opening this form, and
+ * still allows an empty `countryId` for a legacy row with no country on
+ * record - see `updateUserFormSchema`'s doc comment for why).
  */
 export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
   const { updateUser, isUpdating, error, reset: resetMutation } = useUpdateUser();
@@ -69,12 +74,12 @@ export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<UpdateUserFormValues>({
-    resolver: zodResolver(updateUserSchema),
+  } = useForm<UpdateUserFormSchemaValues>({
+    resolver: zodResolver(updateUserFormSchema),
     defaultValues: toFormValues(user),
   });
 
-  const onSubmit = async (values: UpdateUserFormValues) => {
+  const onSubmit = async (values: UpdateUserFormSchemaValues) => {
     resetMutation();
     try {
       await updateUser({ id: user.userId, values });
@@ -145,7 +150,7 @@ export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
         </div>
 
         <div>
-          <Label htmlFor="edit-countryId">Country (optional)</Label>
+          <Label htmlFor="edit-countryId">Country</Label>
           <Controller
             name="countryId"
             control={control}

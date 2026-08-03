@@ -164,6 +164,22 @@ describe('DashboardOverview', () => {
     expect(useMyProjects).toHaveBeenCalledWith(false);
   });
 
+  it('uses GetMyProjectList (useMyProjects) for the Total Projects stat card for a ProjectAdmin', () => {
+    useMyProjects.mockReturnValue({
+      projects: [{ id: 'p1' }],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: jest.fn(),
+    });
+
+    render(<DashboardOverview role="ProjectAdmin" />);
+
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(useProjects).toHaveBeenCalledWith(false);
+    expect(useMyProjects).toHaveBeenCalledWith(true);
+  });
+
   it('hides the "View Reports" quick action for a plain User', () => {
     render(<DashboardOverview role="Employee" />);
     expect(screen.queryByRole('link', { name: /view reports/i })).not.toBeInTheDocument();

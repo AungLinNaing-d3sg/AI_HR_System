@@ -157,6 +157,25 @@ describe('RateCardsTable', () => {
     expect(screen.getByText('4 rate cards match this filter')).toBeInTheDocument();
   });
 
+  it("renders each row's Daily Rate column from the API response's BillingRate field (plus the Hourly rate)", async () => {
+    mockGetRateCards(rateCards);
+    renderWithProviders(<RateCardsTable />);
+
+    await screen.findByText('2 roles · SGD 400-700/day');
+    const table = screen.getByRole('table');
+    const rows = within(table).getAllByRole('row');
+
+    // Rows are sorted by country name then role name (India before
+    // Singapore) - India/Senior Developer is `rate-card-4`
+    // (billingRate: 400, hourlyRate: 15).
+    const indiaSeniorRow = rows.find(
+      (row) => row.textContent?.includes('India') && row.textContent?.includes('Senior Developer')
+    );
+    expect(indiaSeniorRow).toBeDefined();
+    expect(within(indiaSeniorRow as HTMLElement).getByText('400')).toBeInTheDocument();
+    expect(within(indiaSeniorRow as HTMLElement).getByText('Hourly: 15')).toBeInTheDocument();
+  });
+
   it('filters the table to a single country when its summary card is clicked, and clears on a second click', async () => {
     const user = userEvent.setup();
     mockGetRateCards(rateCards);

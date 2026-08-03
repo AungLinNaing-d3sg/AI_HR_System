@@ -26,10 +26,12 @@ import type { SearchUsersResponsePayload } from '@/types/api.types';
  * matching the rest of the Projects surface.
  *
  * `isAllRole` is never accepted from the client - it's derived here from the
- * caller's own decoded JWT role: a `SystemAdmin`/`ProjectAdmin` searches
- * across every role (`true`, so they can find any account to assign), while
- * any other authenticated role (a plain `Employee`/"Assigned User") is
- * restricted to searching other `Employee` accounts only (`false`).
+ * caller's own decoded JWT role: only a `SystemAdmin` searches across every
+ * role (`true`, so they can find any account to assign); a `ProjectAdmin` -
+ * like any other authenticated role (a plain `Employee`/"Assigned User") -
+ * is restricted to searching other `Employee` accounts only (`false`), since
+ * a Project Admin only ever assigns `Employee` resources to their own
+ * projects, never other admin accounts.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -41,8 +43,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const role = extractRole(claims);
-  const isAllRole = role === 'SystemAdmin' || role === 'ProjectAdmin';
-
+  const isAllRole = role === 'SystemAdmin';
   const searchParams = new URL(request.url).searchParams;
   const parsed = searchUsersQuerySchema.safeParse(pickSearchParams(searchParams, ['email', 'userName']));
   if (!parsed.success) {

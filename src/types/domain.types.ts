@@ -4,7 +4,7 @@
  */
 
 /** Mirrors the backend RBAC roles exactly. */
-export const USER_ROLES = ['SystemAdmin', 'ProjectAdmin', 'User', 'Guest'] as const;
+export const USER_ROLES = ['SystemAdmin', 'ProjectAdmin', 'Employee', 'Guest'] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 

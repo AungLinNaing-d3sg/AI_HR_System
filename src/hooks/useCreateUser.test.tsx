@@ -18,7 +18,7 @@ const createdUser: AuthenticatedUser = {
   lastName: 'User',
   employeeId: null,
   countryId: null,
-  role: 'User',
+  role: 'Employee',
 };
 
 function wrapper({ children }: { children: ReactNode }) {

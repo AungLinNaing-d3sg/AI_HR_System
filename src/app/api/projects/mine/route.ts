@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as projectsBackend from '@/lib/api/projectsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
-import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
+import { MY_PROJECT_LIST_ROLES } from '@/lib/constants/project.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
@@ -12,19 +12,20 @@ import type { ProjectListResponsePayload } from '@/types/api.types';
 /**
  * GET /api/projects/mine
  *
- * Backs the `/projects` management table (see `useProjectList`) and the
- * Project filter/select on `/reports/timesheet`, `/reports/cost-revenue`,
- * and `/invoices/generate` (see `useMyProjects`/`useProjectFilterOptions`)
- * for a `ProjectAdmin` caller, scoped to that caller's own assigned projects
- * via `Project/GetMyProjectList` (`projectsBackend.getMyProjectList`) - a
- * separate endpoint from the unscoped `GET /api/projects` (`GetProjectList`),
- * which keeps listing every project, unchanged, for a `SystemAdmin` (or any
- * other role) via `useProjects`. A `SystemAdmin` never calls this endpoint
- * (their table/filters keep using `useProjects`/`GetProjectList`, per the
- * feature spec); it's restricted to `PROJECT_MANAGEMENT_ROLES` purely as a
- * safety net, mirroring the same gate already applied to the Report/Invoice
- * domains (see `app/api/reports/timesheet/route.ts`,
- * `app/api/invoices/route.ts`).
+ * Backs the `/projects` management table (see `useProjectList`) for a
+ * `ProjectAdmin` or `Employee` caller, and the Project filter/select on
+ * `/reports/timesheet`, `/reports/cost-revenue`, and `/invoices/generate`
+ * (see `useMyProjects`/`useProjectFilterOptions`)
+ * for a `ProjectAdmin` caller - scoped to that caller's own assigned
+ * projects via `Project/GetMyProjectList` (`projectsBackend.getMyProjectList`)
+ * - a separate endpoint from the unscoped `GET /api/projects`
+ * (`GetProjectList`), which keeps listing every project, unchanged, for a
+ * `SystemAdmin` (or `Guest`) via `useProjects`. A `SystemAdmin` never calls
+ * this endpoint (their table/filters keep using `useProjects`/
+ * `GetProjectList`, per the feature spec); it's restricted to
+ * `MY_PROJECT_LIST_ROLES` purely as a safety net, mirroring the same gate
+ * already applied to the Report/Invoice domains (see
+ * `app/api/reports/timesheet/route.ts`, `app/api/invoices/route.ts`).
  */
 export async function GET(): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -36,9 +37,9 @@ export async function GET(): Promise<NextResponse> {
   }
 
   const role = extractRole(claims);
-  if (!role || !PROJECT_MANAGEMENT_ROLES.includes(role)) {
+  if (!role || !MY_PROJECT_LIST_ROLES.includes(role)) {
     return NextResponse.json(
-      { message: 'Only a System Admin or Project Admin can view this project list.' },
+      { message: 'Only a Project Admin or an Employee can view this project list.' },
       { status: 403 }
     );
   }

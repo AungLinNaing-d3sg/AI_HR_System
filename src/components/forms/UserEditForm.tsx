@@ -2,16 +2,16 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useCountries } from '@/hooks/useCountries';
 import { useRoles } from '@/hooks/useRoles';
 import { useUpdateUser } from '@/hooks/useUpdateUser';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { CountrySearchCombobox } from '@/components/common/CountrySearchCombobox';
 import { FieldError } from '@/components/ui/FieldError';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
-import { updateUserSchema, type UpdateUserFormValues } from '@/lib/validators/auth.validators';
+import { updateUserFormSchema, type UpdateUserFormSchemaValues } from '@/lib/validators/auth.validators';
 import type { AdminUserListItem } from '@/types/domain.types';
 
 export interface UserEditFormProps {
@@ -22,7 +22,7 @@ export interface UserEditFormProps {
   onCancel: () => void;
 }
 
-function toFormValues(user: AdminUserListItem): UpdateUserFormValues {
+function toFormValues(user: AdminUserListItem): UpdateUserFormSchemaValues {
   return {
     username: user.username,
     email: user.email,
@@ -49,35 +49,37 @@ function toFormValues(user: AdminUserListItem): UpdateUserFormValues {
  * field (password changes go through the dedicated Change Password flow)
  * and `roleId` is optional: left on "Keep current role", the account's
  * existing role is preserved (the backend accepts `RoleId: null` to mean
- * "no change" - see `updateUserSchema`'s comment). The Country dropdown
- * mirrors `CreateUserForm`'s (`useCountries`), and the Status dropdown
- * mirrors `CurrencyForm`'s edit-mode Active/Inactive `Select` pattern -
+ * "no change" - see `updateUserSchema`'s comment). The Country field mirrors
+ * `CreateUserForm`'s searchable `CountrySearchCombobox` (same
+ * `GET /Country/GetAllCountries`-backed, search-as-you-type UX), pre-filled
+ * with the user's current country label once the reference list loads (see
+ * `CountrySearchCombobox`'s doc comment), and - like `CreateUserForm` - is
+ * required to save this form (see `updateUserFormSchema`, the stricter,
+ * form-only variant of `updateUserSchema` used by this form's
+ * `zodResolver`). The Status dropdown mirrors
+ * `CurrencyForm`'s edit-mode Active/Inactive `Select` pattern -
  * this is also how a row is "deleted": there is no delete/deactivate
  * endpoint for a user account, so setting Status to Inactive here is the
  * closest equivalent (see `UsersTable`'s row-level Activate/Deactivate
- * action, which submits this same shape without opening this form).
+ * action, which submits this same shape without opening this form, and
+ * still allows an empty `countryId` for a legacy row with no country on
+ * record - see `updateUserFormSchema`'s doc comment for why).
  */
 export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
   const { updateUser, isUpdating, error, reset: resetMutation } = useUpdateUser();
   const { roles, isLoading: isLoadingRoles, isError: isRolesError, error: rolesError } = useRoles();
-  const {
-    countries,
-    isLoading: isLoadingCountries,
-    isError: isCountriesError,
-    error: countriesError,
-  } = useCountries();
 
   const {
     register,
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<UpdateUserFormValues>({
-    resolver: zodResolver(updateUserSchema),
+  } = useForm<UpdateUserFormSchemaValues>({
+    resolver: zodResolver(updateUserFormSchema),
     defaultValues: toFormValues(user),
   });
 
-  const onSubmit = async (values: UpdateUserFormValues) => {
+  const onSubmit = async (values: UpdateUserFormSchemaValues) => {
     resetMutation();
     try {
       await updateUser({ id: user.userId, values });
@@ -91,7 +93,6 @@ export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       {error && <Alert variant="error">{error}</Alert>}
       {isRolesError && <Alert variant="error">{rolesError ?? 'Could not load roles.'}</Alert>}
-      {isCountriesError && <Alert variant="error">{countriesError ?? 'Could not load countries.'}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -149,21 +150,21 @@ export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
         </div>
 
         <div>
-          <Label htmlFor="edit-countryId">Country (optional)</Label>
-          <Select
-            id="edit-countryId"
-            hasError={Boolean(errors.countryId)}
-            aria-describedby={errors.countryId ? 'edit-countryId-error' : undefined}
-            disabled={isLoadingCountries}
-            {...register('countryId')}
-          >
-            <option value="">{isLoadingCountries ? 'Loading countries…' : 'No country'}</option>
-            {countries.map((country) => (
-              <option key={country.id} value={country.id}>
-                {country.name}
-              </option>
-            ))}
-          </Select>
+          <Label htmlFor="edit-countryId">Country</Label>
+          <Controller
+            name="countryId"
+            control={control}
+            render={({ field }) => (
+              <CountrySearchCombobox
+                id="edit-countryId"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                hasError={Boolean(errors.countryId)}
+                aria-describedby={errors.countryId ? 'edit-countryId-error' : undefined}
+              />
+            )}
+          />
           <FieldError id="edit-countryId-error" message={errors.countryId?.message} />
         </div>
 

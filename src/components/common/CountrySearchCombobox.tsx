@@ -30,8 +30,9 @@ function matchesQuery(country: Country, query: string): boolean {
 }
 
 /**
- * Searchable "Country" combobox on the Create User form (`CreateUserForm`),
- * replacing the previous plain `<Select>` dropdown. Implements the same
+ * Searchable "Country" combobox on the Create User form (`CreateUserForm`)
+ * and the `/admin/users` row-level Edit form (`UserEditForm`), replacing the
+ * previous plain `<Select>` dropdown on both. Implements the same
  * WAI-ARIA "combobox with listbox popup" pattern (`aria-activedescendant`,
  * non-focusable `li` options with `onMouseDown` prevented so a mouse click
  * never blurs/closes the listbox before it's handled) as the "Add User to
@@ -70,13 +71,46 @@ export function CountrySearchCombobox({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [lastEmittedValue, setLastEmittedValue] = useState(value);
   const listRef = useRef<HTMLUListElement>(null);
+  // Only relevant for a caller that mounts with a non-empty `value` (e.g.
+  // `UserEditForm`, pre-filling an existing user's country) - `CreateUserForm`
+  // always starts empty, so this never fires there.
+  const [hasSyncedInitialValue, setHasSyncedInitialValue] = useState(false);
+  // `true` for the brief window where `inputValue` shows the pre-filled
+  // selection's label (see the sync effect below) but the caller hasn't
+  // typed anything yet - so opening the listbox shows every country (like
+  // the empty-query state) instead of filtering by that label text, which
+  // would otherwise match nothing (a country's name never contains its own
+  // "Name (CODE)" display label). Cleared on the first keystroke.
+  const [isPrefilledDisplayOnly, setIsPrefilledDisplayOnly] = useState(false);
 
   const { countries, isLoading, isError, error } = useCountries();
 
+  // Once the country list has loaded, show the currently selected country's
+  // label in the input - otherwise a caller that mounts with a pre-selected
+  // `value` (unlike `CreateUserForm`, which always starts blank) would show
+  // an empty input despite a country already being chosen. Runs once; later
+  // selections/clears are already tracked via `lastEmittedValue`/`onChange`.
+  // Adjusting state during render (rather than a `useEffect`) is React's
+  // documented alternative for this "derived from a prop/query change" case
+  // - see `UserSearchCombobox`'s doc comment for the same pattern - and
+  // avoids an extra render-then-effect round trip.
+  if (!hasSyncedInitialValue && !isLoading) {
+    setHasSyncedInitialValue(true);
+    const selected = value ? countries.find((country) => country.id === value) : undefined;
+    if (selected) {
+      setInputValue(countryLabel(selected));
+      setLastEmittedValue(value);
+      setIsPrefilledDisplayOnly(true);
+    }
+  }
+
   const trimmedQuery = inputValue.trim();
   const matches = useMemo(
-    () => (trimmedQuery.length === 0 ? countries : countries.filter((country) => matchesQuery(country, trimmedQuery))),
-    [countries, trimmedQuery]
+    () =>
+      trimmedQuery.length === 0 || isPrefilledDisplayOnly
+        ? countries
+        : countries.filter((country) => matchesQuery(country, trimmedQuery)),
+    [countries, trimmedQuery, isPrefilledDisplayOnly]
   );
 
   const showListbox = isOpen;
@@ -123,6 +157,7 @@ export function CountrySearchCombobox({
     const text = event.target.value;
     setInputValue(text);
     setIsOpen(true);
+    setIsPrefilledDisplayOnly(false);
     if (lastEmittedValue !== '') {
       emitSelection('');
     }

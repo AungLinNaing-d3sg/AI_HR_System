@@ -40,7 +40,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     const claims = decodeAccessToken(result.AccessToken);
-    const role = extractRole(claims) ?? 'User';
+    const role = extractRole(claims) ?? 'Employee';
     const user = mapAuthUser(
       {
         UserId: result.UserId,

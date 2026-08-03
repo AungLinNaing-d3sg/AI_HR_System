@@ -19,6 +19,19 @@ const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0
  */
 const GUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
+/**
+ * Shared "must pick a country" rule for `createUserSchema` and
+ * `updateUserFormSchema` - the Country field is required on both the Create
+ * User and Edit User forms (business requirement), unlike the backend
+ * contract itself (`CountryId` is nullable there, see the "Create User"/
+ * "Update User" examples in docs/HR_System_BE.postman_collection.json).
+ */
+const REQUIRED_COUNTRY_ID_SCHEMA = z
+  .string()
+  .trim()
+  .min(1, 'Please select a country.')
+  .regex(GUID_REGEX, 'Select a valid country.');
+
 export const loginSchema = z.object({
   usernameOrEmail: z.string().trim().min(1, 'Username or email is required.'),
   password: z.string().min(1, 'Password is required.'),
@@ -83,6 +96,13 @@ export const resetPasswordSchema = z
   });
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
+/**
+ * Backs the `SystemAdmin`-only Create User form (`CreateUserForm`, `POST
+ * /Auth/CreateUser`). `countryId` is required (business requirement) even
+ * though the backend itself accepts a `null` `CountryId` (see
+ * `REQUIRED_COUNTRY_ID_SCHEMA`) - every account created through this form
+ * must have a country on record.
+ */
 export const createUserSchema = z.object({
   username: z.string().trim().min(3, 'Username must be at least 3 characters.').max(50, 'Username is too long.'),
   email: z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.'),
@@ -96,12 +116,7 @@ export const createUserSchema = z.object({
   firstName: z.string().trim().min(1, 'First name is required.').max(100, 'First name is too long.'),
   lastName: z.string().trim().min(1, 'Last name is required.').max(100, 'Last name is too long.'),
   employeeId: z.string().trim().max(50, 'Employee ID is too long.').optional().or(z.literal('')),
-  countryId: z
-    .string()
-    .trim()
-    .regex(GUID_REGEX, 'Enter a valid Country ID (GUID).')
-    .optional()
-    .or(z.literal('')),
+  countryId: REQUIRED_COUNTRY_ID_SCHEMA,
   roleId: z
     .string()
     .trim()
@@ -121,6 +136,14 @@ export type CreateUserFormValues = z.infer<typeof createUserSchema>;
  * `/admin/users` table's row-level Activate/Deactivate action, which
  * resubmits this same schema's shape with every other field unchanged and
  * only `isActive` flipped.
+ *
+ * `countryId` stays optional here (the wire-level contract validated by
+ * `PUT /api/auth/users/:id`, see that Route Handler) so the Activate/
+ * Deactivate quick action keeps working for a legacy row that has no
+ * country on record - it resubmits the row's existing values without ever
+ * opening a form. The Edit User form itself requires a country; see
+ * `updateUserFormSchema` below, used only by `UserEditForm`'s
+ * `zodResolver`.
  */
 export const updateUserSchema = z.object({
   username: z.string().trim().min(3, 'Username must be at least 3 characters.').max(50, 'Username is too long.'),
@@ -143,6 +166,19 @@ export const updateUserSchema = z.object({
     .or(z.literal('')),
 });
 export type UpdateUserFormValues = z.infer<typeof updateUserSchema>;
+
+/**
+ * Form-only variant of `updateUserSchema`, requiring `countryId` to be a
+ * selected, valid GUID (business requirement: Country is required on the
+ * Edit User form). Used exclusively by `UserEditForm`'s `zodResolver` -
+ * `PUT /api/auth/users/:id` itself keeps validating against the more
+ * permissive `updateUserSchema` above, so this stricter, form-only rule
+ * never blocks `UsersTable`'s row-level Activate/Deactivate quick action.
+ */
+export const updateUserFormSchema = updateUserSchema.extend({
+  countryId: REQUIRED_COUNTRY_ID_SCHEMA,
+});
+export type UpdateUserFormSchemaValues = z.infer<typeof updateUserFormSchema>;
 
 /**
  * Validates the `URLSearchParams` `GET /api/auth/search-users` reads off

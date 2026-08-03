@@ -44,7 +44,7 @@ describe('LoginForm', () => {
   });
 
   it('submits valid credentials and redirects to /dashboard by default', async () => {
-    authApi.login.mockResolvedValue({ id: 'user-1', role: 'User' });
+    authApi.login.mockResolvedValue({ id: 'user-1', role: 'Employee' });
     const user = userEvent.setup();
     renderLoginForm();
 
@@ -62,7 +62,7 @@ describe('LoginForm', () => {
   });
 
   it('honors a same-origin ?redirect= target', async () => {
-    authApi.login.mockResolvedValue({ id: 'user-1', role: 'User' });
+    authApi.login.mockResolvedValue({ id: 'user-1', role: 'Employee' });
     mockSearchParamsGet.mockReturnValue('/admin/users/create');
     const user = userEvent.setup();
     renderLoginForm();
@@ -75,7 +75,7 @@ describe('LoginForm', () => {
   });
 
   it('ignores an off-site ?redirect= value and falls back to /dashboard', async () => {
-    authApi.login.mockResolvedValue({ id: 'user-1', role: 'User' });
+    authApi.login.mockResolvedValue({ id: 'user-1', role: 'Employee' });
     mockSearchParamsGet.mockReturnValue('https://evil.example.com');
     const user = userEvent.setup();
     renderLoginForm();

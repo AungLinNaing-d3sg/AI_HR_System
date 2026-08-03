@@ -11,7 +11,7 @@ const user: AuthenticatedUser = {
   lastName: 'Doe',
   employeeId: null,
   countryId: null,
-  role: 'User',
+  role: 'Employee',
 };
 
 /** Axios doesn't expose a public way to invoke a registered interceptor directly, so this reaches into the (stable, widely relied-upon) internal `handlers` array. */

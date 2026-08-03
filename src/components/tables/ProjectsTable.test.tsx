@@ -86,6 +86,63 @@ describe('ProjectsTable', () => {
     expect(projectsApi.getMyProjects).not.toHaveBeenCalled();
   });
 
+  it('uses GetMyProjectList (getMyProjects) for a plain User (Employee) caller and not GetProjectList', async () => {
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
+    projectsApi.getMyProjects.mockResolvedValue(projects);
+    renderWithProviders(<ProjectsTable />);
+
+    expect(await screen.findByText('Project Alpha - Web Platform')).toBeInTheDocument();
+    expect(projectsApi.getMyProjects).toHaveBeenCalled();
+    expect(projectsApi.getProjects).not.toHaveBeenCalled();
+  });
+
+  it('disables the Assign action for a plain User (Employee) caller', async () => {
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
+    projectsApi.getMyProjects.mockResolvedValue(projects);
+    renderWithProviders(<ProjectsTable />);
+
+    await screen.findByText('Project Alpha - Web Platform');
+    expect(screen.queryByRole('link', { name: 'Assign' })).not.toBeInTheDocument();
+    const assignButtons = screen.getAllByRole('button', { name: 'Assign' });
+    expect(assignButtons[0]).toBeDisabled();
+    expect(assignButtons[0]).toHaveAttribute('title', expect.stringMatching(/system admin or project admin/i));
+  });
+
+  it('keeps the Assign action enabled as a link for a ProjectAdmin caller', async () => {
+    mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });
+    projectsApi.getMyProjects.mockResolvedValue(projects);
+    renderWithProviders(<ProjectsTable />);
+
+    await screen.findByText('Project Alpha - Web Platform');
+    const assignLinks = screen.getAllByRole('link', { name: 'Assign' });
+    expect(assignLinks[0]).toHaveAttribute('href', '/projects/project-1/assignments');
+  });
+
+  it('shows the empty state (not an error) for a plain User (Employee) with no assigned projects', async () => {
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
+    projectsApi.getMyProjects.mockResolvedValue([]);
+    renderWithProviders(<ProjectsTable />);
+
+    expect(await screen.findByText(/no projects yet/i)).toBeInTheDocument();
+    expect(projectsApi.getMyProjects).toHaveBeenCalled();
+  });
+
+  it('the disabled Assign button for a plain User (Employee) is not keyboard-focusable, unlike the enabled Edit link next to it', async () => {
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
+    projectsApi.getMyProjects.mockResolvedValue(projects);
+    renderWithProviders(<ProjectsTable />);
+
+    await screen.findByText('Project Alpha - Web Platform');
+    const assignButtons = screen.getAllByRole('button', { name: 'Assign' });
+    const editLinks = screen.getAllByRole('link', { name: 'Edit' });
+
+    assignButtons[0].focus();
+    expect(assignButtons[0]).not.toHaveFocus();
+
+    editLinks[0].focus();
+    expect(editLinks[0]).toHaveFocus();
+  });
+
   it('shows a loading state initially', () => {
     projectsApi.getProjects.mockReturnValue(new Promise(() => {}));
     renderWithProviders(<ProjectsTable />);

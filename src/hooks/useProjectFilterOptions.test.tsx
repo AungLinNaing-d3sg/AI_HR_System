@@ -88,7 +88,7 @@ describe('useProjectFilterOptions', () => {
   });
 
   it('falls back to GetProjectList (getProjects) for any other role', async () => {
-    mockUseAuth.mockReturnValue({ role: 'User' });
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     projectsApi.getProjects.mockResolvedValue(allProjects);
 
     const { result } = renderHook(() => useProjectFilterOptions(), { wrapper });

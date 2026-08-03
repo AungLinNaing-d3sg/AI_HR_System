@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Pencil, Trash2, UserPlus } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { useProjectList } from '@/hooks/useProjectList';
 import { useDeleteProject } from '@/hooks/useDeleteProject';
 import { Alert } from '@/components/ui/Alert';
@@ -14,6 +15,12 @@ import type { Project } from '@/types/domain.types';
 const ACTION_LINK_CLASSNAME =
   'inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-zinc-900';
 
+const DISABLED_ACTION_CLASSNAME =
+  'inline-flex h-8 cursor-not-allowed items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-2.5 text-sm font-medium text-zinc-400';
+
+/** An `Employee` only works their own assigned projects and cannot assign resources to them. */
+const ASSIGN_DISABLED_MESSAGE = 'Only a System Admin or Project Admin can assign resources to a project.';
+
 function formatDate(value: string | null): string {
   if (!value) return '—';
   const parsed = new Date(value);
@@ -22,12 +29,16 @@ function formatDate(value: string | null): string {
 }
 
 /**
- * Lists projects with Edit/Delete row actions. Handles loading, error, and
- * empty states. Scoped to the caller's own projects (`GetMyProjectList`) for
- * a `ProjectAdmin`, or every project (`GetProjectList`) for a `SystemAdmin`/
- * any other role - see `useProjectList`.
+ * Lists projects with Assign/Edit/Delete row actions. Handles loading,
+ * error, and empty states. Scoped to the caller's own projects
+ * (`GetMyProjectList`) for a `ProjectAdmin` or `Employee`, or every project
+ * (`GetProjectList`) for a `SystemAdmin`/`Guest` - see `useProjectList`. The
+ * Assign action is disabled (with an explanatory `title` tooltip) for an
+ * `Employee`, who can only view - not manage - resource assignments.
  */
 export function ProjectsTable() {
+  const { role } = useAuth();
+  const canAssign = role !== 'Employee';
   const { projects, isLoading, isError, error, refetch } = useProjectList();
   const { deleteProject, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteProject();
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
@@ -131,10 +142,23 @@ export function ProjectsTable() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
-                    <Link href={`/projects/${project.id}/assignments`} className={ACTION_LINK_CLASSNAME}>
-                      <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
-                      Assign
-                    </Link>
+                    {canAssign ? (
+                      <Link href={`/projects/${project.id}/assignments`} className={ACTION_LINK_CLASSNAME}>
+                        <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                        Assign
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        title={ASSIGN_DISABLED_MESSAGE}
+                        className={DISABLED_ACTION_CLASSNAME}
+                      >
+                        <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                        Assign
+                      </button>
+                    )}
                     <Link href={`/projects/${project.id}`} className={ACTION_LINK_CLASSNAME}>
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       Edit

@@ -47,6 +47,7 @@ const validPayload = {
   password: 'Password@123',
   firstName: 'Jane',
   lastName: 'Doe',
+  countryId: '22222222-2222-2222-2222-222222222201',
   roleId: '11111111-1111-1111-1111-111111111101',
 };
 
@@ -239,6 +240,20 @@ describe('POST /api/auth/users', () => {
     );
 
     const response = await POST(jsonRequest({ ...validPayload, roleId: '' }));
+    expect(response.status).toBe(400);
+    expect(authBackend.createUser).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when countryId is missing (Country is required)', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+
+    const payloadWithoutCountry: Record<string, unknown> = { ...validPayload };
+    delete payloadWithoutCountry.countryId;
+    const response = await POST(jsonRequest(payloadWithoutCountry));
     expect(response.status).toBe(400);
     expect(authBackend.createUser).not.toHaveBeenCalled();
   });

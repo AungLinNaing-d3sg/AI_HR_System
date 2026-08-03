@@ -90,14 +90,14 @@ describe('GET /api/auth/search-users', () => {
     );
   });
 
-  it('sets isAllRole: true for a ProjectAdmin caller', async () => {
+  it('sets isAllRole: false for a ProjectAdmin caller (restricted to Employee accounts, same as a plain User)', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('ProjectAdmin') } : undefined
     );
     authBackend.searchUsers.mockResolvedValue([]);
     await GET(requestWithQuery('?email=jane&userName=jane'));
     expect(authBackend.searchUsers).toHaveBeenCalledWith(
-      { email: 'jane', userName: 'jane', isAllRole: true },
+      { email: 'jane', userName: 'jane', isAllRole: false },
       expect.any(String)
     );
   });

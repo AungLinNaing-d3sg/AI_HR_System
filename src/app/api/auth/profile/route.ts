@@ -52,7 +52,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
       accessToken
     );
 
-    const role = extractRole(claims) ?? 'User';
+    const role = extractRole(claims) ?? 'Employee';
     return NextResponse.json<AuthResponsePayload>(
       {
         user: mapAuthUser(

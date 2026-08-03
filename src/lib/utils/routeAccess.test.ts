@@ -20,7 +20,7 @@ describe('resolveRouteAccess', () => {
         hasAccessToken: true,
         isAccessTokenExpired: true,
         hasRefreshToken: true,
-        role: 'User',
+        role: 'Employee',
       })
     ).toEqual({ type: 'refresh' });
   });
@@ -44,7 +44,7 @@ describe('resolveRouteAccess', () => {
         hasAccessToken: true,
         isAccessTokenExpired: false,
         hasRefreshToken: true,
-        role: 'User',
+        role: 'Employee',
       })
     ).toEqual({ type: 'allow' });
   });
@@ -152,7 +152,7 @@ describe('resolveRouteAccess', () => {
         hasAccessToken: true,
         isAccessTokenExpired: false,
         hasRefreshToken: true,
-        role: 'User',
+        role: 'Employee',
       })
     ).toEqual({ type: 'redirect', destination: 'forbidden' });
   });
@@ -188,7 +188,7 @@ describe('resolveRouteAccess', () => {
         hasAccessToken: true,
         isAccessTokenExpired: false,
         hasRefreshToken: true,
-        role: 'User',
+        role: 'Employee',
       })
     ).toEqual({ type: 'allow' });
   });

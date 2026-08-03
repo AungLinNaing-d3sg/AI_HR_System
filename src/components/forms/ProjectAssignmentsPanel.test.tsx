@@ -13,7 +13,6 @@ jest.mock('../../lib/api/projects.api', () => ({
 }));
 
 jest.mock('../../lib/api/auth.api', () => ({
-  getUserList: jest.fn(),
   searchUsers: jest.fn(),
 }));
 
@@ -29,7 +28,6 @@ const projectsApi = jest.requireMock('../../lib/api/projects.api') as {
 };
 
 const authApi = jest.requireMock('../../lib/api/auth.api') as {
-  getUserList: jest.Mock;
   searchUsers: jest.Mock;
 };
 
@@ -81,11 +79,9 @@ describe('ProjectAssignmentsPanel', () => {
     projectsApi.getProjectAssignments.mockReset();
     projectsApi.assignResource.mockReset();
     projectsApi.removeResource.mockReset();
-    authApi.getUserList.mockReset();
     authApi.searchUsers.mockReset();
     resourceRoleTypesApi.getResourceRoleTypes.mockReset();
     projectsApi.getProject.mockResolvedValue(project);
-    authApi.getUserList.mockResolvedValue(candidateUsers);
     authApi.searchUsers.mockResolvedValue(candidateUsers);
     resourceRoleTypesApi.getResourceRoleTypes.mockResolvedValue({ roleTypes, totalCount: roleTypes.length });
   });

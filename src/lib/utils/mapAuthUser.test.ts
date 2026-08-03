@@ -5,8 +5,6 @@ import {
   mapRole,
   mapRoleList,
   mapUpdateUserResponse,
-  mapUserListItem,
-  mapUserListItemList,
   mapUserSearchItem,
   mapUserSearchItemList,
 } from './mapAuthUser';
@@ -91,47 +89,6 @@ describe('mapRoleList', () => {
   });
 });
 
-describe('mapUserListItem', () => {
-  const userListItemDto: UserListItemDto = {
-    UserId: 'user-2',
-    Username: 'jane.doe',
-    Email: 'jane@example.com',
-    FirstName: 'Jane',
-    LastName: 'Doe',
-    EmployeeId: 'EMP-002',
-  };
-
-  it('maps only the fields the domain model declares', () => {
-    expect(mapUserListItem(userListItemDto)).toEqual({
-      userId: 'user-2',
-      firstName: 'Jane',
-      lastName: 'Doe',
-      email: 'jane@example.com',
-    });
-  });
-});
-
-describe('mapUserListItemList', () => {
-  const userListItemDto: UserListItemDto = {
-    UserId: 'user-2',
-    Username: 'jane.doe',
-    Email: 'jane@example.com',
-    FirstName: 'Jane',
-    LastName: 'Doe',
-    EmployeeId: null,
-  };
-
-  it('maps an array of DTOs', () => {
-    const result = mapUserListItemList([userListItemDto, { ...userListItemDto, UserId: 'user-3' }]);
-    expect(result).toHaveLength(2);
-    expect(result[1].userId).toBe('user-3');
-  });
-
-  it('returns an empty array for an empty list', () => {
-    expect(mapUserListItemList([])).toEqual([]);
-  });
-});
-
 describe('mapUserSearchItem', () => {
   const userSearchItemDto: UserSearchItemDto = {
     UserId: 'user-2',
@@ -195,7 +152,7 @@ describe('mapAdminUserListItem', () => {
     IsActive: true,
   };
 
-  it('maps every field the /admin/users table needs, unlike mapUserListItem', () => {
+  it('maps every field the /admin/users table needs, unlike mapUserSearchItem', () => {
     expect(mapAdminUserListItem(dto)).toEqual({
       userId: 'user-2',
       username: 'jane.doe',

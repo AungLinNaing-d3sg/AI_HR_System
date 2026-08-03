@@ -173,4 +173,13 @@ describe('authBackend.api (server)', () => {
       params: { email: 'jdoe', userName: 'jdoe', isAllRole: false },
     });
   });
+
+  it('searchUsers omits email/userName entirely when called with neither, letting the backend return its broad/unfiltered list', async () => {
+    backendClient.get.mockResolvedValue({ data: [] });
+    await authBackend.searchUsers({ isAllRole: true }, 'access-token');
+    expect(backendClient.get).toHaveBeenCalledWith('/Auth/SearchUsers', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { isAllRole: true },
+    });
+  });
 });

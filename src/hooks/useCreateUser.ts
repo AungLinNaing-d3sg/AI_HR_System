@@ -9,8 +9,9 @@ import type { CreateUserFormValues } from '@/lib/validators/auth.validators';
  * Creates a new user account. `SystemAdmin`-only; the backend and the
  * `/api/auth/users` Route Handler both enforce this independently of any
  * client-side check. Invalidates both the `/admin/users` management table's
- * list (`['auth', 'users']`) and the "Add User to Project" dropdown's list
- * (`['auth', 'user-list']`) so they refetch and include the new account.
+ * list (`['auth', 'users']`) and the "Add User to Project" combobox's
+ * `SearchUsers`-backed results (`['auth', 'search-users']`, see
+ * `useUserSearch`) so they refetch and include the new account.
  */
 export function useCreateUser() {
   const queryClient = useQueryClient();
@@ -19,7 +20,7 @@ export function useCreateUser() {
     mutationFn: (values: CreateUserFormValues) => authApi.createUser(values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['auth', 'users'] });
-      void queryClient.invalidateQueries({ queryKey: ['auth', 'user-list'] });
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'search-users'] });
     },
   });
 

@@ -91,19 +91,6 @@ describe('auth.api (client)', () => {
     expect(result).toEqual([role]);
   });
 
-  it('getUserList gets /auth/user-list and returns every candidate user', async () => {
-    const candidate: UserListItem = {
-      userId: 'user-2',
-      firstName: 'Jane',
-      lastName: 'Doe',
-      email: 'jane@example.com',
-    };
-    axiosInstance.get.mockResolvedValue({ data: { users: [candidate] } });
-    const result = await authApi.getUserList();
-    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/user-list');
-    expect(result).toEqual([candidate]);
-  });
-
   it('searchUsers gets /auth/search-users with the query sent as both email and userName, returning matches', async () => {
     const candidate: UserListItem = {
       userId: 'user-2',
@@ -117,6 +104,25 @@ describe('auth.api (client)', () => {
       params: { email: 'jane', userName: 'jane' },
     });
     expect(result).toEqual([candidate]);
+  });
+
+  it('searchUsers omits both params entirely for an empty query, returning the broad/unfiltered candidate list', async () => {
+    const candidate: UserListItem = {
+      userId: 'user-2',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+    };
+    axiosInstance.get.mockResolvedValue({ data: { users: [candidate] } });
+    const result = await authApi.searchUsers('');
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/search-users', { params: undefined });
+    expect(result).toEqual([candidate]);
+  });
+
+  it('searchUsers trims the query and omits both params when it is whitespace-only', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { users: [] } });
+    await authApi.searchUsers('   ');
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/search-users', { params: undefined });
   });
 
   it('getUsers gets /auth/users and returns the full admin user list with a total count', async () => {

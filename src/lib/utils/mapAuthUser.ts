@@ -53,29 +53,12 @@ export function mapRoleList(dtos: RoleDto[]): Role[] {
 }
 
 /**
- * Maps a single `GET /Auth/GetUserList` item (PascalCase) to the app's
- * camelCase `UserListItem` domain model used by the "Add User to Project"
- * dropdown.
- */
-export function mapUserListItem(dto: UserListItemDto): UserListItem {
-  return {
-    userId: dto.UserId,
-    firstName: dto.FirstName,
-    lastName: dto.LastName,
-    email: dto.Email,
-  };
-}
-
-export function mapUserListItemList(dtos: UserListItemDto[]): UserListItem[] {
-  return dtos.map(mapUserListItem);
-}
-
-/**
  * Maps a single `GET /Auth/SearchUsers` item (PascalCase) to the app's
  * camelCase `UserListItem` domain model used by the searchable "Add User to
- * Project" combobox. Only forwards the fields the combobox needs - role,
- * country, and active-status fields the search endpoint additionally
- * returns are intentionally dropped, same as `mapUserListItem`.
+ * Project" combobox (its only data source - see `useUserSearch`). Only
+ * forwards the fields the combobox needs - role, country, and active-status
+ * fields the search endpoint additionally returns are intentionally
+ * dropped.
  */
 export function mapUserSearchItem(dto: UserSearchItemDto): UserListItem {
   return {
@@ -93,8 +76,8 @@ export function mapUserSearchItemList(dtos: UserSearchItemDto[]): UserListItem[]
 /**
  * Maps a single `GET /Auth/GetUserList` item (PascalCase) to the app's
  * camelCase `AdminUserListItem` domain model backing the `SystemAdmin`-only
- * `/admin/users` management table - unlike `mapUserListItem`, this keeps the
- * `username`/`employeeId`/role/country/active-status fields the table's
+ * `/admin/users` management table - unlike `mapUserSearchItem`, this keeps
+ * the `username`/`employeeId`/role/country/active-status fields the table's
  * Role/Country/Status columns and row-level actions need. `roleName`/
  * `countryId`/`countryCode`/`countryName` are declared optional on the DTO
  * (see `UserListItemDto`'s comment) since not every backend response is

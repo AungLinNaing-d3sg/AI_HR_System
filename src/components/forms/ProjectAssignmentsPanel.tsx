@@ -31,11 +31,12 @@ function formatDate(value: string): string {
  * `/projects/:id/assignments` panel (`docs/HR_System_FE_wireframe.pdf`):
  * lists currently assigned resources with a Remove action per row (confirmed
  * via `ConfirmDialog`), and an "Add User" form whose user field is a
- * searchable combobox (`UserSearchCombobox`) that queries
- * `GET /Auth/SearchUsers?email={q}&userName={q}` as the user types (see
- * `useUserSearch`, `app/api/auth/search-users/route.ts`), replacing the
- * previously used, non-search `useUserList`/`GET /Auth/GetUserList` dropdown
- * (see the removed `app/api/auth/user-list/route.ts`).
+ * searchable combobox (`UserSearchCombobox`) sourced entirely from
+ * `GET /Auth/SearchUsers?email={q}&userName={q}` - both its as-you-type
+ * search and (called with neither param) its initial, pre-search candidate
+ * list (see `useUserSearch`, `app/api/auth/search-users/route.ts`),
+ * replacing the previously used, separate, non-search `GET /Auth/GetUserList`
+ * dropdown (see the removed `useUserList`/`app/api/auth/user-list/route.ts`).
  */
 export function ProjectAssignmentsPanel({ projectId }: { projectId: string }) {
   const { project } = useProject(projectId);

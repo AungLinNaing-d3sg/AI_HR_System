@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useUserList } from '@/hooks/useUserList';
 import { useUserSearch } from '@/hooks/useUserSearch';
 import { MIN_USER_SEARCH_QUERY_LENGTH, USER_SEARCH_DEBOUNCE_MS } from '@/lib/constants/user.constants';
 import { cn } from '@/lib/utils/cn';
@@ -39,16 +38,20 @@ function matchesLocalQuery(user: UserListItem, query: string): boolean {
 
 /**
  * Searchable "Add User to Project" combobox on `/projects/:id/assignments`
- * (`ProjectAssignmentsPanel`). Shows every candidate user
- * (`useUserList`/`GET /api/auth/user-list`) as soon as it's opened, filtered
- * client-side by name/email as the caller types - so the dropdown never
- * looks empty on first open, matching `docs/HR_System_FE_wireframe.pdf`'s
- * "Select a user…" dropdown while staying a typeahead. Once the (debounced,
+ * (`ProjectAssignmentsPanel`). Shows every candidate user as soon as it's
+ * opened, filtered client-side by name/email as the caller types - so the
+ * dropdown never looks empty on first open, matching
+ * `docs/HR_System_FE_wireframe.pdf`'s "Select a user…" dropdown while
+ * staying a typeahead. That initial candidate list is itself sourced from
+ * `useUserSearch('')` - `GET /Auth/SearchUsers` called with no
+ * `email`/`userName` (the backend's documented no-params behavior) -
+ * rather than the previously used, now-removed `GET /Auth/GetUserList`
+ * dropdown endpoint, so this combobox (and the "Add User to Project" flow
+ * generally) only ever calls `SearchUsers`. Once the (debounced,
  * `useDebounce`/`USER_SEARCH_DEBOUNCE_MS`) query reaches
- * `MIN_USER_SEARCH_QUERY_LENGTH`, it switches over to the server-backed
- * `GET /Auth/SearchUsers?email={q}&userName={q}` via `useUserSearch`
- * instead, which can find any account rather than only the first
- * `USERS_PAGE_SIZE` `useUserList` loaded. Implements the WAI-ARIA
+ * `MIN_USER_SEARCH_QUERY_LENGTH`, it switches over to a real, query-scoped
+ * `useUserSearch(query)` call instead, which can find any account rather
+ * than only the ones present in the initial no-params result. Implements the WAI-ARIA
  * "combobox with listbox popup" pattern using `aria-activedescendant` -
  * options are plain, non-focusable `li` elements, with `onMouseDown`
  * prevented so a mouse click never blurs (and thus never closes/unmounts)
@@ -84,22 +87,28 @@ export function UserSearchCombobox({
   const isServerSearchTier = trimmedQuery.length >= MIN_USER_SEARCH_QUERY_LENGTH;
 
   // Tier 1 (query empty or too short to search server-side): every candidate
-  // user, filtered client-side - see `useUserList`'s doc comment for why this
-  // exists (so the dropdown shows every user up front, not just once the
-  // caller has typed enough to search).
+  // user - sourced from `GET /Auth/SearchUsers` called with no
+  // `email`/`userName` at all (the backend's documented no-params behavior,
+  // replacing the removed `GET /Auth/GetUserList` dropdown endpoint) -
+  // filtered client-side so the dropdown shows every user up front, not just
+  // once the caller has typed enough to search.
   const {
     users: allUsers,
     isLoading: isLoadingAllUsers,
     isError: isAllUsersError,
     error: allUsersError,
-  } = useUserList();
+  } = useUserSearch('');
   const localMatches = useMemo(
     () => (trimmedQuery.length === 0 ? allUsers : allUsers.filter((user) => matchesLocalQuery(user, trimmedQuery))),
     [allUsers, trimmedQuery]
   );
 
-  // Tier 2 (query long enough): the real, server-backed search, which can
-  // find any account rather than only the (bounded) `useUserList` page.
+  // Tier 2 (query long enough): the real, query-scoped `SearchUsers` call,
+  // which can find any account rather than only the ones present in the
+  // no-params tier-1 result above. Below the search threshold this
+  // internally collapses back to the same no-params request as tier 1 (see
+  // `useUserSearch`), so it never fires an extra, overly narrow request of
+  // its own.
   const {
     users: searchMatches,
     isLoading: isSearchLoading,

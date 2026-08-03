@@ -7,12 +7,10 @@ import { UserSearchCombobox } from './UserSearchCombobox';
 import type { UserListItem } from '@/types/domain.types';
 
 jest.mock('../../lib/api/auth.api', () => ({
-  getUserList: jest.fn(),
   searchUsers: jest.fn(),
 }));
 
 const authApi = jest.requireMock('../../lib/api/auth.api') as {
-  getUserList: jest.Mock;
   searchUsers: jest.Mock;
 };
 
@@ -49,9 +47,13 @@ function renderCombobox(initialValue = '') {
 
 describe('UserSearchCombobox', () => {
   beforeEach(() => {
-    authApi.getUserList.mockReset();
     authApi.searchUsers.mockReset();
-    authApi.getUserList.mockResolvedValue(users);
+    // By default every call to `GET /Auth/SearchUsers` (via `searchUsers`) -
+    // whether it's the initial, unfiltered `''` call this combobox fires on
+    // mount (replacing the removed `GetUserList` call) or an as-you-type
+    // search once the query is long enough - resolves the same fixture list;
+    // individual tests override this for pending/error/no-match cases.
+    authApi.searchUsers.mockResolvedValue(users);
   });
 
   it('shows every candidate user as soon as the input is focused, before anything is typed', async () => {
@@ -61,11 +63,14 @@ describe('UserSearchCombobox', () => {
 
     expect(await screen.findByRole('option', { name: /jane doe/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /john smith/i })).toBeInTheDocument();
-    expect(authApi.searchUsers).not.toHaveBeenCalled();
+    // The initial candidate list is now itself sourced from `SearchUsers`
+    // called with no `email`/`userName` (the backend's documented
+    // no-params behavior), not a 1/short-character search term.
+    expect(authApi.searchUsers).toHaveBeenCalledWith('');
   });
 
   it('shows a loading state while the full user list is still loading', async () => {
-    authApi.getUserList.mockReturnValue(new Promise(() => {}));
+    authApi.searchUsers.mockReturnValue(new Promise(() => {}));
     renderCombobox();
     const user = userEvent.setup();
     await user.click(screen.getByRole('combobox'));
@@ -74,7 +79,7 @@ describe('UserSearchCombobox', () => {
   });
 
   it('shows an error message when the full user list fails to load', async () => {
-    authApi.getUserList.mockRejectedValue(new Error('network down'));
+    authApi.searchUsers.mockRejectedValue(new Error('network down'));
     renderCombobox();
     const user = userEvent.setup();
     await user.click(screen.getByRole('combobox'));
@@ -82,17 +87,17 @@ describe('UserSearchCombobox', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 
-  it('filters the already-loaded user list client-side for a one-character query, without calling searchUsers', async () => {
+  it('filters the already-loaded user list client-side for a one-character query, without searching for that character', async () => {
     renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'j');
 
     await screen.findByRole('option', { name: /jane doe/i });
     expect(screen.getByRole('option', { name: /john smith/i })).toBeInTheDocument();
-    expect(authApi.searchUsers).not.toHaveBeenCalled();
+    expect(authApi.searchUsers).not.toHaveBeenCalledWith('j');
   });
 
-  it('narrows the client-side filter as more of the query is typed', async () => {
+  it('searches server-side once the debounced query is long enough', async () => {
     renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'ja');
@@ -101,7 +106,6 @@ describe('UserSearchCombobox', () => {
   });
 
   it('searches and lists matching users once the debounced query is long enough', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'ja');
@@ -111,7 +115,7 @@ describe('UserSearchCombobox', () => {
   });
 
   it('shows a "no users found" empty state', async () => {
-    authApi.searchUsers.mockResolvedValue([]);
+    authApi.searchUsers.mockImplementation((query: string) => Promise.resolve(query === '' ? users : []));
     renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'zz');
@@ -120,7 +124,9 @@ describe('UserSearchCombobox', () => {
   });
 
   it('shows an error message when the search fails', async () => {
-    authApi.searchUsers.mockRejectedValue(new Error('network down'));
+    authApi.searchUsers.mockImplementation((query: string) =>
+      query === '' ? Promise.resolve(users) : Promise.reject(new Error('network down'))
+    );
     renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'ja');
@@ -129,7 +135,6 @@ describe('UserSearchCombobox', () => {
   });
 
   it('selects a user on click, filling the input and emitting the userId', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     const { onChange } = renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'ja');
@@ -142,7 +147,7 @@ describe('UserSearchCombobox', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
-  it('selects a user straight from the initial full list on click, without ever calling searchUsers', async () => {
+  it('selects a user straight from the initial full list on click, without ever searching for a query term', async () => {
     const { onChange } = renderCombobox();
     const user = userEvent.setup();
     await user.click(screen.getByRole('combobox'));
@@ -151,11 +156,10 @@ describe('UserSearchCombobox', () => {
     await user.click(option);
 
     expect(onChange).toHaveBeenCalledWith('user-2');
-    expect(authApi.searchUsers).not.toHaveBeenCalled();
+    expect(authApi.searchUsers).not.toHaveBeenCalledWith(expect.stringMatching(/.+/));
   });
 
   it('clears the previously selected userId when the user resumes typing', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     const { onChange } = renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'ja');
@@ -169,7 +173,6 @@ describe('UserSearchCombobox', () => {
   });
 
   it('supports selecting an option via keyboard (ArrowDown + Enter)', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     const { onChange } = renderCombobox();
     const user = userEvent.setup();
     const input = screen.getByRole('combobox');
@@ -184,7 +187,6 @@ describe('UserSearchCombobox', () => {
   });
 
   it('closes the listbox on Escape without changing the selection', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     renderCombobox();
     const user = userEvent.setup();
     await user.type(screen.getByRole('combobox'), 'ja');
@@ -196,7 +198,6 @@ describe('UserSearchCombobox', () => {
   });
 
   it('clears the visible text when the selected value is reset externally', async () => {
-    authApi.searchUsers.mockResolvedValue(users);
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     function Harness() {

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as projectsApi from '@/lib/api/projects.api';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
-/** Removes a resource assignment and invalidates its project's cached assignments/user-list queries. */
+/** Removes a resource assignment and invalidates its project's cached assignments/search-users queries. */
 export function useRemoveResource(projectId: string) {
   const queryClient = useQueryClient();
 
@@ -12,7 +12,7 @@ export function useRemoveResource(projectId: string) {
     mutationFn: (assignmentId: string) => projectsApi.removeResource(projectId, assignmentId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'assignments'] });
-      void queryClient.invalidateQueries({ queryKey: ['auth', 'user-list'] });
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'search-users'] });
     },
   });
 

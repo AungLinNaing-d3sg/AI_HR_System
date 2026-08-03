@@ -18,6 +18,7 @@ describe('Sidebar', () => {
 
   it('highlights "My Timesheets" (not "Timesheet History") on /timesheets', () => {
     mockPathname = '/timesheets';
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     render(<Sidebar />);
     expect(screen.getByRole('link', { name: 'My Timesheets' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Timesheet History' })).not.toHaveAttribute('aria-current');
@@ -25,9 +26,25 @@ describe('Sidebar', () => {
 
   it('highlights "Timesheet History" (not "My Timesheets") on /timesheets/history', () => {
     mockPathname = '/timesheets/history';
+    mockUseAuth.mockReturnValue({ role: 'Employee' });
     render(<Sidebar />);
     expect(screen.getByRole('link', { name: 'Timesheet History' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'My Timesheets' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('hides "My Timesheets" from a SystemAdmin but keeps "Timesheet History" visible', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin' });
+    render(<Sidebar />);
+    expect(screen.queryByRole('link', { name: 'My Timesheets' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Timesheet History' })).toBeInTheDocument();
+  });
+
+  it('shows "My Timesheets" to a ProjectAdmin', () => {
+    mockPathname = '/dashboard';
+    mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });
+    render(<Sidebar />);
+    expect(screen.getByRole('link', { name: 'My Timesheets' })).toHaveAttribute('href', '/timesheets');
   });
 
   it('hides Administration items from a non-SystemAdmin role', () => {

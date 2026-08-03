@@ -37,6 +37,13 @@ export interface NavItem {
   icon: LucideIcon;
   /** Omit to show to every authenticated role. */
   roles?: readonly UserRole[];
+  /**
+   * Roles that must never see this item, even though `roles` above allows it
+   * (or is omitted entirely). Checked before `roles` so it always wins - e.g.
+   * "My Timesheets" is hidden from `SystemAdmin` specifically (they don't log
+   * their own time) while remaining visible to every other role.
+   */
+  excludeRoles?: readonly UserRole[];
 }
 
 export interface NavSection {
@@ -53,7 +60,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     title: 'Timesheet',
     items: [
       { label: 'Projects', href: '/projects', icon: FolderKanban },
-      { label: 'My Timesheets', href: '/timesheets', icon: Clock },
+      { label: 'My Timesheets', href: '/timesheets', icon: Clock, excludeRoles: ['SystemAdmin'] },
       { label: 'Timesheet History', href: '/timesheets/history', icon: ClipboardList },
       {
         label: 'Timesheet Periods',
@@ -90,6 +97,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
 ];
 
 function isVisible(item: NavItem, role: UserRole | null): boolean {
+  if (role && item.excludeRoles?.includes(role)) return false;
   if (!item.roles) return true;
   if (!role) return false;
   return item.roles.includes(role);

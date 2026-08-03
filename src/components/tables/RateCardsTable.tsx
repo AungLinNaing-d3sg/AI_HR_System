@@ -111,8 +111,8 @@ function CountrySummaryCard({ summary, isSelected, onSelect }: CountrySummaryCar
  * (synchronized with the cards - both drive the same `selectedCountryId`
  * state, so clicking a card or picking it from the dropdown does the same
  * thing, and clicking an already-selected card clears the filter), a
- * Country/Role/Daily Rate/Currency/Effective date/Status table, a "+ Add
- * Rate Card" action, and per-row Edit/Delete actions.
+ * Country/Role/Hourly Rate/Billing Rate/Currency/Effective date/Status
+ * table, a "+ Add Rate Card" action, and per-row Edit/Delete actions.
  *
  * Owns its own header row, cards, filter, and table (rather than splitting
  * them into `page.tsx`) for the same reason `ExchangeRatesTable`/
@@ -283,7 +283,10 @@ export function RateCardsTable() {
                       Role
                     </th>
                     <th scope="col" className="px-4 py-3 font-medium">
-                      Daily Rate
+                      Hourly Rate
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Billing Rate
                     </th>
                     <th scope="col" className="px-4 py-3 font-medium">
                       Currency
@@ -308,10 +311,8 @@ export function RateCardsTable() {
                           {rateCard.resourceRoleType.name}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-zinc-900">{rateCard.billingRate}</p>
-                        <p className="text-xs text-zinc-500">Hourly: {rateCard.hourlyRate}</p>
-                      </td>
+                      <td className="px-4 py-3 font-medium text-zinc-900">{rateCard.hourlyRate}</td>
+                      <td className="px-4 py-3 font-medium text-zinc-900">{rateCard.billingRate}</td>
                       <td className="px-4 py-3">
                         <span className="inline-flex rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-xs font-semibold text-zinc-700">
                           {rateCard.currency.code}

@@ -87,7 +87,8 @@ describe('AppShell', () => {
 
     await user.click(screen.getByLabelText('Toggle navigation menu'));
     const drawer = screen.getByLabelText('Close navigation menu').closest('div')!.parentElement as HTMLElement;
-    const links = screen.getAllByRole('link', { name: 'My Timesheets' });
+    // 'Projects' is visible to every role (unlike 'My Timesheets', hidden for SystemAdmin - the role this suite mocks).
+    const links = screen.getAllByRole('link', { name: 'Projects' });
     // The mobile drawer renders its own `Sidebar` instance alongside the desktop one; click the last (drawer) link.
     await user.click(links[links.length - 1]);
 

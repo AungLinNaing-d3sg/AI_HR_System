@@ -28,7 +28,7 @@ const user: AuthenticatedUser = {
   lastName: 'Doe',
   employeeId: null,
   countryId: null,
-  role: 'User',
+  role: 'Employee',
 };
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -60,7 +60,7 @@ describe('useAuth', () => {
 
     await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
     expect(result.current.user).toEqual(user);
-    expect(result.current.role).toBe('User');
+    expect(result.current.role).toBe('Employee');
   });
 
   it('surfaces a login error message without authenticating', async () => {

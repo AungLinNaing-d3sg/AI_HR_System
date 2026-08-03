@@ -30,12 +30,13 @@ import { createUserSchema, type CreateUserFormValues } from '@/lib/validators/au
  * available at all - so `UsersTable` can show a real, non-fabricated role
  * badge for it.
  *
- * `CountryId` is optional and selected via `CountrySearchCombobox`, a
- * searchable dropdown (`GET /Country/GetAllCountries` via
- * `app/api/countries/route.ts`, same search-as-you-type UX as the "Add User
- * to Project" `UserSearchCombobox`) that shows every configured country
- * up front and filters by name/code as the admin types, matching the
- * read-only "Country" column already shown on `/admin/users` (see
+ * `CountryId` is required (business requirement - see `createUserSchema`'s
+ * doc comment) and selected via `CountrySearchCombobox`, a searchable
+ * dropdown (`GET /Country/GetAllCountries` via `app/api/countries/route.ts`,
+ * same search-as-you-type UX as the "Add User to Project"
+ * `UserSearchCombobox`) that shows every configured country up front and
+ * filters by name/code as the admin types, matching the read-only "Country"
+ * column already shown on `/admin/users` (see
  * `docs/HR_System_FE_wireframe.pdf`).
  */
 export function CreateUserForm() {
@@ -162,7 +163,7 @@ export function CreateUserForm() {
         </div>
 
         <div>
-          <Label htmlFor="countryId">Country (optional)</Label>
+          <Label htmlFor="countryId">Country</Label>
           <Controller
             name="countryId"
             control={control}

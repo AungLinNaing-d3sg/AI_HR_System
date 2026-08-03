@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { BarChart3, ClipboardCheck, Clock, FolderKanban, UserPlus, User as UserIcon } from 'lucide-react';
+import { useMyProjects } from '@/hooks/useMyProjects';
 import { useProjects } from '@/hooks/useProjects';
 import { useTimesheetWeek } from '@/hooks/useTimesheetWeek';
 import { useTimesheetHistory } from '@/hooks/useTimesheetHistory';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
-import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
+import { MY_PROJECT_LIST_ROLES, PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { getMondayOfWeek } from '@/lib/utils/week';
 import { cn } from '@/lib/utils/cn';
 import type { UserRole } from '@/types/domain.types';
@@ -47,14 +48,24 @@ function formatEntryDate(value: string): string {
 export function DashboardOverview({ role }: DashboardOverviewProps) {
   const isSystemAdmin = role === 'SystemAdmin';
   const canViewReports = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
+  // A `ProjectAdmin` only manages, and an `Employee` only works, their own
+  // assigned projects, so the "Total Projects" stat card uses the same
+  // `GET /Project/GetMyProjectList` (`useMyProjects`, see
+  // `MY_PROJECT_LIST_ROLES`) the `/projects` management table scopes to for
+  // both roles (see `useProjectList`), instead of the unscoped
+  // `GetProjectList` (`useProjects`) a `SystemAdmin` (or `Guest`) still sees
+  // here.
+  const isMyProjectsRole = Boolean(role && MY_PROJECT_LIST_ROLES.includes(role));
 
+  const myProjectsQuery = useMyProjects(isMyProjectsRole);
+  const allProjectsQuery = useProjects(!isMyProjectsRole);
   const {
     projects,
     isLoading: isLoadingProjects,
     isError: isProjectsError,
     error: projectsError,
     refetch: refetchProjects,
-  } = useProjects();
+  } = isMyProjectsRole ? myProjectsQuery : allProjectsQuery;
   const {
     week,
     isLoading: isLoadingWeek,

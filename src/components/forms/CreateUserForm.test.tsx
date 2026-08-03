@@ -45,7 +45,7 @@ const createdUser: AuthenticatedUser = {
   lastName: 'User',
   employeeId: null,
   countryId: null,
-  role: 'User',
+  role: 'Employee',
 };
 
 function renderWithProviders(ui: ReactNode) {
@@ -87,9 +87,29 @@ describe('CreateUserForm', () => {
     await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.click(screen.getByLabelText('Country'));
+    await user.click(await screen.findByRole('option', { name: /singapore/i }));
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
     expect(await screen.findByText('Please select a role.')).toBeInTheDocument();
+    expect(authApi.createUser).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a validation error when no country is selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CreateUserForm />);
+    await screen.findByRole('option', { name: 'SystemAdmin' });
+
+    await user.type(screen.getByLabelText('Username'), 'jdoe');
+    await user.type(screen.getByLabelText('Email'), 'jdoe@example.com');
+    await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
+    await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(await screen.findByText('Please select a country.')).toBeInTheDocument();
     expect(authApi.createUser).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
   });
@@ -105,6 +125,8 @@ describe('CreateUserForm', () => {
     await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.click(screen.getByLabelText('Country'));
+    await user.click(await screen.findByRole('option', { name: /singapore/i }));
     await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
@@ -126,6 +148,8 @@ describe('CreateUserForm', () => {
     await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.click(screen.getByLabelText('Country'));
+    await user.click(await screen.findByRole('option', { name: /singapore/i }));
     await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
@@ -143,6 +167,8 @@ describe('CreateUserForm', () => {
     await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.click(screen.getByLabelText('Country'));
+    await user.click(await screen.findByRole('option', { name: /singapore/i }));
     await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
@@ -162,6 +188,8 @@ describe('CreateUserForm', () => {
     await user.type(screen.getByLabelText('Temporary password'), 'Password@123');
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.type(screen.getByLabelText('Last name'), 'Doe');
+    await user.click(screen.getByLabelText('Country'));
+    await user.click(await screen.findByRole('option', { name: /singapore/i }));
     await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
@@ -184,12 +212,11 @@ describe('CreateUserForm', () => {
     expect(await screen.findByText(/could not load roles/i)).toBeInTheDocument();
   });
 
-  it('renders the optional country combobox populated from useCountries, showing every country once opened', async () => {
+  it('renders the required country combobox populated from useCountries, showing every country once opened', async () => {
     const user = userEvent.setup();
     renderWithProviders(<CreateUserForm />);
-    expect(screen.getByLabelText('Country (optional)')).not.toBeRequired();
 
-    await user.click(screen.getByLabelText('Country (optional)'));
+    await user.click(screen.getByLabelText('Country'));
     expect(await screen.findByRole('option', { name: /singapore/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /united states/i })).toBeInTheDocument();
   });
@@ -199,13 +226,12 @@ describe('CreateUserForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<CreateUserForm />);
 
-    await user.click(screen.getByLabelText('Country (optional)'));
+    await user.click(screen.getByLabelText('Country'));
     expect(await screen.findByText(/loading countries/i)).toBeInTheDocument();
   });
 
-  it('submits successfully without selecting a country (optional field)', async () => {
+  it('does not submit without selecting a country (Country is required)', async () => {
     const user = userEvent.setup();
-    authApi.createUser.mockResolvedValue(createdUser);
     renderWithProviders(<CreateUserForm />);
     await screen.findByRole('option', { name: 'SystemAdmin' });
 
@@ -217,8 +243,9 @@ describe('CreateUserForm', () => {
     await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
-    await waitFor(() => expect(authApi.createUser).toHaveBeenCalledWith(expect.objectContaining({ countryId: '' })));
-    expect(pushMock).toHaveBeenCalledWith('/admin/users');
+    expect(await screen.findByText('Please select a country.')).toBeInTheDocument();
+    expect(authApi.createUser).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('submits the selected country id along with the rest of the form', async () => {
@@ -233,7 +260,7 @@ describe('CreateUserForm', () => {
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.type(screen.getByLabelText('Last name'), 'Doe');
 
-    await user.click(screen.getByLabelText('Country (optional)'));
+    await user.click(screen.getByLabelText('Country'));
     await user.click(await screen.findByRole('option', { name: /singapore/i }));
 
     await user.selectOptions(screen.getByLabelText('Role'), '11111111-1111-1111-1111-111111111102');
@@ -251,7 +278,7 @@ describe('CreateUserForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<CreateUserForm />);
 
-    await user.click(screen.getByLabelText('Country (optional)'));
+    await user.click(screen.getByLabelText('Country'));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 });

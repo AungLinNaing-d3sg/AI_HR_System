@@ -70,13 +70,15 @@ describe('GET /api/projects/mine', () => {
     expect(projectsBackend.getMyProjectList).not.toHaveBeenCalled();
   });
 
-  it('returns 403 for a plain User (not a System Admin or Project Admin)', async () => {
+  it('returns the mapped project list for a plain User (Employee)', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
-      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('Employee') } : undefined
     );
+    projectsBackend.getMyProjectList.mockResolvedValue([dto]);
+
     const response = await GET();
-    expect(response.status).toBe(403);
-    expect(projectsBackend.getMyProjectList).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(projectsBackend.getMyProjectList).toHaveBeenCalledWith(expect.any(String));
   });
 
   it('returns the mapped project list for a ProjectAdmin', async () => {
@@ -106,14 +108,35 @@ describe('GET /api/projects/mine', () => {
     ]);
   });
 
-  it('allows a SystemAdmin to call this endpoint too (safety-net gate, not normally used)', async () => {
+  it('returns 403 for a SystemAdmin (their /projects table always uses the unscoped GetProjectList)', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
-    projectsBackend.getMyProjectList.mockResolvedValue([dto]);
+    const response = await GET();
+    expect(response.status).toBe(403);
+    expect(projectsBackend.getMyProjectList).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 for a Guest (same unscoped-GetProjectList-only rule as a SystemAdmin)', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('Guest') } : undefined
+    );
+    const response = await GET();
+    expect(response.status).toBe(403);
+    expect(projectsBackend.getMyProjectList).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty array for a plain User (Employee) with no assigned projects', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('Employee') } : undefined
+    );
+    projectsBackend.getMyProjectList.mockResolvedValue([]);
 
     const response = await GET();
+    const body = await response.json();
+
     expect(response.status).toBe(200);
+    expect(body.projects).toEqual([]);
   });
 
   it('returns a normalized error when the backend call fails', async () => {

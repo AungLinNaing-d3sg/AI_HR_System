@@ -43,7 +43,7 @@ describe('proxy', () => {
 
   it('allows a request with a valid, non-expired access token', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/profile', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -65,7 +65,7 @@ describe('proxy', () => {
 
   it('redirects to /forbidden when a non-admin hits the SystemAdmin-only route', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/admin/users/create', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -78,7 +78,7 @@ describe('proxy', () => {
 
   it('redirects to /forbidden when a non-admin hits /admin/currencies', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/admin/currencies', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -103,7 +103,7 @@ describe('proxy', () => {
 
   it('redirects to /forbidden when a non-admin hits /admin/exchange-rates', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/admin/exchange-rates', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -128,7 +128,7 @@ describe('proxy', () => {
 
   it('redirects to /forbidden when a non-admin hits /admin/rate-cards', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/admin/rate-cards', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -153,7 +153,7 @@ describe('proxy', () => {
 
   it('redirects to /forbidden when a non-admin hits /admin/countries', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/admin/countries', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -178,7 +178,7 @@ describe('proxy', () => {
 
   it('redirects to /forbidden when a non-admin hits /admin/resource-role-types', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/admin/resource-role-types', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -201,9 +201,9 @@ describe('proxy', () => {
     expect(response.status).toBe(200);
   });
 
-  it('allows a plain User to reach /projects (Projects is open to every authenticated role)', async () => {
+  it('allows an Employee to reach /projects (Projects is open to every authenticated role)', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = makeToken({ role: 'User', exp: futureExp });
+    const token = makeToken({ role: 'Employee', exp: futureExp });
     const request = new NextRequest('https://example.com/projects', {
       headers: { cookie: `${ACCESS_TOKEN_COOKIE}=${token}` },
     });
@@ -227,8 +227,8 @@ describe('proxy', () => {
 
   it('silently refreshes an expired access token and allows the request through', async () => {
     const pastExp = Math.floor(Date.now() / 1000) - 60;
-    const expiredToken = makeToken({ role: 'User', exp: pastExp });
-    const newToken = makeToken({ role: 'User', exp: Math.floor(Date.now() / 1000) + 3600 });
+    const expiredToken = makeToken({ role: 'Employee', exp: pastExp });
+    const newToken = makeToken({ role: 'Employee', exp: Math.floor(Date.now() / 1000) + 3600 });
 
     authBackend.refreshToken.mockResolvedValue({
       AccessToken: newToken,
@@ -254,7 +254,7 @@ describe('proxy', () => {
 
   it('redirects to /login when the refresh token is rejected by the backend', async () => {
     const pastExp = Math.floor(Date.now() / 1000) - 60;
-    const expiredToken = makeToken({ role: 'User', exp: pastExp });
+    const expiredToken = makeToken({ role: 'Employee', exp: pastExp });
 
     authBackend.refreshToken.mockRejectedValue(new Error('invalid_grant'));
 

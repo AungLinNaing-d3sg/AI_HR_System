@@ -52,7 +52,7 @@ describe('mapAuthUser', () => {
       FirstName: 'Jane',
       LastName: 'Doe',
     };
-    const mapped = mapAuthUser(minimalDto, 'User');
+    const mapped = mapAuthUser(minimalDto, 'Employee');
     expect(mapped.employeeId).toBeNull();
     expect(mapped.countryId).toBeNull();
   });

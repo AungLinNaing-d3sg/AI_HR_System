@@ -20,11 +20,12 @@ const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0
 const GUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 /**
- * Shared "must pick a country" rule for `createUserSchema` and
- * `updateUserFormSchema` - the Country field is required on both the Create
- * User and Edit User forms (business requirement), unlike the backend
- * contract itself (`CountryId` is nullable there, see the "Create User"/
- * "Update User" examples in docs/HR_System_BE.postman_collection.json).
+ * Shared "must pick a country" rule for `createUserSchema`,
+ * `updateUserFormSchema`, and `updateProfileFormSchema` - the Country field
+ * is required on the Create User, Edit User, and My Account/Profile forms
+ * (business requirement), unlike the backend contract itself (`CountryId`
+ * is nullable there, see the "Create User"/"Update User" examples in
+ * docs/HR_System_BE.postman_collection.json).
  */
 const REQUIRED_COUNTRY_ID_SCHEMA = z
   .string()
@@ -42,12 +43,28 @@ export const updateProfileSchema = z.object({
   firstName: z.string().trim().min(1, 'First name is required.').max(100, 'First name is too long.'),
   lastName: z.string().trim().min(1, 'Last name is required.').max(100, 'Last name is too long.'),
   email: z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.'),
-  // Not surfaced as an editable field in this feature (no country lookup
-  // endpoint is in scope); carried through as a hidden field so an existing
-  // value is preserved rather than being wiped by the update.
+  // Wire-level contract validated by `PUT /api/auth/profile` - stays
+  // optional/nullable (unlike `updateProfileFormSchema` below) so a legacy
+  // account with no country on record can still update its other profile
+  // fields without being forced to pick one first.
   countryId: z.string().trim().optional().nullable(),
 });
 export type UpdateProfileFormValues = z.infer<typeof updateProfileSchema>;
+
+/**
+ * Form-only variant of `updateProfileSchema`, requiring `countryId` to be a
+ * selected, valid GUID - mirrors `createUserSchema`/`updateUserFormSchema`'s
+ * "Country is required" business rule, now that `UpdateProfileForm` surfaces
+ * a searchable Country field (`CountrySearchCombobox`, backed by
+ * `GET /Country/GetAllCountries`) instead of carrying `countryId` through as
+ * a hidden field. Used exclusively by `UpdateProfileForm`'s `zodResolver` -
+ * `PUT /api/auth/profile` itself keeps validating against the more
+ * permissive `updateProfileSchema` above.
+ */
+export const updateProfileFormSchema = updateProfileSchema.extend({
+  countryId: REQUIRED_COUNTRY_ID_SCHEMA,
+});
+export type UpdateProfileFormSchemaValues = z.infer<typeof updateProfileFormSchema>;
 
 export const changePasswordSchema = z
   .object({

@@ -34,8 +34,11 @@ export function ChangePasswordForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="w-full max-w-md space-y-4">
-      <h2 className="text-lg font-semibold text-zinc-900">Change password</h2>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="w-full space-y-4">
+      <div>
+        <h2 className="text-base font-semibold text-zinc-900">Change password</h2>
+        <p className="mt-1 text-sm text-zinc-500">Choose a strong, unique password for your account.</p>
+      </div>
 
       {error && <Alert variant="error">{error}</Alert>}
       {isSuccess && <Alert variant="success">Your password has been changed.</Alert>}
@@ -79,9 +82,11 @@ export function ChangePasswordForm() {
         <FieldError id="confirmNewPassword-error" message={errors.confirmNewPassword?.message} />
       </div>
 
-      <Button type="submit" isLoading={isChanging}>
-        {isChanging ? 'Changing…' : 'Change password'}
-      </Button>
+      <div className="flex justify-end border-t border-zinc-200 pt-4">
+        <Button type="submit" isLoading={isChanging}>
+          {isChanging ? 'Changing…' : 'Change password'}
+        </Button>
+      </div>
     </form>
   );
 }

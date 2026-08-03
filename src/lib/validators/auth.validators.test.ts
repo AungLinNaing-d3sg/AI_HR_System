@@ -4,6 +4,7 @@ import {
   loginSchema,
   resetPasswordSchema,
   searchUsersQuerySchema,
+  updateProfileFormSchema,
   updateProfileSchema,
   updateUserFormSchema,
   updateUserSchema,
@@ -51,6 +52,40 @@ describe('updateProfileSchema', () => {
 
   it('rejects a first name over the max length', () => {
     const result = updateProfileSchema.safeParse({ ...base, firstName: 'a'.repeat(101) });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('updateProfileFormSchema (form-only, Country is required on the Profile page)', () => {
+  const base = {
+    firstName: 'Jane',
+    lastName: 'Doe',
+    email: 'jane@example.com',
+    countryId: '22222222-2222-2222-2222-222222222201',
+  };
+
+  it('accepts a valid payload with a selected country', () => {
+    expect(updateProfileFormSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('rejects a missing countryId (Country is required on the Profile form)', () => {
+    const withoutCountry: Record<string, unknown> = { ...base };
+    delete withoutCountry.countryId;
+    expect(updateProfileFormSchema.safeParse(withoutCountry).success).toBe(false);
+  });
+
+  it('rejects an empty-string countryId (Country is required on the Profile form)', () => {
+    const result = updateProfileFormSchema.safeParse({ ...base, countryId: '' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a null countryId, unlike the wire-level updateProfileSchema', () => {
+    const result = updateProfileFormSchema.safeParse({ ...base, countryId: null });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a countryId that is not a valid GUID', () => {
+    const result = updateProfileFormSchema.safeParse({ ...base, countryId: 'not-a-guid' });
     expect(result.success).toBe(false);
   });
 });

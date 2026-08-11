@@ -80,6 +80,15 @@ export interface UsersPage {
 export interface UsersListParams {
   pageNo?: number;
   pageSize?: number;
+  /**
+   * Free-text search term for the `/admin/users` management table's search
+   * box (`UsersTable`) - forwarded to `GET /api/auth/users?search=`, which
+   * switches over to `GET /Auth/SearchUsers?...&isAllRole=true` server-side
+   * (see `app/api/auth/users/route.ts`) instead of the paginated
+   * `GetUserList` call. When supplied, `pageNo`/`pageSize` are ignored -
+   * `SearchUsers` returns its full, unpaginated match list.
+   */
+  search?: string;
 }
 
 /**

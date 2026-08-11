@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TimesheetGrid } from './TimesheetGrid';
+import { TASK_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/timesheet.constants';
 import type { TimesheetGridRowView } from '@/hooks/useTimesheetGrid';
 
 jest.mock('next/navigation', () => ({
@@ -198,6 +199,31 @@ describe('TimesheetGrid', () => {
     expect(
       screen.getByLabelText('Task notes for Project Alpha - Web Platform on Mon, Feb 24')
     ).toBeInTheDocument();
+  });
+
+  it('does not surface an "Approved" hint on an approved cell and omits aria-describedby for it', () => {
+    useTimesheetGrid.mockReturnValue(
+      baseHookValue({
+        rows: [makeRow({ cells: makeRow().cells.map((cell, index) => (index === 0 ? { ...cell, isApproved: true } : cell)) })],
+      })
+    );
+    render(<TimesheetGrid />);
+
+    const mondayInput = screen.getByLabelText('Mon, Feb 24 hours for Project Alpha - Web Platform');
+    expect(mondayInput).not.toHaveAttribute('aria-describedby');
+    expect(screen.queryByText(/approved.*editing resets to pending/i)).not.toBeInTheDocument();
+  });
+
+  it('caps the task notes textarea at TASK_DESCRIPTION_MAX_LENGTH and labels it as a description field', async () => {
+    const user = userEvent.setup();
+    useTimesheetGrid.mockReturnValue(baseHookValue());
+    render(<TimesheetGrid />);
+
+    await user.click(screen.getByRole('button', { name: /show task notes for project alpha/i }));
+
+    expect(screen.getByText('Task Notes / Description')).toBeInTheDocument();
+    const notesField = screen.getByLabelText('Task notes for Project Alpha - Web Platform on Mon, Feb 24');
+    expect(notesField).toHaveAttribute('maxLength', String(TASK_DESCRIPTION_MAX_LENGTH));
   });
 
   it('calls setCell when an hours input changes', async () => {

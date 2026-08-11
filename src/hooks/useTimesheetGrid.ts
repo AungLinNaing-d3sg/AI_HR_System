@@ -50,16 +50,32 @@ function countPendingEdits(edits: PendingEdits): number {
  */
 export function useTimesheetGrid(initialWeekStart?: string) {
   const [weekStart, setWeekStart] = useState<string>(() => initialWeekStart ?? getMondayOfWeek());
-  // The "Timesheet Period" dropdown's explicit selection (see `goToPeriod`),
-  // cleared on any plain week navigation (Previous/Next/This week) so those
-  // fall back to re-deriving the covering period from the new week's date
-  // range - see `useTimesheetWeek`/`app/api/timesheets/week/route.ts` for why
-  // this is required for every period option to be selectable, not just the
-  // one that a plain overlap lookup alone would resolve to.
-  const [periodId, setPeriodId] = useState<string | undefined>(undefined);
+  // The "Timesheet Period" dropdown's explicit selection (see `goToPeriod`).
+  // Kept (not cleared) across plain week navigation (Previous/Next/This
+  // week) so the chosen period stays selected while its own date range
+  // still covers the displayed week - this is what keeps a specific option
+  // "sticky" when two Timesheet Periods overlap the same week, instead of
+  // silently snapping back to whichever period a plain overlap lookup would
+  // resolve to first. Only cleared implicitly, by `periodId` below
+  // resolving to `undefined`, once week navigation moves outside the pinned
+  // period's own `periodStart`/`periodEnd` range - at that point
+  // `useTimesheetWeek`/`app/api/timesheets/week/route.ts` fall back to
+  // re-deriving the covering period from the new week's date range, exactly
+  // as for a week that was never explicitly pinned.
+  const [pinnedPeriod, setPinnedPeriod] = useState<TimesheetPeriod | undefined>(undefined);
   const [edits, setEdits] = useState<PendingEdits>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
+
+  // Re-validated on every week change: a pinned period only keeps pinning
+  // the request while it still overlaps the currently displayed week.
+  const periodId = useMemo(() => {
+    if (!pinnedPeriod) return undefined;
+    const pinnedPeriodStillCoversWeek = pinnedPeriod.periodStart <= weekEnd && pinnedPeriod.periodEnd >= weekStart;
+    return pinnedPeriodStillCoversWeek ? pinnedPeriod.id : undefined;
+  }, [pinnedPeriod, weekStart, weekEnd]);
 
   const { week, isLoading, isError, error, refetch } = useTimesheetWeek(weekStart, periodId);
   const { createEntry } = useCreateTimesheetEntry();
@@ -153,21 +169,22 @@ export function useTimesheetGrid(initialWeekStart?: string) {
     [baseRows]
   );
 
+  // Plain week navigation deliberately does *not* clear `pinnedPeriod` -
+  // see that state's doc comment above: an explicitly-selected period stays
+  // selected (and keeps disambiguating an overlap with another period) for
+  // as long as its own date range still covers the week being navigated to.
   const goToPreviousWeek = useCallback(() => {
     resetEdits();
-    setPeriodId(undefined);
     setWeekStart((current) => addDays(current, -7));
   }, [resetEdits]);
 
   const goToNextWeek = useCallback(() => {
     resetEdits();
-    setPeriodId(undefined);
     setWeekStart((current) => addDays(current, 7));
   }, [resetEdits]);
 
   const goToCurrentWeek = useCallback(() => {
     resetEdits();
-    setPeriodId(undefined);
     setWeekStart(getMondayOfWeek());
   }, [resetEdits]);
 
@@ -178,12 +195,15 @@ export function useTimesheetGrid(initialWeekStart?: string) {
    * period always matches the option the caller picked even when another
    * period also overlaps that same week. Entries then load for whichever
    * week that resolves to, and `hasPeriod`/`canEdit` reflect the chosen
-   * period (or a locked one) as soon as the fetch settles.
+   * period (or a locked one) as soon as the fetch settles. The pin then
+   * persists across subsequent plain week navigation (see `pinnedPeriod`'s
+   * doc comment) instead of being dropped on the very next Previous/Next/
+   * This week click.
    */
   const goToPeriod = useCallback(
     (period: TimesheetPeriod) => {
       resetEdits();
-      setPeriodId(period.id);
+      setPinnedPeriod(period);
       setWeekStart(getMondayOfWeek(new Date(`${period.periodStart}T00:00:00.000Z`)));
     },
     [resetEdits]
@@ -237,7 +257,7 @@ export function useTimesheetGrid(initialWeekStart?: string) {
 
   return {
     weekStart,
-    weekEnd: week?.weekEnd ?? addDays(weekStart, 6),
+    weekEnd: week?.weekEnd ?? weekEnd,
     weekDates,
     rows,
     dailyTotals,

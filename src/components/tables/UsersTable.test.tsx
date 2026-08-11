@@ -287,4 +287,73 @@ describe('UsersTable', () => {
     const row = within(table).getByText('Alex Kumar').closest('tr') as HTMLElement;
     expect(within(row).getByRole('button', { name: /activate/i })).toBeInTheDocument();
   });
+
+  it('searches every role via SearchUsers (isAllRole: true) once the query reaches the minimum length', async () => {
+    const user = userEvent.setup();
+    authApi.getUsers.mockResolvedValue({ users, totalCount: 3 });
+    renderWithProviders(<UsersTable />);
+
+    await screen.findByRole('table');
+    authApi.getUsers.mockClear();
+    authApi.getUsers.mockResolvedValue({
+      users: [users[1]],
+      totalCount: 1,
+    });
+
+    await user.type(screen.getByLabelText(/search users by name or email/i), 'sarah');
+
+    await waitFor(() =>
+      expect(authApi.getUsers).toHaveBeenCalledWith({ search: 'sarah' })
+    );
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('Sarah Chen')).toBeInTheDocument();
+    expect(within(table).queryByText('Alex Kumar')).not.toBeInTheDocument();
+  });
+
+  it('does not search (falls back to the paginated list) below the minimum query length', async () => {
+    const user = userEvent.setup();
+    authApi.getUsers.mockResolvedValue({ users, totalCount: 3 });
+    renderWithProviders(<UsersTable />);
+
+    await screen.findByRole('table');
+    authApi.getUsers.mockClear();
+
+    await user.type(screen.getByLabelText(/search users by name or email/i), 'a');
+
+    expect(await screen.findByText(/enter at least 2 characters to search/i)).toBeInTheDocument();
+    expect(authApi.getUsers).not.toHaveBeenCalledWith({ search: 'a' });
+  });
+
+  it('shows a "no users found" message and hides pagination when a search has no matches', async () => {
+    const user = userEvent.setup();
+    authApi.getUsers.mockResolvedValue({ users, totalCount: 3 });
+    renderWithProviders(<UsersTable />);
+
+    await screen.findByRole('table');
+    authApi.getUsers.mockClear();
+    authApi.getUsers.mockResolvedValue({ users: [], totalCount: 0 });
+
+    await user.type(screen.getByLabelText(/search users by name or email/i), 'zzz');
+
+    expect(await screen.findByText(/no users found matching/i)).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
+  });
+
+  it('clears the search box and returns to the paginated list via the clear button', async () => {
+    const user = userEvent.setup();
+    authApi.getUsers.mockResolvedValue({ users, totalCount: 3 });
+    renderWithProviders(<UsersTable />);
+
+    await screen.findByRole('table');
+    await user.type(screen.getByLabelText(/search users by name or email/i), 'sarah');
+
+    await waitFor(() => expect(authApi.getUsers).toHaveBeenCalledWith({ search: 'sarah' }));
+
+    await user.click(screen.getByRole('button', { name: /clear search/i }));
+
+    expect(screen.getByLabelText(/search users by name or email/i)).toHaveValue('');
+    await waitFor(() =>
+      expect(authApi.getUsers).toHaveBeenCalledWith(expect.objectContaining({ pageNo: expect.any(Number) }))
+    );
+  });
 });

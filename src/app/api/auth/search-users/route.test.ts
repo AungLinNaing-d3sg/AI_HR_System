@@ -103,14 +103,14 @@ describe('GET /api/auth/search-users', () => {
     );
   });
 
-  it('sets isAllRole: true for a SystemAdmin caller', async () => {
+  it('always sets isAllRole: false for a SystemAdmin caller too, unlike the previous role-derived behavior (this route only ever backs "Add User to Project", never the admin-only every-role search)', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
     authBackend.searchUsers.mockResolvedValue([]);
     await GET(requestWithQuery('?email=jane&userName=jane'));
     expect(authBackend.searchUsers).toHaveBeenCalledWith(
-      { email: 'jane', userName: 'jane', isAllRole: true },
+      { email: 'jane', userName: 'jane', isAllRole: false },
       expect.any(String)
     );
   });

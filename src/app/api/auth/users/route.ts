@@ -8,12 +8,13 @@ import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt'
 import { logger } from '@/lib/utils/logger';
 import { mapAdminUserListItemList } from '@/lib/utils/mapAuthUser';
 import { resolvePagination } from '@/lib/utils/pagination';
+import { pickSearchParams } from '@/lib/utils/searchParams';
 import { zodErrorToFieldErrors } from '@/lib/utils/zodErrors';
-import { createUserSchema } from '@/lib/validators/auth.validators';
+import { createUserSchema, usersSearchQuerySchema } from '@/lib/validators/auth.validators';
 import type { CreateUserResponsePayload, UsersListResponsePayload } from '@/types/api.types';
 
 /**
- * GET /api/auth/users?pageNo=&pageSize=
+ * GET /api/auth/users?pageNo=&pageSize=&search=
  *
  * Every user account in the system, for the `/admin/users` management
  * table's own server-side pagination (`docs/HR_System_FE_wireframe.pdf`).
@@ -30,6 +31,21 @@ import type { CreateUserResponsePayload, UsersListResponsePayload } from '@/type
  * table's Role/Country/Status columns and row-level Edit/Activate actions.
  * A row missing a confirmed role still renders a "Role unavailable" state
  * (see `UserRoleBadge`) rather than fabricating one.
+ *
+ * An optional `search` param (validated by `usersSearchQuerySchema`, same
+ * `MIN_USER_SEARCH_QUERY_LENGTH` rule as the "Add User to Project" combobox's
+ * `searchUsersQuerySchema`) switches this route over to
+ * `GET /Auth/SearchUsers?email={search}&userName={search}&isAllRole=true`
+ * instead of the paginated `GetUserList` call - backing `UsersTable`'s search
+ * box. `isAllRole` is always `true` here (never accepted from the client):
+ * unlike the "Add User to Project" combobox's own `/api/auth/search-users`
+ * (always `isAllRole: false`), this route is only ever reachable by a
+ * confirmed `SystemAdmin` (see the role check below), who is expected to
+ * find *any* account - `SystemAdmin`, `ProjectAdmin`, or `Employee` - from
+ * the user management table's search box. `SearchUsers`' response `Data` is
+ * a plain, unpaginated array, so the response here reports `pageNo: 1` and
+ * `pageSize` equal to the match count rather than echoing the backend's own
+ * paging envelope (which only `GetUserList` returns).
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -44,12 +60,31 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ message: 'Only a System Admin can view the user list.' }, { status: 403 });
   }
 
-  const { pageNo, pageSize } = resolvePagination(new URL(request.url).searchParams, {
-    pageNo: 1,
-    pageSize: USERS_PAGE_SIZE,
-  });
+  const searchParams = new URL(request.url).searchParams;
+  const parsedSearch = usersSearchQuerySchema.safeParse(pickSearchParams(searchParams, ['search']));
+  if (!parsedSearch.success) {
+    return NextResponse.json(
+      { message: 'Enter at least 2 characters to search.', errors: zodErrorToFieldErrors(parsedSearch.error) },
+      { status: 400 }
+    );
+  }
+  const search = parsedSearch.data.search;
 
   try {
+    if (search) {
+      const results = await authBackend.searchUsers({ email: search, userName: search, isAllRole: true }, accessToken);
+      const users = mapAdminUserListItemList(results);
+      return NextResponse.json<UsersListResponsePayload>(
+        { users, totalCount: users.length, pageNo: 1, pageSize: users.length },
+        { status: 200 }
+      );
+    }
+
+    const { pageNo, pageSize } = resolvePagination(searchParams, {
+      pageNo: 1,
+      pageSize: USERS_PAGE_SIZE,
+    });
+
     const { Items, TotalCount, PageNo, PageSize } = await authBackend.getUserList(accessToken, {
       pageNo,
       pageSize,

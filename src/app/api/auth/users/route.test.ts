@@ -15,11 +15,13 @@ jest.mock('next/headers', () => ({
 jest.mock('../../../../lib/api/authBackend.api', () => ({
   createUser: jest.fn(),
   getUserList: jest.fn(),
+  searchUsers: jest.fn(),
 }));
 
 const authBackend = jest.requireMock('../../../../lib/api/authBackend.api') as {
   createUser: jest.Mock;
   getUserList: jest.Mock;
+  searchUsers: jest.Mock;
 };
 
 import { GET, POST } from './route';
@@ -68,6 +70,7 @@ describe('GET /api/auth/users', () => {
   beforeEach(() => {
     mockCookieStore.get.mockReset();
     authBackend.getUserList.mockReset();
+    authBackend.searchUsers.mockReset();
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -176,6 +179,98 @@ describe('GET /api/auth/users', () => {
 
     const response = await GET(makeGetRequest());
     expect(response.status).toBe(500);
+  });
+
+  it('calls SearchUsers with isAllRole: true when a search term is supplied, instead of the paginated GetUserList call', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    authBackend.searchUsers.mockResolvedValue([
+      {
+        UserId: 'user-2',
+        Username: 'jane.doe',
+        Email: 'jane@example.com',
+        FirstName: 'Jane',
+        LastName: 'Doe',
+        EmployeeId: null,
+        RoleName: 'ProjectAdmin',
+        CountryId: null,
+        CountryCode: null,
+        CountryName: null,
+        IsActive: true,
+      },
+    ]);
+
+    const response = await GET(makeGetRequest('?search=jane'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(authBackend.searchUsers).toHaveBeenCalledWith(
+      { email: 'jane', userName: 'jane', isAllRole: true },
+      token
+    );
+    expect(authBackend.getUserList).not.toHaveBeenCalled();
+    expect(body.users).toEqual([
+      {
+        userId: 'user-2',
+        username: 'jane.doe',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@example.com',
+        employeeId: null,
+        roleName: 'ProjectAdmin',
+        countryId: null,
+        countryCode: null,
+        countryName: null,
+        isActive: true,
+      },
+    ]);
+    expect(body.totalCount).toBe(1);
+  });
+
+  it('sets isAllRole: true for SearchUsers even when unrelated to the caller\'s own role (this route is already SystemAdmin-only)', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    authBackend.searchUsers.mockResolvedValue([]);
+
+    await GET(makeGetRequest('?search=jane'));
+
+    expect(authBackend.searchUsers).toHaveBeenCalledWith(
+      expect.objectContaining({ isAllRole: true }),
+      token
+    );
+  });
+
+  it('returns 400 when the search term is shorter than the minimum length', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+
+    const response = await GET(makeGetRequest('?search=j'));
+    expect(response.status).toBe(400);
+    expect(authBackend.searchUsers).not.toHaveBeenCalled();
+    expect(authBackend.getUserList).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the paginated GetUserList call when no search term is supplied', async () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const token = makeToken({ role: 'SystemAdmin', exp: futureExp });
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
+    );
+    authBackend.getUserList.mockResolvedValue({ TotalCount: 0, PageNo: 1, PageSize: 100, Items: [] });
+
+    await GET(makeGetRequest());
+
+    expect(authBackend.getUserList).toHaveBeenCalled();
+    expect(authBackend.searchUsers).not.toHaveBeenCalled();
   });
 });
 

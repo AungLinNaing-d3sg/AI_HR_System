@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import * as authBackend from '@/lib/api/authBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
-import { decodeAccessToken, extractRole, isTokenExpired } from '@/lib/utils/jwt';
+import { decodeAccessToken, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
 import { mapUserSearchItemList } from '@/lib/utils/mapAuthUser';
 import { pickSearchParams } from '@/lib/utils/searchParams';
@@ -30,13 +30,15 @@ import type { SearchUsersResponsePayload } from '@/types/api.types';
  * list. Open to any authenticated user, matching the rest of the Projects
  * surface.
  *
- * `isAllRole` is never accepted from the client - it's derived here from the
- * caller's own decoded JWT role: only a `SystemAdmin` searches across every
- * role (`true`, so they can find any account to assign); a `ProjectAdmin` -
- * like any other authenticated role (a plain `Employee`/"Assigned User") -
- * is restricted to searching other `Employee` accounts only (`false`), since
- * a Project Admin only ever assigns `Employee` resources to their own
- * projects, never other admin accounts.
+ * `isAllRole` is never accepted from the client, and - unlike this route's
+ * previous, role-derived behavior - is now always `false` regardless of the
+ * caller's own role: this route exclusively backs the "Add User to Project"
+ * flow, which only ever assigns `Employee` ("Assigned User") resources to a
+ * project, never other admin accounts, so a `SystemAdmin` no longer gets a
+ * wider, every-role search here than a `ProjectAdmin`/plain `Employee` would.
+ * The `SystemAdmin`-only, every-role search backing the `/admin/users`
+ * management table's own search box is a separate concern - see
+ * `app/api/auth/users/route.ts`.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
@@ -47,8 +49,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ message: 'Your session has expired. Please log in again.' }, { status: 401 });
   }
 
-  const role = extractRole(claims);
-  const isAllRole = role === 'SystemAdmin';
+  const isAllRole = false;
   const searchParams = new URL(request.url).searchParams;
   const parsed = searchUsersQuerySchema.safeParse(pickSearchParams(searchParams, ['email', 'userName']));
   if (!parsed.success) {

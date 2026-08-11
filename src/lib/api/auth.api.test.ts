@@ -145,6 +145,12 @@ describe('auth.api (client)', () => {
     expect(result).toEqual({ users: [candidate], totalCount: 1 });
   });
 
+  it('getUsers forwards a search term to /auth/users for the admin search box', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { users: [], totalCount: 0 } });
+    await authApi.getUsers({ search: 'jane' });
+    expect(axiosInstance.get).toHaveBeenCalledWith('/auth/users', { params: { search: 'jane' } });
+  });
+
   it('updateUser puts to /auth/users/:id and returns the updated admin user', async () => {
     const updated: AdminUserListItem = {
       userId: 'user-2',

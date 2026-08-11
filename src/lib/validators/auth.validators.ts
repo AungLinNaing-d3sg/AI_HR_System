@@ -211,7 +211,7 @@ export type UpdateUserFormSchemaValues = z.infer<typeof updateUserFormSchema>;
  * against an overly narrow 1-character search reaching the backend, without
  * blocking the no-params case.
  */
-const optionalSearchTermSchema = (maxLength: number) =>
+export const optionalSearchTermSchema = (maxLength: number) =>
   z
     .string()
     .trim()
@@ -226,3 +226,17 @@ export const searchUsersQuerySchema = z.object({
   userName: optionalSearchTermSchema(100),
 });
 export type SearchUsersQueryValues = z.infer<typeof searchUsersQuerySchema>;
+
+/**
+ * Validates the optional `search` query param `GET /api/auth/users` reads
+ * off `request.url` (see `lib/utils/searchParams.ts`'s `pickSearchParams`)
+ * before forwarding to `GET /Auth/SearchUsers?email=&userName=&isAllRole=true`
+ * for the `SystemAdmin`-only `/admin/users` management table's search box
+ * (`UsersTable`). Reuses the same "at least `MIN_USER_SEARCH_QUERY_LENGTH`
+ * characters, once supplied" rule as `searchUsersQuerySchema` above, since
+ * both ultimately validate a term bound for the same backend endpoint.
+ */
+export const usersSearchQuerySchema = z.object({
+  search: optionalSearchTermSchema(200),
+});
+export type UsersSearchQueryValues = z.infer<typeof usersSearchQuerySchema>;

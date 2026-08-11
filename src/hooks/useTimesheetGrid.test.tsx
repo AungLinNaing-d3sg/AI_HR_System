@@ -277,7 +277,7 @@ describe('useTimesheetGrid', () => {
     );
   });
 
-  it('clears the pinned periodId on plain week navigation (Previous/Next/This week), falling back to auto-resolving the new week\'s period', async () => {
+  it('keeps the pinned periodId selected across plain week navigation (Previous/Next/This week) while its date range still covers the displayed week', async () => {
     timesheetsApi.getTimesheetWeek.mockResolvedValue(weekWith());
     const { result } = renderHook(() => useTimesheetGrid('2025-02-24'), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -289,10 +289,46 @@ describe('useTimesheetGrid', () => {
       expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-17', 'period-2')
     );
 
+    // 2025-03-24 - 2025-03-30 still falls within period-2's 2025-03-19 to
+    // 2025-04-15 range, so the pin stays intact instead of being dropped on
+    // the very next Next-week click.
     act(() => {
       result.current.goToNextWeek();
     });
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-24', 'period-2')
+    );
 
-    await waitFor(() => expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-24'));
+    // Previous week, back into the same still-covered range, keeps the pin too.
+    act(() => {
+      result.current.goToPreviousWeek();
+    });
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-17', 'period-2')
+    );
+  });
+
+  it('drops the pinned periodId, falling back to auto-resolving the new week\'s period, once plain week navigation moves past the pinned period\'s own date range', async () => {
+    timesheetsApi.getTimesheetWeek.mockResolvedValue(weekWith());
+    const { result } = renderHook(() => useTimesheetGrid('2025-02-24'), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.goToPeriod({ id: 'period-2', periodStart: '2025-03-19', periodEnd: '2025-04-15', isLocked: false });
+    });
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-03-17', 'period-2')
+    );
+
+    // Advance week-by-week from 2025-03-17 to 2025-04-21 - the first week
+    // that no longer overlaps period-2's 2025-03-19 to 2025-04-15 range.
+    for (let i = 0; i < 5; i += 1) {
+      act(() => {
+        result.current.goToNextWeek();
+      });
+    }
+
+    await waitFor(() => expect(result.current.weekStart).toBe('2025-04-21'));
+    await waitFor(() => expect(timesheetsApi.getTimesheetWeek).toHaveBeenLastCalledWith('2025-04-21'));
   });
 });

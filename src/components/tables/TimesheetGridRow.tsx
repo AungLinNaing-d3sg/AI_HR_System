@@ -3,7 +3,7 @@
 import { Info } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { HOURS_STEP, MAX_ENTRY_HOURS } from '@/lib/constants/timesheet.constants';
+import { HOURS_STEP, MAX_ENTRY_HOURS, TASK_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/timesheet.constants';
 import { cn } from '@/lib/utils/cn';
 import { formatDayLabel } from '@/lib/utils/week';
 import type { TimesheetGridRowView } from '@/hooks/useTimesheetGrid';
@@ -34,8 +34,9 @@ export interface TimesheetGridRowProps {
  * A cell whose entry is already Approved stays editable *when it is not a
  * future date* (only `disabled`, e.g. a locked period, or the date being
  * in the future, blocks it) - editing it resets it to Pending Approval and
- * requires the Project Admin to re-approve it, so an "Approved" cell shows
- * a hint explaining that instead of being locked out.
+ * requires the Project Admin to re-approve it, per the latest
+ * `UpdateTimesheetEntry` contract (see `useTimesheetGrid#saveAll`'s
+ * comment), without surfacing that status inline on the cell itself.
  */
 export function TimesheetGridRow({
   row,
@@ -90,23 +91,12 @@ export function TimesheetGridRow({
                 title={readOnlyHint}
                 className="h-9 w-16 text-center"
                 aria-label={`${formatDayLabel(cell.date)} hours for ${row.projectName}`}
-                aria-describedby={
-                  cell.error
-                    ? `${notesRowId}-${cell.date}-error`
-                    : cell.isApproved
-                      ? `${notesRowId}-${cell.date}-approved`
-                      : undefined
-                }
+                aria-describedby={cell.error ? `${notesRowId}-${cell.date}-error` : undefined}
                 onChange={(event) => onHoursChange(cell.date, event.target.value)}
               />
               {cell.error && (
                 <p id={`${notesRowId}-${cell.date}-error`} role="alert" className="mt-1 text-xs text-red-600">
                   {cell.error}
-                </p>
-              )}
-              {!cell.error && cell.isApproved && (
-                <p id={`${notesRowId}-${cell.date}-approved`} className="mt-1 text-xs text-zinc-400">
-                  Approved · editing resets to Pending
                 </p>
               )}
             </td>
@@ -121,7 +111,7 @@ export function TimesheetGridRow({
       {isExpanded && (
         <tr id={notesRowId} className="bg-zinc-50">
           <th scope="row" className="px-4 py-3 text-left align-top text-xs font-medium text-zinc-500">
-            Task notes
+            Task Notes / Description
           </th>
           {row.cells.map((cell) => {
             const isFuture = cell.date > today;
@@ -132,10 +122,11 @@ export function TimesheetGridRow({
                 <Textarea
                   value={cell.taskDescription}
                   disabled={cellDisabled}
-                  rows={2}
-                  placeholder="Add a note…"
+                  rows={3}
+                  maxLength={TASK_DESCRIPTION_MAX_LENGTH}
+                  placeholder="Describe the task worked on…"
                   title={isFuture ? 'Read-only · entries cannot be logged for a future date' : undefined}
-                  className="h-16 min-h-16 w-36 text-xs"
+                  className="h-24 min-h-24 w-52 resize-y text-sm leading-snug"
                   aria-label={`Task notes for ${row.projectName} on ${formatDayLabel(cell.date)}`}
                   onChange={(event) => onNotesChange(cell.date, event.target.value)}
                 />

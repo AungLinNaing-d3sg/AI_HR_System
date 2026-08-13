@@ -1,9 +1,10 @@
 /**
  * Pagination defaults shared by every server-side-paginated list page/table
  * in the app (Countries, Currencies, Exchange Rates, Rate Cards, Resource
- * Role Types, Invoices, Users, and the Timesheet Report). Mirrors the
- * `page`/`pageSize` (or, for the Auth domain, `PageNo`/`PageSize`) query
- * parameters documented across the `GetAll*`/`GenerateTimesheetReport`
+ * Role Types, Invoices, Users, the Timesheet Report, and the Timesheet
+ * History table). Mirrors the `page`/`pageSize` (or, for the Auth domain,
+ * `PageNo`/`PageSize`) query parameters documented across the
+ * `GetAll*`/`GenerateTimesheetReport`/`GetProjectAdminTimesheetSummary`
  * endpoints in docs/HR_System_BE.postman_collection.json.
  */
 

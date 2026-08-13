@@ -8,12 +8,14 @@ import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApproveTimesheetEntry } from '@/hooks/useApproveTimesheetEntry';
 import { useDeleteTimesheetEntry } from '@/hooks/useDeleteTimesheetEntry';
+import { usePagination } from '@/hooks/usePagination';
 import { useTimesheetHistory } from '@/hooks/useTimesheetHistory';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Pagination } from '@/components/common/Pagination';
 import { PROJECT_MANAGEMENT_ROLES } from '@/lib/constants/project.constants';
 import { cn } from '@/lib/utils/cn';
 import { getMondayOfWeek } from '@/lib/utils/week';
@@ -84,10 +86,21 @@ function matchesFilters(
  * consistency - "Filter" applies `fromInput`/`toInput`/`projectInput` (with
  * the From-after-To cross-field validation below), "Reset" clears every
  * filter back to its default. All matching/filtering is client-side over
- * `useTimesheetHistory`'s already-fetched rows. `useTimesheetHistory`
+ * the *currently fetched page* of `useTimesheetHistory`'s rows - the same
+ * page-scoped trade-off `TimesheetReportTable`'s own client-side `userId`
+ * filter already documents, since neither `GetAllTimesheetEntries` nor
+ * `GetProjectAdminTimesheetSummary` (see `app/api/timesheets/history/route.ts`)
+ * take a date-range query param to filter server-side. `useTimesheetHistory`
  * already scopes rows by role server-side (own entries only for a plain
  * `User`, every entry for `ProjectAdmin`/`SystemAdmin`), so this component
  * only adds the User column for the roles that can see everyone's entries.
+ *
+ * Pagination: `usePagination`/the shared `Pagination` control
+ * (`components/common/Pagination.tsx`) drive `useTimesheetHistory`'s
+ * `pageNo`/`pageSize`, matching every other server-side-paginated list table
+ * in this app (`ResourceRoleTypesTable`, `TimesheetReportTable`, etc.) -
+ * applying or resetting a filter jumps back to page 1, same as
+ * `TimesheetReportTable`'s own filter bar.
  *
  * Actions column, per row: all actions are right-aligned (the column's own
  * header label included) and rendered as identically-sized, identically-styled
@@ -113,7 +126,8 @@ export function TimesheetHistoryTable() {
   const { user, role } = useAuth();
   const canApprove = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
 
-  const { entries, isLoading, isError, error, refetch } = useTimesheetHistory();
+  const { pageNo, pageSize, goToPage } = usePagination();
+  const { entries, totalCount, isLoading, isError, error, refetch } = useTimesheetHistory({ pageNo, pageSize });
   const { approveEntry, isApproving, error: approveError, reset: resetApproveError } = useApproveTimesheetEntry();
   const { deleteEntry, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteTimesheetEntry();
 
@@ -149,6 +163,7 @@ export function TimesheetHistoryTable() {
     }
     setFilterError(null);
     setAppliedFilters({ from: fromInput, to: toInput, projectId: projectInput });
+    goToPage(1);
   };
 
   const handleFilterReset = () => {
@@ -157,6 +172,7 @@ export function TimesheetHistoryTable() {
     setProjectInput(ALL_PROJECTS);
     setFilterError(null);
     setAppliedFilters({ from: '', to: '', projectId: ALL_PROJECTS });
+    goToPage(1);
   };
 
   const handleConfirmDelete = async () => {
@@ -442,6 +458,15 @@ export function TimesheetHistoryTable() {
           </table>
         </div>
       )}
+
+      <Pagination
+        pageNo={pageNo}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={goToPage}
+        isLoading={isLoading}
+        itemLabel="entries"
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

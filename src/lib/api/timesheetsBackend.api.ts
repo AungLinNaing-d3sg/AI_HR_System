@@ -87,8 +87,20 @@ export interface TimesheetEntryQuery {
   projectId?: string;
   timesheetPeriodId?: string;
   isApproved?: boolean;
+  /** Optional server-side pagination - see `TimesheetEntryListResponse`'s doc comment in `types/api.types.ts`. */
+  pageNo?: number;
+  pageSize?: number;
 }
 
+/**
+ * `GetAllTimesheetEntries` returns the standard paginated envelope (see
+ * `TimesheetEntryListResponse`). Callers that need "every matching entry"
+ * for an internal check rather than a page to render (the `/timesheets`
+ * weekly grid's own entries, and the same-day duplicate check in
+ * `POST /api/timesheets/entries`) pass an explicit large `pageSize` (see
+ * `lib/constants/pagination.constants.ts`'s `MAX_PAGE_SIZE`) instead of
+ * leaving it to default to the standard page size.
+ */
 export async function getTimesheetEntries(
   accessToken: string,
   query: TimesheetEntryQuery = {}
@@ -160,6 +172,9 @@ export async function deleteTimesheetEntry(id: string, accessToken: string): Pro
 
 export interface ProjectAdminTimesheetSummaryQuery {
   projectId?: string;
+  /** Optional server-side pagination over `Items` - see `ProjectAdminTimesheetSummaryDto`'s doc comment in `types/api.types.ts`. */
+  pageNo?: number;
+  pageSize?: number;
 }
 
 /**

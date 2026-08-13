@@ -33,6 +33,12 @@ function tokenFor(role: string): string {
   return makeToken({ sub: 'user-1', role, exp: futureExp });
 }
 
+function requestFor(query: Record<string, string> = {}): Request {
+  const url = new URL('https://example.com/api/timesheets/history');
+  for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+  return new Request(url);
+}
+
 const entryDto = {
   Id: 'entry-1',
   UserId: 'user-1',
@@ -70,25 +76,63 @@ describe('GET /api/timesheets/history', () => {
 
   it('returns 401 when there is no access token', async () => {
     mockCookieStore.get.mockReturnValue(undefined);
-    const response = await GET();
+    const response = await GET(requestFor());
     expect(response.status).toBe(401);
     expect(timesheetsBackend.getTimesheetEntries).not.toHaveBeenCalled();
   });
 
-  it('scopes the query to the caller for a plain User', async () => {
+  it('scopes the query to the caller for a plain User, defaulting pageNo/pageSize', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
     );
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([entryDto]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [entryDto],
+      TotalCount: 1,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 20,
+    });
 
-    const response = await GET();
+    const response = await GET(requestFor());
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(expect.any(String), { userId: 'user-1' });
+    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(expect.any(String), {
+      userId: 'user-1',
+      pageNo: 1,
+      pageSize: 20,
+    });
     expect(body.entries).toHaveLength(1);
     expect(body.entries[0].userName).toBe('Lin Thit Htoo');
     expect(body.entries[0].projectName).toBe('Project Helix');
+    expect(body.totalCount).toBe(1);
+    expect(body.pageNo).toBe(1);
+    expect(body.pageSize).toBe(20);
+  });
+
+  it('forwards an explicit pageNo/pageSize query param to the backend', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('User') } : undefined
+    );
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [entryDto],
+      TotalCount: 45,
+      TotalPages: 5,
+      PageNo: 2,
+      PageSize: 10,
+    });
+
+    const response = await GET(requestFor({ pageNo: '2', pageSize: '10' }));
+    const body = await response.json();
+
+    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(expect.any(String), {
+      userId: 'user-1',
+      pageNo: 2,
+      pageSize: 10,
+    });
+    expect(body.totalCount).toBe(45);
+    expect(body.pageNo).toBe(2);
+    expect(body.pageSize).toBe(10);
   });
 
   it('scopes a ProjectAdmin to their own assigned-project entries via GetProjectAdminTimesheetSummary', async () => {
@@ -102,17 +146,25 @@ describe('GET /api/timesheets/history', () => {
       ProjectSummaries: [
         { ProjectId: 'project-1', ProjectCode: 'PRJ-001', ProjectName: 'Project Helix', TotalHours: 8, ApprovedHours: 0, PendingHours: 8 },
       ],
-      Entries: [entryDto],
+      TotalCount: 1,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 20,
+      Items: [entryDto],
     });
 
-    const response = await GET();
+    const response = await GET(requestFor());
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(timesheetsBackend.getProjectAdminTimesheetSummary).toHaveBeenCalledWith(expect.any(String));
+    expect(timesheetsBackend.getProjectAdminTimesheetSummary).toHaveBeenCalledWith(expect.any(String), {
+      pageNo: 1,
+      pageSize: 20,
+    });
     expect(timesheetsBackend.getTimesheetEntries).not.toHaveBeenCalled();
     expect(body.entries).toHaveLength(1);
     expect(body.entries[0].projectName).toBe('Project Helix');
+    expect(body.totalCount).toBe(1);
   });
 
   it('returns an empty list for a ProjectAdmin with no assigned projects (no Data on the summary)', async () => {
@@ -121,21 +173,31 @@ describe('GET /api/timesheets/history', () => {
     );
     timesheetsBackend.getProjectAdminTimesheetSummary.mockResolvedValue(null);
 
-    const response = await GET();
+    const response = await GET(requestFor());
     const body = await response.json();
 
     expect(body.entries).toEqual([]);
+    expect(body.totalCount).toBe(0);
   });
 
   it('requests every entry (no userId filter) for a SystemAdmin', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor('SystemAdmin') } : undefined
     );
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 20,
+    });
 
-    await GET();
+    await GET(requestFor());
 
-    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(expect.any(String), {});
+    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(expect.any(String), {
+      pageNo: 1,
+      pageSize: 20,
+    });
   });
 
   it('returns a normalized error when the backend call fails', async () => {
@@ -144,7 +206,7 @@ describe('GET /api/timesheets/history', () => {
     );
     timesheetsBackend.getTimesheetEntries.mockRejectedValue(new Error('network down'));
 
-    const response = await GET();
+    const response = await GET(requestFor());
     expect(response.status).toBe(500);
   });
 });

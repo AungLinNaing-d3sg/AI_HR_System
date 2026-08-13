@@ -127,7 +127,13 @@ describe('GET /api/timesheets/week', () => {
     );
     projectsBackend.getProjectList.mockResolvedValue([projectDto]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodDto]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([entryDto]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [entryDto],
+      TotalCount: 1,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24'));
     const body = await response.json();
@@ -143,7 +149,10 @@ describe('GET /api/timesheets/week', () => {
     });
     expect(body.projects).toHaveLength(1);
     expect(body.entries).toHaveLength(1);
-    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(token, { userId: 'user-1' });
+    expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(token, {
+      userId: 'user-1',
+      pageSize: 200,
+    });
   });
 
   it('excludes an active project the caller is not assigned to', async () => {
@@ -159,7 +168,13 @@ describe('GET /api/timesheets/week', () => {
       )
     );
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodDto]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([entryDto]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [entryDto],
+      TotalCount: 1,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24'));
     const body = await response.json();
@@ -175,7 +190,13 @@ describe('GET /api/timesheets/week', () => {
     );
     projectsBackend.getProjectList.mockResolvedValue([{ ...projectDto, IsActive: false }]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24'));
     const body = await response.json();
@@ -191,7 +212,13 @@ describe('GET /api/timesheets/week', () => {
     );
     projectsBackend.getProjectList.mockResolvedValue([]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-26'));
     const body = await response.json();
@@ -206,7 +233,13 @@ describe('GET /api/timesheets/week', () => {
     );
     projectsBackend.getProjectList.mockResolvedValue([]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24'));
     const body = await response.json();
@@ -221,7 +254,13 @@ describe('GET /api/timesheets/week', () => {
     );
     projectsBackend.getProjectList.mockResolvedValue([]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([{ ...entryDto, EntryDate: '2025-03-15' }]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [{ ...entryDto, EntryDate: '2025-03-15' }],
+      TotalCount: 1,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24'));
     const body = await response.json();
@@ -243,7 +282,13 @@ describe('GET /api/timesheets/week', () => {
     const periodB = { ...periodDto, Id: 'period-b', PeriodStart: '2025-02-27', PeriodEnd: '2025-03-31' };
     projectsBackend.getProjectList.mockResolvedValue([]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodA, periodB]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24', 'period-b'));
     const body = await response.json();
@@ -258,7 +303,13 @@ describe('GET /api/timesheets/week', () => {
     );
     projectsBackend.getProjectList.mockResolvedValue([]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodDto]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24', 'stale-period-id'));
     const body = await response.json();
@@ -275,7 +326,13 @@ describe('GET /api/timesheets/week', () => {
     const periodB = { ...periodDto, Id: 'period-b', PeriodStart: '2025-02-27', PeriodEnd: '2025-03-31' };
     projectsBackend.getProjectList.mockResolvedValue([]);
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([periodA, periodB]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24'));
     const body = await response.json();
@@ -290,7 +347,13 @@ describe('GET /api/timesheets/week', () => {
     );
     projectsBackend.getProjectList.mockRejectedValue(new Error('network down'));
     timesheetsBackend.getTimesheetPeriods.mockResolvedValue([]);
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await GET(requestFor('2025-02-24'));
     expect(response.status).toBe(500);

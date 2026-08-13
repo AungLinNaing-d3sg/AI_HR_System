@@ -1,9 +1,10 @@
 /**
  * Pagination defaults shared by every server-side-paginated list page/table
  * in the app (Countries, Currencies, Exchange Rates, Rate Cards, Resource
- * Role Types, Invoices, Users, and the Timesheet Report). Mirrors the
- * `page`/`pageSize` (or, for the Auth domain, `PageNo`/`PageSize`) query
- * parameters documented across the `GetAll*`/`GenerateTimesheetReport`
+ * Role Types, Invoices, Users, the Timesheet Report, and the Timesheet
+ * History table). Mirrors the `page`/`pageSize` (or, for the Auth domain,
+ * `PageNo`/`PageSize`) query parameters documented across the
+ * `GetAll*`/`GenerateTimesheetReport`/`GetProjectAdminTimesheetSummary`
  * endpoints in docs/HR_System_BE.postman_collection.json.
  */
 
@@ -18,4 +19,4 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 export type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
 
 /** Upper bound accepted from a client-supplied `pageSize` query param, to keep a single request cheap. */
-export const MAX_PAGE_SIZE = 200;
+export const MAX_PAGE_SIZE = 100;

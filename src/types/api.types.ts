@@ -518,7 +518,23 @@ export interface LockTimesheetPeriodResponseDto {
  */
 export type UnlockTimesheetPeriodResponse = null;
 export type DeleteTimesheetPeriodResponse = null;
-export type TimesheetEntryListResponse = TimesheetEntryDto[];
+
+/**
+ * Raw paginated response `Data` for `GET /TimesheetEntry/GetAllTimesheetEntries`,
+ * verified against the latest documented example response
+ * (docs/HR_System_BE.postman_collection.json) - as of this contract, the
+ * endpoint always returns the standard `Items`/`TotalCount`/`TotalPages`/
+ * `PageNo`/`PageSize` pagination envelope (matching `GetUserListResponse`/
+ * `ResourceRoleTypeListResponse`), rather than a bare array as before.
+ */
+export interface TimesheetEntryListResponse {
+  TotalCount: number;
+  TotalPages: number;
+  PageNo: number;
+  PageSize: number;
+  Items: TimesheetEntryDto[];
+}
+
 export type TimesheetEntryResponse = TimesheetEntryDto;
 
 /**
@@ -565,9 +581,18 @@ export interface TimesheetEntryUpdateResponsePayload {
 /** Combined read model behind `GET /api/timesheets/week` - see `app/api/timesheets/week/route.ts`. */
 export type TimesheetWeekResponsePayload = import('./domain.types').TimesheetWeek;
 
-/** Shape returned by `GET /api/timesheets/history` - see `app/api/timesheets/history/route.ts`. */
+/**
+ * Shape returned by `GET /api/timesheets/history` - see
+ * `app/api/timesheets/history/route.ts`. `totalCount`/`pageNo`/`pageSize`
+ * drive the shared `Pagination` control (`components/common/Pagination.tsx`)
+ * on the `/timesheets/history` table, mirroring `TimesheetReportResponsePayload`'s
+ * own pagination fields.
+ */
 export interface TimesheetHistoryResponsePayload {
   entries: import('./domain.types').TimesheetHistoryEntry[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
 }
 
 /** Shape returned by `PUT /api/timesheets/entries/:id/approve`. */
@@ -608,11 +633,18 @@ export interface TimesheetPeriodUnlockResponsePayload {
 
 /**
  * Raw response `Data` for `GET /TimesheetEntry/GetProjectAdminTimesheetSummary`,
- * verified against the documented example response. The backend scopes this
- * to the calling `ProjectAdmin`'s own assigned projects (there is no
- * per-caller "my projects" filter on `GetAllTimesheetEntries` itself), with
- * an optional `projectId` query param to narrow to a single one of them -
- * see `TimesheetEntryQuery`/`getProjectAdminTimesheetSummary` below.
+ * verified against the latest documented example response
+ * (docs/HR_System_BE.postman_collection.json). The backend scopes this to
+ * the calling `ProjectAdmin`'s own assigned projects (there is no per-caller
+ * "my projects" filter on `GetAllTimesheetEntries` itself), with an optional
+ * `projectId` query param to narrow to a single one of them - see
+ * `TimesheetEntryQuery`/`getProjectAdminTimesheetSummary` below.
+ *
+ * `TotalHours`/`ApprovedHours`/`PendingHours`/`ProjectSummaries` are
+ * aggregates across *every* matching entry regardless of page - only the
+ * entry list itself (`Items`, formerly the unpaginated `Entries`) is paged,
+ * per the standard `Items`/`TotalCount`/`TotalPages`/`PageNo`/`PageSize`
+ * pagination envelope this endpoint now shares with `GetAllTimesheetEntries`.
  */
 export interface ProjectAdminProjectSummaryDto {
   ProjectId: string;
@@ -628,7 +660,11 @@ export interface ProjectAdminTimesheetSummaryDto {
   ApprovedHours: number;
   PendingHours: number;
   ProjectSummaries: ProjectAdminProjectSummaryDto[];
-  Entries: TimesheetEntryDto[];
+  TotalCount: number;
+  TotalPages: number;
+  PageNo: number;
+  PageSize: number;
+  Items: TimesheetEntryDto[];
 }
 
 export type ProjectAdminTimesheetSummaryResponse = ProjectAdminTimesheetSummaryDto | null;

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import * as projectsBackend from '@/lib/api/projectsBackend.api';
 import * as timesheetsBackend from '@/lib/api/timesheetsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
+import { MAX_PAGE_SIZE } from '@/lib/constants/pagination.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractUserId, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
@@ -67,11 +68,18 @@ export async function GET(request: Request): Promise<NextResponse> {
   const weekEnd = addDays(weekStart, 6);
 
   try {
-    const [allProjectDtos, periodDtos, entryDtos] = await Promise.all([
+    const [allProjectDtos, periodDtos, entriesResult] = await Promise.all([
       projectsBackend.getProjectList(accessToken),
       timesheetsBackend.getTimesheetPeriods(accessToken),
-      timesheetsBackend.getTimesheetEntries(accessToken, { userId }),
+      // `GetAllTimesheetEntries` now returns the standard paginated envelope
+      // (see `TimesheetEntryListResponse` in types/api.types.ts). The grid
+      // below still filters this down to the requested week itself, so this
+      // needs every one of the caller's own entries (across every period),
+      // not just one page of them - hence the explicit maximum page size
+      // rather than the standard list-page default.
+      timesheetsBackend.getTimesheetEntries(accessToken, { userId, pageSize: MAX_PAGE_SIZE }),
     ]);
+    const entryDtos = entriesResult.Items;
 
     const activeProjectDtos = allProjectDtos.filter((project) => project.IsActive);
     const projectDtos = await filterProjectsAssignedToUser(activeProjectDtos, userId, accessToken);

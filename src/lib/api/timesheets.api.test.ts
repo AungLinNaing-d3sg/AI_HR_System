@@ -78,6 +78,46 @@ describe('timesheets.api (client)', () => {
     expect(result).toEqual(echoed);
   });
 
+  it('getTimesheetHistory gets /timesheets/history with pageNo/pageSize and returns entries plus pagination metadata', async () => {
+    const historyPayload = {
+      entries: [
+        {
+          id: 'entry-1',
+          userId: 'user-1',
+          userName: 'Lin Thit Htoo',
+          resourceRoleTypeName: 'Senior Developer',
+          projectId: 'project-1',
+          projectCode: 'PRJ-001',
+          projectName: 'Project Helix',
+          entryDate: '2025-03-01',
+          hours: 8,
+          taskDescription: 'Worked on feature implementation',
+          isApproved: false,
+          approvedAt: null,
+        },
+      ],
+      totalCount: 1,
+      pageNo: 1,
+      pageSize: 20,
+    };
+    axiosInstance.get.mockResolvedValue({ data: historyPayload });
+
+    const result = await timesheetsApi.getTimesheetHistory({ pageNo: 1, pageSize: 20 });
+
+    expect(axiosInstance.get).toHaveBeenCalledWith('/timesheets/history', { params: { pageNo: 1, pageSize: 20 } });
+    expect(result).toEqual(historyPayload);
+  });
+
+  it('getTimesheetHistory defaults to no params', async () => {
+    axiosInstance.get.mockResolvedValue({
+      data: { entries: [], totalCount: 0, pageNo: 1, pageSize: 20 },
+    });
+
+    await timesheetsApi.getTimesheetHistory();
+
+    expect(axiosInstance.get).toHaveBeenCalledWith('/timesheets/history', { params: {} });
+  });
+
   it('getTimesheetPeriods gets /timesheets/periods and returns the period list', async () => {
     const periods = [week.period!];
     axiosInstance.get.mockResolvedValue({ data: { periods } });

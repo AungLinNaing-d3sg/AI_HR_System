@@ -53,6 +53,12 @@ const entries: TimesheetHistoryEntry[] = [
   },
 ];
 
+// `getTimesheetHistory` now resolves the paginated envelope (see
+// `TimesheetHistoryResult` in lib/api/timesheets.api.ts) rather than a bare
+// entry array - `historyResult` is the shared "one page, everything fits"
+// shape most tests below reuse.
+const historyResult = { entries, totalCount: entries.length, pageNo: 1, pageSize: 20 };
+
 function renderWithProviders(ui: ReactNode) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
@@ -73,7 +79,7 @@ describe('TimesheetHistoryTable', () => {
   });
 
   it('shows an empty state when there are no entries', async () => {
-    timesheetsApi.getTimesheetHistory.mockResolvedValue([]);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue({ entries: [], totalCount: 0, pageNo: 1, pageSize: 20 });
     renderWithProviders(<TimesheetHistoryTable />);
     expect(await screen.findByText(/no timesheet entries yet/i)).toBeInTheDocument();
   });
@@ -86,7 +92,7 @@ describe('TimesheetHistoryTable', () => {
   });
 
   it('renders Approved/Pending badges per entry', async () => {
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -95,7 +101,7 @@ describe('TimesheetHistoryTable', () => {
   });
 
   it('shows the project code as secondary text beneath the project name', async () => {
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -106,7 +112,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('shows the resource role type as secondary text beneath the user name for a role that can see the User column', async () => {
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Lin Thit Htoo');
@@ -117,7 +123,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('renders a leading edit icon and right-aligns the row actions, with Edit matching the bordered Approve/Delete buttons', async () => {
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Lin Thit Htoo');
@@ -138,7 +144,7 @@ describe('TimesheetHistoryTable', () => {
   });
 
   it('renders the three stat cards with their hour totals', async () => {
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -152,7 +158,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('hides the User column and Approve action for a plain User', async () => {
     mockUseAuth.mockReturnValue({ role: 'User' });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -163,7 +169,7 @@ describe('TimesheetHistoryTable', () => {
   it('shows the Approve action for a pending entry to a ProjectAdmin and calls approveTimesheetEntry', async () => {
     const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin' });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     timesheetsApi.approveTimesheetEntry.mockResolvedValue({
       id: 'entry-1',
       isApproved: true,
@@ -183,7 +189,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('shows "Locked" (no action) for an already-approved entry that is not the viewer\'s own and needs no review', async () => {
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'admin-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Lin Thit Htoo');
@@ -195,7 +201,7 @@ describe('TimesheetHistoryTable', () => {
 
   it("shows an Edit link (not Locked) for the signed-in user's own already-approved entry, since editing resets it to Pending Approval", async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -207,7 +213,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('shows an "Edit" link to the timesheet grid for the signed-in user\'s own pending entry', async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -219,7 +225,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('shows neither Edit nor Approve for a pending entry that belongs to someone else and the viewer cannot approve', async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'someone-else' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -229,7 +235,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('shows neither Delete nor an approve/edit action for a pending entry belonging to someone else when the viewer cannot approve', async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'someone-else' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -238,7 +244,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('does not show a Delete action for an already-approved entry', async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -249,7 +255,7 @@ describe('TimesheetHistoryTable', () => {
   it("deletes the signed-in user's own pending entry after confirming in the dialog", async () => {
     const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     timesheetsApi.deleteTimesheetEntry.mockResolvedValue(undefined);
     renderWithProviders(<TimesheetHistoryTable />);
 
@@ -264,7 +270,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('shows a Delete action alongside Approve for a ProjectAdmin reviewing someone else\'s pending entry', async () => {
     mockUseAuth.mockReturnValue({ role: 'ProjectAdmin', user: { id: 'admin-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Lin Thit Htoo');
@@ -275,7 +281,7 @@ describe('TimesheetHistoryTable', () => {
   it('surfaces an error message when deleting an entry fails', async () => {
     const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     timesheetsApi.deleteTimesheetEntry.mockRejectedValue(new Error('Approved timesheet entries cannot be deleted.'));
     renderWithProviders(<TimesheetHistoryTable />);
 
@@ -291,7 +297,7 @@ describe('TimesheetHistoryTable', () => {
   it('rejects a "From" date that is after the "To" date without applying the filter', async () => {
     const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -309,7 +315,7 @@ describe('TimesheetHistoryTable', () => {
 
   it('renders the filter section as a single inline filter bar (Date From/To, Project, Filter/Reset)', async () => {
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -324,7 +330,7 @@ describe('TimesheetHistoryTable', () => {
   it('applies a date-range filter to only show matching entries', async () => {
     const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -341,7 +347,7 @@ describe('TimesheetHistoryTable', () => {
   it('clears an applied filter and restores every entry when Reset is clicked', async () => {
     const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     renderWithProviders(<TimesheetHistoryTable />);
 
     await screen.findAllByText('Project Helix');
@@ -355,5 +361,51 @@ describe('TimesheetHistoryTable', () => {
     await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(3));
     expect((screen.getByLabelText('From') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('To') as HTMLInputElement).value).toBe('');
+  });
+
+  it('does not render pagination controls when every entry fits on one page', async () => {
+    mockUseAuth.mockReturnValue({ role: 'User', user: { id: 'user-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    expect(screen.queryByRole('navigation', { name: /pagination/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the shared Pagination control and requests the next page on click', async () => {
+    const user = userEvent.setup();
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin', user: { id: 'admin-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue({ entries, totalCount: 45, pageNo: 1, pageSize: 20 });
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    const pagination = screen.getByRole('navigation', { name: /pagination/i });
+    expect(within(pagination).getByText(/showing/i)).toBeInTheDocument();
+
+    await user.click(within(pagination).getByRole('button', { name: /next/i }));
+
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetHistory).toHaveBeenLastCalledWith({ pageNo: 2, pageSize: 20 })
+    );
+  });
+
+  it('jumps back to page 1 when a filter is applied', async () => {
+    const user = userEvent.setup();
+    mockUseAuth.mockReturnValue({ role: 'SystemAdmin', user: { id: 'admin-1' } });
+    timesheetsApi.getTimesheetHistory.mockResolvedValue({ entries, totalCount: 45, pageNo: 1, pageSize: 20 });
+    renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+    const pagination = screen.getByRole('navigation', { name: /pagination/i });
+    await user.click(within(pagination).getByRole('button', { name: /next/i }));
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetHistory).toHaveBeenLastCalledWith({ pageNo: 2, pageSize: 20 })
+    );
+
+    await user.click(screen.getByRole('button', { name: /^reset$/i }));
+
+    await waitFor(() =>
+      expect(timesheetsApi.getTimesheetHistory).toHaveBeenLastCalledWith({ pageNo: 1, pageSize: 20 })
+    );
   });
 });

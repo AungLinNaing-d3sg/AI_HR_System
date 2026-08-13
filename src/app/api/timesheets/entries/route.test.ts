@@ -78,7 +78,13 @@ describe('POST /api/timesheets/entries', () => {
     mockCookieStore.get.mockReset();
     timesheetsBackend.createTimesheetEntry.mockReset();
     timesheetsBackend.getTimesheetEntries.mockReset();
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [],
+      TotalCount: 0,
+      TotalPages: 0,
+      PageNo: 1,
+      PageSize: 200,
+    });
   });
 
   it('returns 401 when there is no access token', async () => {
@@ -127,6 +133,7 @@ describe('POST /api/timesheets/entries', () => {
     expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(token, {
       userId: 'user-1',
       projectId: 'project-1',
+      pageSize: 200,
     });
     expect(timesheetsBackend.createTimesheetEntry).toHaveBeenCalledWith(
       {
@@ -144,7 +151,13 @@ describe('POST /api/timesheets/entries', () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: tokenFor() } : undefined
     );
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([{ ...dto, EntryDate: '2025-02-24' }]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [{ ...dto, EntryDate: '2025-02-24' }],
+      TotalCount: 1,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 200,
+    });
 
     const response = await POST(jsonRequest(validPayload));
     expect(response.status).toBe(409);
@@ -156,7 +169,13 @@ describe('POST /api/timesheets/entries', () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === ACCESS_TOKEN_COOKIE ? { value: token } : undefined
     );
-    timesheetsBackend.getTimesheetEntries.mockResolvedValue([{ ...dto, EntryDate: '2025-02-25' }]);
+    timesheetsBackend.getTimesheetEntries.mockResolvedValue({
+      Items: [{ ...dto, EntryDate: '2025-02-25' }],
+      TotalCount: 1,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 200,
+    });
     timesheetsBackend.createTimesheetEntry.mockResolvedValue(dto);
 
     const response = await POST(jsonRequest(validPayload));

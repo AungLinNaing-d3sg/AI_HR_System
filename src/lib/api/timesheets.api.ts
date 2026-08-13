@@ -53,9 +53,26 @@ export async function updateTimesheetEntry(
   return data.entry;
 }
 
-export async function getTimesheetHistory(): Promise<TimesheetHistoryEntry[]> {
-  const { data } = await axiosInstance.get<TimesheetHistoryResponsePayload>('/timesheets/history');
-  return data.entries;
+export interface TimesheetHistoryParams {
+  pageNo?: number;
+  pageSize?: number;
+}
+
+export interface TimesheetHistoryResult {
+  entries: TimesheetHistoryEntry[];
+  totalCount: number;
+  pageNo: number;
+  pageSize: number;
+}
+
+/**
+ * Fetches a page of the `/timesheets/history` table's entries.
+ * `pageNo`/`pageSize` drive the shared `Pagination` control
+ * (`components/common/Pagination.tsx`) - see `useTimesheetHistory`.
+ */
+export async function getTimesheetHistory(params: TimesheetHistoryParams = {}): Promise<TimesheetHistoryResult> {
+  const { data } = await axiosInstance.get<TimesheetHistoryResponsePayload>('/timesheets/history', { params });
+  return { entries: data.entries, totalCount: data.totalCount, pageNo: data.pageNo, pageSize: data.pageSize };
 }
 
 export async function approveTimesheetEntry(id: string): Promise<ApproveTimesheetEntryResponsePayload> {

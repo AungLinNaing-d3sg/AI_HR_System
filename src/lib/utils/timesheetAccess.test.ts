@@ -92,11 +92,19 @@ describe('getProjectAdminAssignedProjectIds', () => {
         { ProjectId: 'project-1', ProjectCode: 'D3SG001', ProjectName: 'STP', TotalHours: 40, ApprovedHours: 20, PendingHours: 20 },
         { ProjectId: 'project-2', ProjectCode: 'D3SG002', ProjectName: 'Other', TotalHours: 0, ApprovedHours: 0, PendingHours: 0 },
       ],
-      Entries: [],
+      TotalCount: 40,
+      TotalPages: 40,
+      PageNo: 1,
+      PageSize: 1,
+      Items: [],
     });
 
     const result = await getProjectAdminAssignedProjectIds('token');
     expect(result).toEqual(new Set(['project-1', 'project-2']));
+    // `Items` is never used for this check, so the smallest possible page is
+    // requested rather than the standard list-page size - see the doc
+    // comment on `getProjectAdminAssignedProjectIds`.
+    expect(timesheetsBackend.getProjectAdminTimesheetSummary).toHaveBeenCalledWith('token', { pageSize: 1 });
   });
 
   it('returns an empty set when the summary has no Data', async () => {

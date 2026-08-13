@@ -19,4 +19,4 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 export type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
 
 /** Upper bound accepted from a client-supplied `pageSize` query param, to keep a single request cheap. */
-export const MAX_PAGE_SIZE = 200;
+export const MAX_PAGE_SIZE = 100;

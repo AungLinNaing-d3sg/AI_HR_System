@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as timesheetsBackend from '@/lib/api/timesheetsBackend.api';
 import { ACCESS_TOKEN_COOKIE } from '@/lib/constants/auth.constants';
+import { MAX_PAGE_SIZE } from '@/lib/constants/pagination.constants';
 import { getBackendErrorDetails } from '@/lib/utils/backendError';
 import { decodeAccessToken, extractUserId, isTokenExpired } from '@/lib/utils/jwt';
 import { logger } from '@/lib/utils/logger';
@@ -60,11 +61,18 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
+    // `GetAllTimesheetEntries` now returns the standard paginated envelope
+    // (see `TimesheetEntryListResponse` in types/api.types.ts) rather than a
+    // bare array - this check needs every entry the caller already has for
+    // this project (to catch a same-day duplicate anywhere in that set), not
+    // just one page of it, so it explicitly requests the maximum page size
+    // instead of leaving it to default to the standard list-page size.
     const sameDayEntries = await timesheetsBackend.getTimesheetEntries(accessToken, {
       userId,
       projectId: parsed.data.projectId,
+      pageSize: MAX_PAGE_SIZE,
     });
-    const alreadySubmitted = sameDayEntries.some((entry) => entry.EntryDate === parsed.data.entryDate);
+    const alreadySubmitted = sameDayEntries.Items.some((entry) => entry.EntryDate === parsed.data.entryDate);
     if (alreadySubmitted) {
       return NextResponse.json(
         {

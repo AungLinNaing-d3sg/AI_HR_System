@@ -56,8 +56,14 @@ export async function filterProjectsAssignedToUser(
  * timesheet entries for - i.e. the projects `GetProjectAdminTimesheetSummary`
  * (scoped server-side to the caller's own assignments) reports a summary for.
  * `SystemAdmin` never needs this - it has unrestricted access.
+ *
+ * Only `ProjectSummaries` is read here - an aggregate unaffected by the
+ * endpoint's own `Items` pagination (see `ProjectAdminTimesheetSummaryDto`'s
+ * doc comment in `types/api.types.ts`) - so this requests the smallest
+ * possible `Items` page rather than the standard list-page size, since the
+ * paginated entries themselves are never used for this access check.
  */
 export async function getProjectAdminAssignedProjectIds(accessToken: string): Promise<Set<string>> {
-  const summary = await timesheetsBackend.getProjectAdminTimesheetSummary(accessToken);
+  const summary = await timesheetsBackend.getProjectAdminTimesheetSummary(accessToken, { pageSize: 1 });
   return new Set((summary?.ProjectSummaries ?? []).map((project) => project.ProjectId));
 }

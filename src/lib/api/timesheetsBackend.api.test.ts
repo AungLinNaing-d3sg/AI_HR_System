@@ -84,12 +84,33 @@ describe('timesheetsBackend.api (server)', () => {
   });
 
   it('getTimesheetEntries gets /TimesheetEntry/GetAllTimesheetEntries with a Bearer header and query params', async () => {
-    backendClient.get.mockResolvedValue({ data: [] });
+    backendClient.get.mockResolvedValue({ data: { Items: [], TotalCount: 0, TotalPages: 0, PageNo: 1, PageSize: 20 } });
     await timesheetsBackend.getTimesheetEntries('access-token', { userId: 'user-1' });
     expect(backendClient.get).toHaveBeenCalledWith('/TimesheetEntry/GetAllTimesheetEntries', {
       headers: { Authorization: 'Bearer access-token' },
       params: { userId: 'user-1' },
     });
+  });
+
+  it('getTimesheetEntries forwards pageNo/pageSize and returns the paginated envelope', async () => {
+    const dto = {
+      Items: [{ Id: 'entry-1' }],
+      TotalCount: 45,
+      TotalPages: 5,
+      PageNo: 2,
+      PageSize: 10,
+    };
+    backendClient.get.mockResolvedValue({ data: dto });
+    const result = await timesheetsBackend.getTimesheetEntries('access-token', {
+      userId: 'user-1',
+      pageNo: 2,
+      pageSize: 10,
+    });
+    expect(backendClient.get).toHaveBeenCalledWith('/TimesheetEntry/GetAllTimesheetEntries', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { userId: 'user-1', pageNo: 2, pageSize: 10 },
+    });
+    expect(result).toEqual(dto);
   });
 
   it('createTimesheetEntry posts to /TimesheetEntry/CreateTimesheetEntry with a Bearer header', async () => {
@@ -166,7 +187,11 @@ describe('timesheetsBackend.api (server)', () => {
       ProjectSummaries: [
         { ProjectId: 'project-1', ProjectCode: 'D3SG001', ProjectName: 'STP Enhancement', TotalHours: 40, ApprovedHours: 20, PendingHours: 20 },
       ],
-      Entries: [],
+      TotalCount: 2,
+      TotalPages: 1,
+      PageNo: 1,
+      PageSize: 20,
+      Items: [],
     };
     backendClient.get.mockResolvedValue({ data: dto });
     const result = await timesheetsBackend.getProjectAdminTimesheetSummary('access-token');
@@ -183,6 +208,15 @@ describe('timesheetsBackend.api (server)', () => {
     expect(backendClient.get).toHaveBeenCalledWith('/TimesheetEntry/GetProjectAdminTimesheetSummary', {
       headers: { Authorization: 'Bearer access-token' },
       params: { projectId: 'project-1' },
+    });
+  });
+
+  it('getProjectAdminTimesheetSummary forwards pageNo/pageSize for the Items page', async () => {
+    backendClient.get.mockResolvedValue({ data: null });
+    await timesheetsBackend.getProjectAdminTimesheetSummary('access-token', { pageNo: 2, pageSize: 10 });
+    expect(backendClient.get).toHaveBeenCalledWith('/TimesheetEntry/GetProjectAdminTimesheetSummary', {
+      headers: { Authorization: 'Bearer access-token' },
+      params: { pageNo: 2, pageSize: 10 },
     });
   });
 });

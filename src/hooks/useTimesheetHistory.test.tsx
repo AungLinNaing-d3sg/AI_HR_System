@@ -32,26 +32,37 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
+const historyResult = { entries, totalCount: entries.length, pageNo: 1, pageSize: 20 };
+
 describe('useTimesheetHistory', () => {
   beforeEach(() => {
     timesheetsApi.getTimesheetHistory.mockReset();
   });
 
-  it('returns the entry list once loaded', async () => {
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+  it('returns the entry list and pagination metadata once loaded', async () => {
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     const { result } = renderHook(() => useTimesheetHistory(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.entries).toEqual(entries);
+    expect(result.current.totalCount).toBe(1);
     expect(result.current.isError).toBe(false);
   });
 
-  it('defaults to an empty array before data loads', () => {
-    timesheetsApi.getTimesheetHistory.mockResolvedValue(entries);
+  it('defaults to an empty array and zero totalCount before data loads', () => {
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
     const { result } = renderHook(() => useTimesheetHistory(), { wrapper });
     expect(result.current.entries).toEqual([]);
+    expect(result.current.totalCount).toBe(0);
+  });
+
+  it('forwards pageNo/pageSize to getTimesheetHistory', async () => {
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
+    renderHook(() => useTimesheetHistory({ pageNo: 2, pageSize: 10 }), { wrapper });
+
+    await waitFor(() => expect(timesheetsApi.getTimesheetHistory).toHaveBeenCalledWith({ pageNo: 2, pageSize: 10 }));
   });
 
   it('surfaces an error message on failure', async () => {

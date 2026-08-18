@@ -65,7 +65,7 @@ const listDto = {
   ],
   TotalCount: 1,
   Page: 1,
-  PageSize: 200,
+  PageSize: 100,
 };
 
 const generateResponseDto = {
@@ -156,7 +156,7 @@ describe('GET /api/invoices', () => {
 
     expect(response.status).toBe(200);
     expect(invoicesBackend.getMyInvoices).toHaveBeenCalledWith(
-      { projectId: 'project-1', status: 'Draft', page: 1, pageSize: 200 },
+      { projectId: 'project-1', status: 'Draft', page: 1, pageSize: 100 },
       expect.any(String)
     );
     expect(invoicesBackend.getAllInvoices).not.toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('GET /api/invoices', () => {
 
     expect(response.status).toBe(200);
     expect(invoicesBackend.getAllInvoices).toHaveBeenCalledWith(
-      { projectId: 'project-1', status: 'Draft', page: 1, pageSize: 200 },
+      { projectId: 'project-1', status: 'Draft', page: 1, pageSize: 100 },
       expect.any(String)
     );
     expect(invoicesBackend.getMyInvoices).not.toHaveBeenCalled();

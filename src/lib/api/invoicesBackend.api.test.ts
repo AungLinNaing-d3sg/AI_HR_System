@@ -25,20 +25,20 @@ describe('invoicesBackend.api (server)', () => {
   });
 
   it('getAllInvoices gets /Invoice/GetAllInvoices with the query params and a Bearer header', async () => {
-    backendClient.get.mockResolvedValue({ data: { Items: [], TotalCount: 0, Page: 1, PageSize: 200 } });
-    await invoicesBackend.getAllInvoices({ projectId: 'project-1', page: 1, pageSize: 200 }, 'access-token');
+    backendClient.get.mockResolvedValue({ data: { Items: [], TotalCount: 0, Page: 1, PageSize: 100 } });
+    await invoicesBackend.getAllInvoices({ projectId: 'project-1', page: 1, pageSize: 100 }, 'access-token');
     expect(backendClient.get).toHaveBeenCalledWith('/Invoice/GetAllInvoices', {
       headers: { Authorization: 'Bearer access-token' },
-      params: { projectId: 'project-1', page: 1, pageSize: 200 },
+      params: { projectId: 'project-1', page: 1, pageSize: 100 },
     });
   });
 
   it('getMyInvoices gets /Invoice/GetMyInvoices with the query params and a Bearer header', async () => {
-    backendClient.get.mockResolvedValue({ data: { Items: [], TotalCount: 0, Page: 1, PageSize: 200 } });
-    await invoicesBackend.getMyInvoices({ projectId: 'project-1', page: 1, pageSize: 200 }, 'access-token');
+    backendClient.get.mockResolvedValue({ data: { Items: [], TotalCount: 0, Page: 1, PageSize: 100 } });
+    await invoicesBackend.getMyInvoices({ projectId: 'project-1', page: 1, pageSize: 100 }, 'access-token');
     expect(backendClient.get).toHaveBeenCalledWith('/Invoice/GetMyInvoices', {
       headers: { Authorization: 'Bearer access-token' },
-      params: { projectId: 'project-1', page: 1, pageSize: 200 },
+      params: { projectId: 'project-1', page: 1, pageSize: 100 },
     });
   });
 

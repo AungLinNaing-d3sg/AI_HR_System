@@ -32,7 +32,7 @@ export const INVOICE_STATUS_BADGE_CLASSNAMES: Record<InvoiceStatus, string> = {
  * same choice made for the Report domain (see `REPORT_PAGE_SIZE` in
  * `report.constants.ts`).
  */
-export const INVOICE_LIST_PAGE_SIZE = 200;
+export const INVOICE_LIST_PAGE_SIZE = 100;
 
 /**
  * Static issuing-company profile shown on the printable invoice

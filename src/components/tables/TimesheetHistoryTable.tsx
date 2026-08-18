@@ -187,7 +187,7 @@ export function TimesheetHistoryTable() {
 
   if (isLoading) {
     return (
-      <p aria-live="polite" className="text-sm text-zinc-500">
+      <p aria-live="polite" className="shrink-0 text-sm text-zinc-500">
         Loading timesheet history…
       </p>
     );
@@ -195,7 +195,7 @@ export function TimesheetHistoryTable() {
 
   if (isError) {
     return (
-      <div className="space-y-3">
+      <div className="shrink-0 space-y-3">
         <Alert variant="error">{error ?? 'Could not load timesheet history.'}</Alert>
         <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
           Try again
@@ -206,14 +206,20 @@ export function TimesheetHistoryTable() {
 
   if (entries.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
+      <div className="shrink-0 rounded-md border border-dashed border-zinc-300 p-8 text-center">
         <p className="text-sm text-zinc-600">No timesheet entries yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    // `shrink-0` keeps this section (and every early-return above) at its
+    // natural height instead of being squeezed by the page-level flex
+    // container's `min-h-0 overflow-y-auto` (see `page.tsx`) - that
+    // container is the one place scrolling now happens for the whole page,
+    // so nothing in here should ever shrink to "fit"; it should just render
+    // at full size and let the ancestor scroll.
+    <div className="shrink-0 space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
         <HistoryStatCard
           label="Total hours logged"

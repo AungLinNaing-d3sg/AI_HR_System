@@ -156,6 +156,26 @@ describe('TimesheetHistoryTable', () => {
     expect(screen.getByText('8h')).toBeInTheDocument();
   });
 
+  it('renders its root as a non-shrinking block so the page (not the table) owns the single scrollbar', async () => {
+    timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);
+    const { container } = renderWithProviders(<TimesheetHistoryTable />);
+
+    await screen.findAllByText('Project Helix');
+
+    // Regression guard for the double-scrollbar bug introduced by the
+    // numbered-page-button pagination upgrade: this root must stay
+    // `shrink-0` (render at natural height) so `page.tsx`'s
+    // `min-h-0 overflow-y-auto` container is the only element that scrolls,
+    // covering the stat cards, filter bar, table, *and* pagination together
+    // rather than the table scrolling on its own.
+    expect(container.firstElementChild).toHaveClass('shrink-0');
+    // The table's own wrapper stays horizontal-scroll-only; it must not gain
+    // a competing vertical scroll region.
+    const tableWrapper = screen.getByRole('table').parentElement;
+    expect(tableWrapper).toHaveClass('overflow-x-auto');
+    expect(tableWrapper).not.toHaveClass('overflow-y-auto', 'overflow-auto');
+  });
+
   it('hides the User column and Approve action for a plain User', async () => {
     mockUseAuth.mockReturnValue({ role: 'User' });
     timesheetsApi.getTimesheetHistory.mockResolvedValue(historyResult);

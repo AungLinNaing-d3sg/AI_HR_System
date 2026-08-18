@@ -100,7 +100,19 @@ function matchesFilters(
  * `pageNo`/`pageSize`, matching every other server-side-paginated list table
  * in this app (`ResourceRoleTypesTable`, `TimesheetReportTable`, etc.) -
  * applying or resetting a filter jumps back to page 1, same as
- * `TimesheetReportTable`'s own filter bar.
+ * `TimesheetReportTable`'s own filter bar. Turning a page (or resetting back
+ * to page 1) keeps the *current* rows mounted - via `useTimesheetHistory`'s
+ * `placeholderData: keepPreviousData` - and only shows a small inline
+ * "Updating…" note plus disables the Previous/Next/page-number buttons
+ * (`isFetching`) while the next page loads, rather than unmounting the
+ * whole stat-cards/filter-bar/table down to a bare loading line. That
+ * previous, harder collapse-and-remount is what produced this table's
+ * "scrolls down into blank space" bug: replacing the entire layout with a
+ * one-line "Loading timesheet history…" paragraph shrank the visible
+ * content to a sliver while the page's `flex-1` content column still
+ * stretched to the full viewport height, so every page turn (Previous/Next
+ * sits at the *bottom* of a full page, i.e. exactly where a user is already
+ * scrolled to) briefly left a large empty gap below that sliver.
  *
  * Actions column, per row: all actions are right-aligned (the column's own
  * header label included) and rendered as identically-sized, identically-styled
@@ -127,7 +139,10 @@ export function TimesheetHistoryTable() {
   const canApprove = Boolean(role && PROJECT_MANAGEMENT_ROLES.includes(role));
 
   const { pageNo, pageSize, goToPage } = usePagination();
-  const { entries, totalCount, isLoading, isError, error, refetch } = useTimesheetHistory({ pageNo, pageSize });
+  const { entries, totalCount, isLoading, isFetching, isError, error, refetch } = useTimesheetHistory({
+    pageNo,
+    pageSize,
+  });
   const { approveEntry, isApproving, error: approveError, reset: resetApproveError } = useApproveTimesheetEntry();
   const { deleteEntry, isDeleting, error: deleteError, reset: resetDeleteError } = useDeleteTimesheetEntry();
 
@@ -312,6 +327,12 @@ export function TimesheetHistoryTable() {
 
       {(approveError || deleteError) && <Alert variant="error">{approveError ?? deleteError}</Alert>}
 
+      {isFetching && (
+        <p aria-live="polite" className="text-xs text-zinc-400">
+          Updating…
+        </p>
+      )}
+
       {filteredEntries.length === 0 ? (
         <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center">
           <p className="text-sm text-zinc-600">No timesheet entries match these filters.</p>
@@ -464,7 +485,7 @@ export function TimesheetHistoryTable() {
         pageSize={pageSize}
         totalCount={totalCount}
         onPageChange={goToPage}
-        isLoading={isLoading}
+        isLoading={isFetching}
         itemLabel="entries"
       />
 

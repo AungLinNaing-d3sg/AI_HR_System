@@ -72,4 +72,41 @@ describe('useTimesheetHistory', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeTruthy();
   });
+
+  it(
+    'keeps the previous page\'s entries visible (via placeholderData) while a new page loads, ' +
+      'exposing that as isFetching rather than isLoading',
+    async () => {
+      let resolveSecondPage: (value: typeof historyResult) => void = () => {};
+      timesheetsApi.getTimesheetHistory
+        .mockResolvedValueOnce(historyResult)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveSecondPage = resolve;
+            })
+        );
+
+      const { result, rerender } = renderHook(
+        ({ pageNo }: { pageNo: number }) => useTimesheetHistory({ pageNo, pageSize: 20 }),
+        { wrapper, initialProps: { pageNo: 1 } }
+      );
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.entries).toEqual(entries);
+
+      rerender({ pageNo: 2 });
+
+      // The page-2 request is still in flight, but page 1's rows stay put as
+      // placeholder data instead of being cleared back to `[]` - the caller
+      // (`TimesheetHistoryTable`) uses this to keep its whole layout mounted
+      // and only flag the in-progress refetch via `isFetching`.
+      await waitFor(() => expect(result.current.isFetching).toBe(true));
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.entries).toEqual(entries);
+
+      resolveSecondPage({ ...historyResult, pageNo: 2 });
+      await waitFor(() => expect(result.current.isFetching).toBe(false));
+    }
+  );
 });

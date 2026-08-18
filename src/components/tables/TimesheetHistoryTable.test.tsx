@@ -389,6 +389,47 @@ describe('TimesheetHistoryTable', () => {
     );
   });
 
+  it(
+    'keeps the previous page\'s stat cards/filter bar/table mounted (only showing an inline ' +
+      '"Updating…" note) while the next page loads, instead of collapsing to the bare loading state',
+    async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ role: 'SystemAdmin', user: { id: 'admin-1' } });
+
+      let resolveSecondPage: (value: typeof historyResult) => void = () => {};
+      timesheetsApi.getTimesheetHistory
+        .mockResolvedValueOnce({ entries, totalCount: 45, pageNo: 1, pageSize: 20 })
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveSecondPage = resolve;
+            })
+        );
+      renderWithProviders(<TimesheetHistoryTable />);
+
+      await screen.findAllByText('Project Helix');
+      const pagination = screen.getByRole('navigation', { name: /pagination/i });
+      await user.click(within(pagination).getByRole('button', { name: /next/i }));
+
+      // Page 2 is still in flight: page 1's stat cards, filter bar, and rows
+      // all stay on screen (this is the fix for the "scrolls down into blank
+      // space" bug - the whole layout no longer unmounts down to a bare
+      // "Loading timesheet history…" line on every page turn).
+      expect(screen.getByText('Total hours logged')).toBeInTheDocument();
+      expect(screen.getByRole('form', { name: /filter timesheet history/i })).toBeInTheDocument();
+      expect(screen.getAllByText('Project Helix').length).toBeGreaterThan(0);
+      expect(screen.queryByText(/^loading timesheet history/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/updating/i)).toBeInTheDocument();
+      // Previous/Next disable while the next page is being fetched, matching
+      // the shared `Pagination` control's own documented `isLoading` intent.
+      expect(within(pagination).getByRole('button', { name: /next/i })).toBeDisabled();
+
+      resolveSecondPage({ entries, totalCount: 45, pageNo: 2, pageSize: 20 });
+      await waitFor(() => expect(screen.queryByText(/updating/i)).not.toBeInTheDocument());
+      expect(within(pagination).getByRole('button', { name: /next/i })).not.toBeDisabled();
+    }
+  );
+
   it('jumps back to page 1 when a filter is applied', async () => {
     const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ role: 'SystemAdmin', user: { id: 'admin-1' } });

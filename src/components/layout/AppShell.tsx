@@ -19,6 +19,15 @@ interface AppShellProps {
  * list) and the `<main>` content area each own their own vertical scrollbar
  * and scroll independently, while `Header` stays pinned above the scrolling
  * content.
+ *
+ * `min-h-0` on the right-hand column and on `main` is a deliberate, explicit
+ * belt-and-suspenders alongside that `overflow-hidden`/`overflow-y-auto`
+ * pairing: a flex item's automatic `min-height` is otherwise its *content*
+ * size (not `0`), which - if either of those `overflow` values were ever
+ * dropped or overridden by a page - would let `main` grow taller than the
+ * `h-screen` shell instead of scrolling internally, reproducing the
+ * whole-document-scroll/blank-sidebar bug this layout fixes (a long
+ * `/timesheets/history` table is exactly the scenario that surfaced it).
  */
 export function AppShell({ children }: AppShellProps) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -43,9 +52,9 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       )}
 
-      <div className="flex h-screen min-w-0 flex-1 flex-col">
+      <div className="flex h-screen min-h-0 min-w-0 flex-1 flex-col">
         <Header onMenuClick={() => setIsMobileNavOpen((open) => !open)} />
-        <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
       </div>
     </div>
   );

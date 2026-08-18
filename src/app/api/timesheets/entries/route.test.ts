@@ -83,7 +83,7 @@ describe('POST /api/timesheets/entries', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
   });
 
@@ -133,7 +133,7 @@ describe('POST /api/timesheets/entries', () => {
     expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(token, {
       userId: 'user-1',
       projectId: 'project-1',
-      pageSize: 200,
+      pageSize: 100,
     });
     expect(timesheetsBackend.createTimesheetEntry).toHaveBeenCalledWith(
       {
@@ -156,7 +156,7 @@ describe('POST /api/timesheets/entries', () => {
       TotalCount: 1,
       TotalPages: 1,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await POST(jsonRequest(validPayload));
@@ -174,7 +174,7 @@ describe('POST /api/timesheets/entries', () => {
       TotalCount: 1,
       TotalPages: 1,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
     timesheetsBackend.createTimesheetEntry.mockResolvedValue(dto);
 

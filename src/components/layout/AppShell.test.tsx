@@ -17,6 +17,7 @@ describe('AppShell', () => {
     mockPathname = '/dashboard';
     mockUseAuth.mockReturnValue({
       role: 'SystemAdmin',
+      hasHydrated: true,
       user: { id: 'user-1', firstName: 'Ada', lastName: 'Lovelace', role: 'SystemAdmin' },
       logout: jest.fn(),
       isLoggingOut: false,

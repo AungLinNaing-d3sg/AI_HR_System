@@ -32,3 +32,55 @@ export function resolvePagination(searchParams: URLSearchParams, defaults: Resol
     pageSize: parsed.data.pageSize ?? defaults.pageSize,
   };
 }
+
+/** A single token in a page-number sequence: either a real 1-indexed page, or a collapsed run of skipped pages. */
+export type PageToken = number | 'ellipsis';
+
+/**
+ * Computes the compact, clickable page-number sequence for the shared
+ * `Pagination` control's numbered page-button row (e.g. `1 … 4 5 6 … 20`),
+ * following the common "sibling + boundary" windowing pattern: always keep
+ * the first and last page visible, plus the current page and `siblingCount`
+ * pages either side of it, collapsing any remaining gap into a single
+ * `'ellipsis'` token instead of listing every skipped page number. Returns
+ * every page (no ellipsis) once `totalPages` is small enough to fit without
+ * collapsing anything.
+ */
+export function getPageNumbers(pageNo: number, totalPages: number, siblingCount = 1): PageToken[] {
+  const safeTotalPages = Math.max(1, Math.trunc(totalPages) || 1);
+  const safePageNo = Math.min(Math.max(1, Math.trunc(pageNo) || 1), safeTotalPages);
+
+  // first page + last page + current page + 2 siblings + 2 possible ellipses.
+  const totalSlots = siblingCount * 2 + 5;
+
+  if (safeTotalPages <= totalSlots) {
+    return Array.from({ length: safeTotalPages }, (_, index) => index + 1);
+  }
+
+  const leftSiblingIndex = Math.max(safePageNo - siblingCount, 1);
+  const rightSiblingIndex = Math.min(safePageNo + siblingCount, safeTotalPages);
+
+  const shouldShowLeftEllipsis = leftSiblingIndex > 2;
+  const shouldShowRightEllipsis = rightSiblingIndex < safeTotalPages - 1;
+
+  if (!shouldShowLeftEllipsis && shouldShowRightEllipsis) {
+    const leftItemCount = 3 + siblingCount * 2;
+    const leftRange = Array.from({ length: leftItemCount }, (_, index) => index + 1);
+    return [...leftRange, 'ellipsis', safeTotalPages];
+  }
+
+  if (shouldShowLeftEllipsis && !shouldShowRightEllipsis) {
+    const rightItemCount = 3 + siblingCount * 2;
+    const rightRange = Array.from(
+      { length: rightItemCount },
+      (_, index) => safeTotalPages - rightItemCount + index + 1
+    );
+    return [1, 'ellipsis', ...rightRange];
+  }
+
+  const middleRange = Array.from(
+    { length: rightSiblingIndex - leftSiblingIndex + 1 },
+    (_, index) => leftSiblingIndex + index
+  );
+  return [1, 'ellipsis', ...middleRange, 'ellipsis', safeTotalPages];
+}

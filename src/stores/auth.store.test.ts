@@ -15,7 +15,7 @@ const user: AuthenticatedUser = {
 describe('useAuthStore', () => {
   beforeEach(() => {
     useAuthStore.setState({ user: null, hasHydrated: false });
-    window.sessionStorage.clear();
+    window.localStorage.clear();
   });
 
   it('starts with no user', () => {
@@ -33,13 +33,27 @@ describe('useAuthStore', () => {
     expect(useAuthStore.getState().user).toBeNull();
   });
 
-  it('persists only the user to sessionStorage, never tokens', () => {
+  it('persists only the user to localStorage, never tokens', () => {
     useAuthStore.getState().setUser(user);
-    const raw = window.sessionStorage.getItem('hr-auth-user');
+    const raw = window.localStorage.getItem('hr-auth-user');
     expect(raw).not.toBeNull();
     const parsed = JSON.parse(raw as string);
     expect(parsed.state.user).toEqual(user);
     expect(JSON.stringify(parsed)).not.toContain('accessToken');
     expect(JSON.stringify(parsed)).not.toContain('refreshToken');
+  });
+
+  it('persists to localStorage (not sessionStorage) so a new browser tab shares the already-known profile', () => {
+    useAuthStore.getState().setUser(user);
+    expect(window.sessionStorage.getItem('hr-auth-user')).toBeNull();
+    expect(window.localStorage.getItem('hr-auth-user')).not.toBeNull();
+  });
+
+  it('clearUser removes the persisted snapshot from localStorage on logout', () => {
+    useAuthStore.getState().setUser(user);
+    useAuthStore.getState().clearUser();
+    const raw = window.localStorage.getItem('hr-auth-user');
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw as string).state.user).toBeNull();
   });
 });

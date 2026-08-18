@@ -132,7 +132,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 1,
       TotalPages: 1,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24'));
@@ -151,7 +151,7 @@ describe('GET /api/timesheets/week', () => {
     expect(body.entries).toHaveLength(1);
     expect(timesheetsBackend.getTimesheetEntries).toHaveBeenCalledWith(token, {
       userId: 'user-1',
-      pageSize: 200,
+      pageSize: 100,
     });
   });
 
@@ -173,7 +173,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 1,
       TotalPages: 1,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24'));
@@ -195,7 +195,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24'));
@@ -217,7 +217,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-26'));
@@ -238,7 +238,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24'));
@@ -259,7 +259,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 1,
       TotalPages: 1,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24'));
@@ -287,7 +287,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24', 'period-b'));
@@ -308,7 +308,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24', 'stale-period-id'));
@@ -331,7 +331,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24'));
@@ -352,7 +352,7 @@ describe('GET /api/timesheets/week', () => {
       TotalCount: 0,
       TotalPages: 0,
       PageNo: 1,
-      PageSize: 200,
+      PageSize: 100,
     });
 
     const response = await GET(requestFor('2025-02-24'));

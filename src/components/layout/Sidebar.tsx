@@ -34,8 +34,18 @@ function findActiveHref(pathname: string, hrefs: readonly string[]): string | nu
 
 export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
-  const { user, role, logout, isLoggingOut } = useAuth();
-  const sections = getVisibleNavSections(role);
+  const { user, role, hasHydrated, logout, isLoggingOut } = useAuth();
+  // `useAuth`'s `user`/`role` come from a `localStorage`-persisted snapshot
+  // (see `stores/auth.store.ts`) so a brand new tab can render role-aware
+  // chrome without re-fetching it - but that snapshot is only readable once
+  // Zustand's `persist` middleware has rehydrated from storage. Computing
+  // `getVisibleNavSections`/showing the profile+Logout block before that
+  // finishes would use a transient `role: null`, which - for an otherwise
+  // still-authenticated `SystemAdmin`/`ProjectAdmin` - incorrectly hides
+  // Billing/Administration and the Logout control for a flash. Rendering a
+  // neutral loading placeholder instead until `hasHydrated` is true avoids
+  // that incorrect/incomplete sidebar ever being shown.
+  const sections = hasHydrated ? getVisibleNavSections(role) : [];
   const activeHref = findActiveHref(
     pathname,
     sections.flatMap((section) => section.items.map((item) => item.href))
@@ -52,6 +62,12 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <p className="text-xs text-sidebar-foreground-muted">Time &amp; Invoice</p>
         </div>
       </div>
+
+      {!hasHydrated && (
+        <p aria-live="polite" className="px-5 py-4 text-xs text-sidebar-foreground-muted">
+          Loading navigation&hellip;
+        </p>
+      )}
 
       <div className="sidebar-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-4">
         {sections.map((section, index) => (
@@ -89,7 +105,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         ))}
       </div>
 
-      {user && (
+      {hasHydrated && user && (
         <div className="flex items-center gap-1 border-t border-sidebar-border px-2 py-3">
           <Link
             href="/profile"

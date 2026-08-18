@@ -56,8 +56,9 @@ describe('AppShell', () => {
   it(
     'keeps the sidebar (logo, every nav section, and the profile/logout footer) fully mounted and ' +
       "the shell/main scroll classes intact when the main content is far taller than the viewport - " +
-      'the exact /timesheets/history repro (a 20-row paginated table) for the bug where the whole ' +
-      'document scrolled as one, eventually leaving a blank white screen once the (shorter) sidebar ' +
+      'the exact /timesheets/history repro (33 tall rows, simulating a paginated table taller than a ' +
+      'single 20-row page) for the bug where the whole document scrolled as one, eventually leaving a ' +
+      'blank white screen once the (shorter) sidebar ' +
       "content had scrolled past. The fix keeps the shell pinned to `h-screen`/`overflow-hidden` and " +
       'gives the sidebar nav list and `<main>` their own independent `overflow-y-auto` regions, so ' +
       'neither the sidebar nor its footer/logo can ever be scrolled out of view.',

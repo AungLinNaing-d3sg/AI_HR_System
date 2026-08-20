@@ -99,4 +99,11 @@ describe('Pagination', () => {
     expect(screen.getByRole('button', { name: 'Page 1' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Page 3' })).toBeDisabled();
   });
+
+  it('is `relative` so the sr-only "Page X of Y" summary is contained by the nav instead of the document (regression test for the whole-page/sidebar scroll overflow bug)', () => {
+    render(<Pagination pageNo={2} pageSize={20} totalCount={45} onPageChange={jest.fn()} />);
+
+    const nav = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(nav.className.split(/\s+/)).toContain('relative');
+  });
 });

@@ -35,6 +35,24 @@ export interface PaginationProps {
  * already where the user is), Previous/Next disable at the first/last page,
  * and every navigation control disables together while `isLoading` is true
  * so a page can't be double-requested mid-fetch.
+ *
+ * The `<nav>` is deliberately `relative`: the "Page X of Y" summary below is
+ * `sr-only` (Tailwind's visually-hidden utility, which is `position:
+ * absolute`), and none of its actual ancestors up to `<body>` set a
+ * `position` of their own (see `AppShell`/`layout.tsx`). Without a
+ * positioned ancestor nearby, that absolutely-positioned span's containing
+ * block falls all the way back to the document's initial containing block
+ * (`<html>`) instead of this `<nav>` - which, on a long page (e.g.
+ * `/timesheets/history`, where this renders near the bottom, well past one
+ * viewport's worth of content), makes the *whole document* grow to fit it.
+ * `AppShell` relies on the document itself never scrolling (its own
+ * `h-screen overflow-hidden` shell owns exactly one viewport, with the
+ * sidebar and `<main>` each scrolling independently inside it) - a taller
+ * document defeats that, so the browser scrolls the whole page (sidebar
+ * included) instead of just `<main>`/the table. Making `<nav>` `relative`
+ * gives the summary a small, local containing block instead, without
+ * changing anything visually (`position: relative` with no offsets doesn't
+ * move it) or requiring the summary itself to be removed.
  */
 export function Pagination({ pageNo, pageSize, totalCount, onPageChange, isLoading, itemLabel = 'items' }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -52,7 +70,7 @@ export function Pagination({ pageNo, pageSize, totalCount, onPageChange, isLoadi
   return (
     <nav
       aria-label="Pagination"
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-1 pt-4 text-sm"
+      className="relative flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-1 pt-4 text-sm"
     >
       <p aria-live="polite" className="text-zinc-500">
         Showing <span className="font-medium text-zinc-900">{rangeStart}</span>–
